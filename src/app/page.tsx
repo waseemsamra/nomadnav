@@ -26,7 +26,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const baseSearchSchema = z.object({
-  origin: z.string().min(3, { message: 'Origin must be a 3-letter IATA code.' }).optional(),
   destination: z.string().min(3, { message: 'Destination must be a 3-letter IATA code.' }),
   dates: z.object({
     from: z.date({ required_error: "A date is required."}),
@@ -35,26 +34,9 @@ const baseSearchSchema = z.object({
   travelers: z.coerce.number().min(1, { message: 'At least one traveler is required.' }).max(9, { message: "Maximum 9 travelers."}),
 });
 
-const refinedSearchSchema = baseSearchSchema.superRefine((data, ctx) => {
-  if (data.origin && data.destination && data.origin === data.destination) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Origin and destination cannot be the same.",
-      path: ["destination"],
-    });
-  }
-  if (data.dates.from && data.dates.to && data.dates.from > data.dates.to) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Return date must be after departure date.",
-      path: ["dates"],
-    });
-  }
-});
+type SearchFormValues = z.infer<typeof baseSearchSchema> & { origin?: string };
 
-type SearchFormValues = z.infer<typeof refinedSearchSchema>;
-
-const AirportCombobox = ({ field, onSelect, placeholder }: { field: any, onSelect: (value: string) => void, placeholder: string }) => {
+const AirportCombobox = ({ field, placeholder }: { field: any, placeholder: string }) => {
   const { data: airports, isLoading } = useAirports();
   const [open, setOpen] = useState(false);
 
@@ -90,7 +72,7 @@ const AirportCombobox = ({ field, onSelect, placeholder }: { field: any, onSelec
                   key={airport.code}
                   value={`${airport.name} (${airport.code})`}
                   onSelect={() => {
-                    onSelect(airport.code);
+                    field.onChange(airport.code);
                     setOpen(false);
                   }}
                 >
@@ -120,7 +102,7 @@ function SearchForm() {
       ? z.string().min(3, { message: 'Origin must be a 3-letter IATA code.' }) 
       : z.string().optional(),
   }).superRefine((data, ctx) => {
-    if (data.origin && data.destination && data.origin === data.destination) {
+    if (activeTab !== 'hotels' && data.origin && data.destination && data.origin === data.destination) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Origin and destination cannot be the same.",
@@ -188,7 +170,6 @@ function SearchForm() {
                 <FormLabel>Origin</FormLabel>
                 <AirportCombobox
                   field={field}
-                  onSelect={(value) => form.setValue('origin', value)}
                   placeholder="Select origin"
                 />
                 <FormMessage />
@@ -204,7 +185,6 @@ function SearchForm() {
               <FormLabel>Destination</FormLabel>
                <AirportCombobox
                 field={field}
-                onSelect={(value) => form.setValue('destination', value)}
                 placeholder="Select destination"
               />
               <FormMessage />
@@ -453,7 +433,7 @@ function Testimonials() {
           role: 'Travel Blogger',
           content: 'I\'ve used dozens of travel sites, but none compare to Nomad Navigator. The interface is beautiful and finding deals is so easy.',
           rating: 5,
-          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%G%3D%3D',
           location: 'London, UK'
         },
         {
