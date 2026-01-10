@@ -1,5 +1,5 @@
 'use client';
-import axios, { AxiosResponse } from 'axios';
+import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 import { cache } from 'react';
 import type { Airport, Flight, FlightSearchParams, AirportOption, HotelSearchParams, Hotel } from '@/types/travel';
 
@@ -85,6 +85,44 @@ class TravelpayoutsApiService {
   async getFlightSearchResults(searchId: string) {
     const response = await this.realtimeApi.get(`/flights_search_results?search_id=${searchId}&with_request=true`);
     return response.data;
+  }
+  
+  async searchFlights(params: any): Promise<Flight[]> {
+    const searchId = await this.searchFlightsRealtime(params);
+    
+    let results: any = {};
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+        results = await this.getFlightSearchResults(searchId);
+        // The API might return results before it is 'over'
+        if (results.is_over || (results.tickets && results.tickets.length > 0)) {
+            break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        attempts++;
+    }
+
+    if (results.tickets) {
+        return results.tickets.map((ticket: any) => ({
+            value: ticket.price.value,
+            trip_class: 0,
+            origin: ticket.segments[0].origin_code,
+            destination: ticket.segments[0].destination_code,
+            depart_date: ticket.segments[0].departure.at,
+            return_date: ticket.segments[1] ? ticket.segments[1].departure.at : undefined,
+            number_of_changes: ticket.segments.reduce((acc: number, seg: any) => acc + seg.stops, 0),
+            duration: ticket.total_duration,
+            distance: 0, // not provided directly in this response
+            gate: 'Unknown',
+            link: ticket.search_url,
+            airline: ticket.segments[0].marketing_airline,
+            flight_number: ticket.segments[0].flight_number,
+        }));
+    }
+
+    return [];
   }
 
 
