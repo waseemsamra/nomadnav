@@ -1,4 +1,3 @@
-
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 // Types
@@ -125,18 +124,16 @@ class TravelpayoutsApiService {
         origin: params.origin,
         destination: params.destination,
         depart_date: params.depart_date,
-        token: API_TOKEN,
-        marker: MARKER,
+        token: API_TOKEN
       });
-
+  
       if (params.return_date) {
         searchParams.append('return_date', params.return_date);
       }
       if (params.trip_type) {
         searchParams.append('one_way', params.trip_type === 'oneway' ? 'true' : 'false');
       }
-
-      // Use the correct endpoint for flight search
+  
       const response = await axios.get<ApiResponse<Flight[]>>(
         `${API_BASE}/v2/prices/latest?${searchParams.toString()}`,
         {
@@ -144,22 +141,41 @@ class TravelpayoutsApiService {
           timeout: 15000,
         }
       );
-
+  
       if (!response.data.success) {
         console.error('API Error:', response.data.error);
         throw new Error(response.data.error || 'Failed to fetch flights');
       }
-
-      return response.data.data || [];
+  
+      const flightsWithLinks = (response.data.data || []).map(flight => {
+        const linkParams = new URLSearchParams({
+          origin_iata: flight.origin,
+          destination_iata: flight.destination,
+          depart_date: flight.depart_date,
+          adults: (params.passengers || 1).toString(),
+          children: '0',
+          infants: '0',
+          trip_class: flight.trip_class.toString(),
+          marker: MARKER,
+        });
+        if (flight.return_date) {
+          linkParams.append('return_date', flight.return_date);
+        }
+        return {
+          ...flight,
+          link: `/flights?${linkParams.toString()}`,
+        };
+      }).filter(flight => flight.link); // Ensure link is not empty
+  
+      return flightsWithLinks;
     } catch (error: any) {
-      console.error('Error searching flights:', error);
-
-      // Fallback to mock data for development
+      console.error('Error searching flights:', error.message);
+  
       if (process.env.NODE_ENV === 'development') {
         console.log('Using mock flight data for development');
         return this.getMockFlights(params);
       }
-
+  
       throw new Error(error.response?.data?.error || error.message || 'Failed to search flights');
     }
   }
@@ -224,8 +240,8 @@ class TravelpayoutsApiService {
       return options
         .filter(option => 
           option.label.toLowerCase().includes(searchTerm) ||
-          option.city.toLowerCase().includes(searchTerm) ||
-          option.country.toLowerCase().includes(searchTerm) ||
+          (option.city && option.city.toLowerCase().includes(searchTerm)) ||
+          (option.country && option.country.toLowerCase().includes(searchTerm)) ||
           option.value.toLowerCase() === searchTerm
         )
         .slice(0, 50);

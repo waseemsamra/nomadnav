@@ -1,6 +1,3 @@
-
-
-
 export interface Airline {
   code: string;
   name: string;
@@ -36,12 +33,13 @@ export interface HotelSearchParams {
 export interface SearchFormData {
     origin: string;
     destination: string;
-    dates: {
-        from: Date;
-        to?: Date;
-    };
-    travelers: number;
+    departDate: Date;
+    returnDate: Date;
+    tripType: 'round' | 'oneway';
+    passengers: number;
+    cabinClass: 'economy' | 'business' | 'first';
 }
+
 
 export interface FilterState {
   maxPrice: number;
@@ -50,12 +48,4 @@ export interface FilterState {
   sortBy: 'price' | 'duration' | 'departure';
   departureTime: [number, number];
   arrivalTime: [number, number];
-}
-
-export interface AirportOption {
-  value: string;
-  label: string;
-  city: string;
-  country: string;
-  fullLabel: string;
 }
