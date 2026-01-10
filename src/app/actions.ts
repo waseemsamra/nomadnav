@@ -4,6 +4,7 @@ import { personalizedTravelRecommendations } from '@/ai/flows/personalized-trave
 import { generateItinerarySuggestions } from '@/ai/flows/generate-itinerary-suggestions';
 import { mockUser } from '@/lib/placeholder-data';
 import { z } from 'zod';
+import { travelpayoutsApi, type Flight, type FlightSearchParams } from '@/services/travelpayoutsApi';
 
 export async function getPersonalizedRecommendations() {
   try {
@@ -64,5 +65,50 @@ export async function getItinerary(prevState: ItineraryState, formData: FormData
   } catch (error) {
     console.error(error);
     return { success: false, data: null, error: 'Failed to generate itinerary.' };
+  }
+}
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export async function searchFlightsAction(
+  params: FlightSearchParams
+): Promise<{ success: boolean; data?: Flight[]; error?: string }> {
+  try {
+    const searchId = await travelpayoutsApi.searchFlightsRealtime(params);
+    if (!searchId) {
+      throw new Error('Failed to initiate flight search.');
+    }
+
+    let attempts = 0;
+    const maxAttempts = 15;
+
+    while (attempts < maxAttempts) {
+      const results = await travelpayoutsApi.getFlightSearchResults(searchId);
+      
+      const tickets = results?.tickets || [];
+      if (tickets.length > 0) {
+        const flights: Flight[] = tickets.map((ticket: any) => ({
+          ...ticket,
+          value: ticket.price,
+          depart_date: ticket.departure_at,
+          return_date: ticket.return_at,
+          number_of_changes: ticket.transfers,
+          link: ticket.link,
+        }));
+        return { success: true, data: flights };
+      }
+
+      // If results are not ready, wait and try again
+      attempts++;
+      await sleep(2000); // 2-second delay between polling
+    }
+
+    // If no results after all attempts, return empty
+    return { success: true, data: [] };
+
+  } catch (error: any) {
+    console.error('[Flight Search Action Error]', error);
+    const errorMessage = error.response?.data?.message || error.message || 'An unknown error occurred during flight search.';
+    return { success: false, error: errorMessage };
   }
 }

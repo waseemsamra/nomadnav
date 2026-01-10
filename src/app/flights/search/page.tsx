@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { searchFlightsAction } from '@/app/actions';
 import { 
   Filter, 
   SortAsc, 
@@ -15,7 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Flight, travelpayoutsApi, FlightSearchParams } from '@/services/travelpayoutsApi';
+import type { Flight, FlightSearchParams } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -29,6 +29,7 @@ function SearchResultsContent() {
   const { toast } = useToast();
   
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
     maxPrice: 5000,
     maxStops: 2,
@@ -46,70 +47,43 @@ function SearchResultsContent() {
     trip_type: searchParams.get('trip_type') || 'round',
   }), [searchParams]);
 
-  const { data: searchId, error: searchIdError } = useQuery({
-    queryKey: ['flightSearchId', searchData],
-    queryFn: () => {
-        if (!searchData.origin || !searchData.destination || !searchData.depart_date) {
-            throw new Error('Missing search parameters');
-        }
-        hotToast.loading('Finding the best flights...');
-        return travelpayoutsApi.searchFlightsRealtime(searchData as FlightSearchParams);
-    },
-    enabled: !!searchData.origin && !!searchData.destination && !!searchData.depart_date,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-  });
-
-  const { data: searchResults, isLoading: resultsLoading, error: resultsError } = useQuery({
-    queryKey: ['flightSearchResults', searchId],
-    queryFn: async () => {
-      const results = await travelpayoutsApi.getFlightSearchResults(searchId!);
-      // The actual flight tickets are nested in the response
-      const tickets = results?.tickets || [];
-      return tickets.map((ticket: any) => ({
-        ...ticket,
-        value: ticket.price,
-        depart_date: ticket.departure_at,
-        return_date: ticket.return_at,
-        number_of_changes: ticket.transfers,
-        link: ticket.link,
-      }));
-    },
-    enabled: !!searchId,
-    refetchInterval: (data) => (data && data.length > 0 ? false : 2000), // poll every 2s until we get results
-    onSuccess: (data) => {
-        if (data && data.length > 0) {
-            hotToast.dismiss();
-            hotToast.success('We found flights for you!');
-            setFlights(data);
-        }
-    },
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-  });
-
   useEffect(() => {
-    if (searchIdError) {
-      hotToast.dismiss();
-      toast({
-        variant: "destructive",
-        title: "Search Failed",
-        description: searchIdError.message || "Could not initiate flight search."
-      });
-      router.push('/');
-    }
-  }, [searchIdError, router, toast]);
-
-  useEffect(() => {
-    if (resultsError) {
-        hotToast.dismiss();
+    const performSearch = async () => {
+      if (!searchData.origin || !searchData.destination || !searchData.depart_date) {
         toast({
-            variant: "destructive",
-            title: 'Failed to Load Flights',
-            description: resultsError.message || 'There was an error fetching flight data. Please try again later.'
+          variant: "destructive",
+          title: "Search Incomplete",
+          description: "Please go back and select an origin, destination, and date."
         });
-    }
-  }, [resultsError, toast]);
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      hotToast.loading('Finding the best flights...');
+      
+      const result = await searchFlightsAction(searchData as FlightSearchParams);
+
+      hotToast.dismiss();
+      setIsLoading(false);
+
+      if (result.success && result.data) {
+        if (result.data.length > 0) {
+          hotToast.success('We found flights for you!');
+        }
+        setFlights(result.data);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Search Failed",
+          description: result.error || "Could not retrieve flight results."
+        });
+      }
+    };
+
+    performSearch();
+  }, [searchData, router, toast]);
+
 
   const filteredFlights = useMemo(() => (flights || [])
     .filter(flight => {
@@ -145,8 +119,6 @@ function SearchResultsContent() {
     }
   };
   
-  const isLoading = resultsLoading || (flights.length === 0 && !resultsError);
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
