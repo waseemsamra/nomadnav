@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from '@/components/providers';
+import { TravelProvider } from '@/context/TravelContext';
 
 export const metadata: Metadata = {
   title: 'Nomad Navigator',
@@ -24,12 +25,14 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <Providers>
+          <TravelProvider>
             <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-grow">{children}</main>
             <Footer />
             </div>
             <Toaster />
+          </TravelProvider>
         </Providers>
       </body>
     </html>

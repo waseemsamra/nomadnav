@@ -1,4 +1,5 @@
 
+
 export interface Airport {
   code: string;
   name: string;
@@ -66,4 +67,14 @@ export interface HotelSearchParams {
   checkIn?: string;
   checkOut?: string;
   guests?: string | null;
+}
+
+export interface SearchFormData {
+    origin: string;
+    destination: string;
+    dates: {
+        from: Date;
+        to?: Date;
+    };
+    travelers: number;
 }
