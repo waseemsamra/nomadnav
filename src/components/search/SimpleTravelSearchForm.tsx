@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { getAirportOptions, type AirportOption } from '@/services/travelpayoutsApi';
+import { getAirportOptions } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
+import type { AirportOption } from '@/services/travelpayoutsApi';
 
 interface SearchFormData {
   origin: string;
@@ -27,24 +28,10 @@ interface SearchFormData {
   cabinClass: 'economy' | 'business' | 'first';
 }
 
-interface SimpleTravelSearchFormProps {
-  className?: string;
-}
-
-const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({ 
-  className = ''
-}) => {
+const SimpleTravelSearchForm: React.FC = () => {
   const router = useRouter();
-  const [isClient, setIsClient] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
-  const [searchInput, setSearchInput] = useState({
-    origin: '',
-    destination: '',
-  });
-  const [filteredAirports, setFilteredAirports] = useState<AirportOption[]>([]);
-  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
-  const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
+  const [airportOptions, setAirportOptions] = useState<{ value: string; label: string, city: string }[]>([]);
   const [formData, setFormData] = useState<SearchFormData>({
     origin: '',
     destination: '',
@@ -54,17 +41,18 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
     passengers: 1,
     cabinClass: 'economy',
   });
-  
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // Load airports on mount
   useEffect(() => {
     const loadAirports = async () => {
       try {
-        const options = await getAirportOptions();
-        setAirportOptions(options);
+        const options: AirportOption[] = await getAirportOptions();
+        const simplifiedOptions = options.map(opt => ({
+          value: opt.value,
+          label: `${opt.city} (${opt.value})`,
+          city: opt.city,
+        }));
+        setAirportOptions(simplifiedOptions);
       } catch (error) {
         console.error('Error loading airports:', error);
         toast.error('Failed to load airport data');
@@ -74,23 +62,10 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
     loadAirports();
   }, []);
 
-  // Filter airports based on search input
-  useEffect(() => {
-    if (searchInput.origin.trim()) {
-      const filtered = airportOptions.filter(option =>
-        (option.label && option.label.toLowerCase().includes(searchInput.origin.toLowerCase())) ||
-        (option.city && option.city.toLowerCase().includes(searchInput.origin.toLowerCase())) ||
-        (option.value && option.value.toLowerCase().includes(searchInput.origin.toLowerCase()))
-      ).slice(0, 10);
-      setFilteredAirports(filtered);
-    } else {
-      setFilteredAirports([]);
-    }
-  }, [searchInput.origin, airportOptions]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
     if (!formData.origin || !formData.destination) {
       toast.error('Please select origin and destination airports');
       return;
@@ -122,6 +97,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
         searchParams.append('return_date', format(formData.returnDate, 'yyyy-MM-dd'));
       }
 
+      console.log('Navigating with params:', Object.fromEntries(searchParams));
       router.push(`/flights/search?${searchParams.toString()}`);
       
     } catch (error) {
@@ -138,226 +114,161 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
       origin: prev.destination,
       destination: prev.origin,
     }));
-    setSearchInput(prev => ({
-      origin: prev.destination,
-      destination: prev.origin,
-    }));
   };
 
-  const selectAirport = (field: 'origin' | 'destination', airport: AirportOption) => {
-    setFormData(prev => ({ ...prev, [field]: airport.value }));
-    setSearchInput(prev => ({ ...prev, [field]: airport.label }));
-    
-    if (field === 'origin') {
-      setShowOriginDropdown(false);
-    } else {
-      setShowDestinationDropdown(false);
-    }
-  };
+  // Popular airports for quick selection
+  const popularAirports = [
+    { code: 'JFK', city: 'New York' },
+    { code: 'LAX', city: 'Los Angeles' },
+    { code: 'LHR', city: 'London' },
+    { code: 'CDG', city: 'Paris' },
+    { code: 'HND', city: 'Tokyo' },
+    { code: 'DXB', city: 'Dubai' },
+    { code: 'SIN', city: 'Singapore' },
+    { code: 'SYD', city: 'Sydney' },
+  ];
 
-  const popularAirports = airportOptions
-    .filter(opt => ['JFK', 'LAX', 'LHR', 'CDG', 'HND', 'DXB', 'SIN', 'SYD'].includes(opt.value))
-    .slice(0, 8);
-
-  if (!isClient) {
-    return null;
-  }
-  
   return (
-    <form 
-      onSubmit={handleSubmit} 
-      className={`bg-white rounded-2xl shadow-2xl p-6 ${className}`}
-    >
-      {/* Trip Type Toggle */}
-      <div className="flex gap-2 mb-6">
-        <button
-          type="button"
-          onClick={() => setFormData(prev => ({ ...prev, tripType: 'round' }))}
-          className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-            formData.tripType === 'round'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Round Trip
-        </button>
-        <button
-          type="button"
-          onClick={() => setFormData(prev => ({ ...prev, tripType: 'oneway' }))}
-          className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-            formData.tripType === 'oneway'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          One Way
-        </button>
-      </div>
+    <div className="bg-card rounded-2xl shadow-2xl p-6">
+      <form onSubmit={handleSubmit}>
+        {/* Trip Type */}
+        <div className="flex gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, tripType: 'round' }))}
+            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
+              formData.tripType === 'round'
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+          >
+            Round Trip
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, tripType: 'oneway' }))}
+            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
+              formData.tripType === 'oneway'
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+          >
+            One Way
+          </button>
+        </div>
 
-      {/* Airport Selection */}
-      <div className="relative mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Origin Airport */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Plane className="w-4 h-4 inline mr-1" />
-              From
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchInput.origin}
-                onChange={(e) => {
-                  setSearchInput(prev => ({ ...prev, origin: e.target.value }));
-                  setShowOriginDropdown(true);
-                }}
-                onFocus={() => setShowOriginDropdown(true)}
-                onBlur={() => setTimeout(() => setShowOriginDropdown(false), 200)}
-                placeholder="City or airport"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>
-            
-            {showOriginDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                {filteredAirports.length > 0 ? (
-                  filteredAirports.map((airport) => (
-                    <button
-                      key={airport.value}
-                      type="button"
-                      onMouseDown={() => selectAirport('origin', airport)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                    >
-                      <div className="font-medium">{airport.city || airport.label}</div>
-                      <div className="text-sm text-gray-500">
-                        {airport.country} ({airport.value})
-                      </div>
-                    </button>
-                  ))
-                ) : searchInput.origin.trim() ? (
-                  <div className="px-4 py-3 text-gray-500">
-                    No airports found
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          {/* Destination Airport */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Plane className="w-4 h-4 inline mr-1" />
-              To
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchInput.destination}
-                onChange={(e) => {
-                  setSearchInput(prev => ({ ...prev, destination: e.target.value }));
-                  setShowDestinationDropdown(true);
-                }}
-                onFocus={() => setShowDestinationDropdown(true)}
-                onBlur={() => setTimeout(() => setShowDestinationDropdown(false), 200)}
-                placeholder="City or airport"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>
-            
-            {showDestinationDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                {airportOptions
-                  .filter(option => {
-                      if (!searchInput.destination.trim()) return false;
-                      const searchTerm = searchInput.destination.toLowerCase();
-                      return (option.label && option.label.toLowerCase().includes(searchTerm)) ||
-                             (option.city && option.city.toLowerCase().includes(searchTerm)) ||
-                             (option.value && option.value.toLowerCase().includes(searchTerm))
-                    }
-                  )
-                  .slice(0, 10)
-                  .map((airport) => (
-                    <button
-                      key={airport.value}
-                      type="button"
-                      onMouseDown={() => selectAirport('destination', airport)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                    >
-                      <div className="font-medium">{airport.city || airport.label}</div>
-                      <div className="text-sm text-gray-500">
-                        {airport.country} ({airport.value})
-                      </div>
-                    </button>
+        {/* Airport Selection */}
+        <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                <Plane className="w-4 h-4 inline mr-1" />
+                From
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.origin}
+                  onChange={(e) => setFormData(prev => ({ ...prev, origin: e.target.value }))}
+                  className="w-full pl-10 pr-4 py-3 border border-input bg-background rounded-lg 
+                           focus:ring-2 focus:ring-ring focus:border-ring appearance-none"
+                  required
+                >
+                  <option value="">Select airport</option>
+                  {airportOptions.map((airport) => (
+                    <option key={airport.value} value={airport.value}>
+                      {airport.label}
+                    </option>
                   ))}
+                </select>
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               </div>
-            )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                <Plane className="w-4 h-4 inline mr-1" />
+                To
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.destination}
+                  onChange={(e) => setFormData(prev => ({ ...prev, destination: e.target.value }))}
+                  className="w-full pl-10 pr-4 py-3 border border-input bg-background rounded-lg 
+                           focus:ring-2 focus:ring-ring focus:border-ring appearance-none"
+                  required
+                >
+                  <option value="">Select airport</option>
+                  {airportOptions.map((airport) => (
+                    <option key={airport.value} value={airport.value}>
+                      {airport.label}
+                    </option>
+                  ))}
+                </select>
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              </div>
+            </div>
           </div>
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-3 hidden md:block">
+                 <button
+                    type="button"
+                    onClick={handleSwapAirports}
+                    className="bg-background border-2 border-border rounded-full p-2 
+                                hover:bg-muted hover:border-ring transition-colors
+                                shadow-md z-10"
+                    title="Swap airports"
+                >
+                    <ArrowRightLeft className="w-5 h-5 text-muted-foreground" />
+                </button>
+            </div>
         </div>
 
-        {/* Swap Button */}
-        <button
-          type="button"
-          onClick={handleSwapAirports}
-          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 
-                    bg-white border-2 border-gray-300 rounded-full p-2 
-                    hover:bg-gray-50 hover:border-blue-500 transition-colors
-                    shadow-md z-10"
-          title="Swap airports"
-        >
-          <ArrowRightLeft className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-
-      {/* Dates and Passengers */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Departure Date */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Calendar className="w-4 h-4 inline mr-1" />
-            Departure
-          </label>
-          <input
-            type="date"
-            value={format(formData.departDate, 'yyyy-MM-dd')}
-            onChange={(e) => setFormData(prev => ({ 
-              ...prev, 
-              departDate: new Date(e.target.value) 
-            }))}
-            min={format(new Date(), 'yyyy-MM-dd')}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        {/* Return Date (only for round trips) */}
-        {formData.tripType === 'round' && (
+        {/* Dates */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               <Calendar className="w-4 h-4 inline mr-1" />
-              Return
+              Departure
             </label>
             <input
               type="date"
-              value={format(formData.returnDate, 'yyyy-MM-dd')}
+              value={format(formData.departDate, 'yyyy-MM-dd')}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
-                returnDate: new Date(e.target.value) 
+                departDate: new Date(e.target.value) 
               }))}
-              min={format(formData.departDate, 'yyyy-MM-dd')}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              min={format(new Date(), 'yyyy-MM-dd')}
+              className="w-full px-4 py-3 border border-input bg-background rounded-lg 
+                       focus:ring-2 focus:ring-ring focus:border-ring"
+              required
             />
           </div>
-        )}
+
+          {formData.tripType === 'round' && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Return
+              </label>
+              <input
+                type="date"
+                value={format(formData.returnDate, 'yyyy-MM-dd')}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  returnDate: new Date(e.target.value) 
+                }))}
+                min={format(formData.departDate, 'yyyy-MM-dd')}
+                className="w-full px-4 py-3 border border-input bg-background rounded-lg 
+                         focus:ring-2 focus:ring-ring focus:border-ring"
+                required={formData.tripType === 'round'}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Passengers & Class */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               <Users className="w-4 h-4 inline mr-1" />
               Passengers
             </label>
@@ -367,10 +278,10 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                 ...prev, 
                 passengers: parseInt(e.target.value) 
               }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-3 border border-input bg-background rounded-lg 
+                       focus:ring-2 focus:ring-ring focus:border-ring"
             >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+              {[1, 2, 3, 4, 5, 6].map(num => (
                 <option key={num} value={num}>
                   {num} {num === 1 ? 'Passenger' : 'Passengers'}
                 </option>
@@ -379,8 +290,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Class
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Cabin Class
             </label>
             <select
               value={formData.cabinClass}
@@ -388,8 +299,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                 ...prev, 
                 cabinClass: e.target.value as 'economy' | 'business' | 'first' 
               }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-3 border border-input bg-background rounded-lg 
+                       focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="economy">Economy</option>
               <option value="business">Business</option>
@@ -397,40 +308,38 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Popular Airports */}
-      <div className="mb-6">
-        <p className="text-sm text-gray-600 mb-2">Popular airports:</p>
-        <div className="flex flex-wrap gap-2">
-          {popularAirports.map((airport) => (
-            <button
-              key={airport.value}
-              type="button"
-              onClick={() => {
-                if (!formData.origin) {
-                  selectAirport('origin', airport);
-                } else if (!formData.destination) {
-                  selectAirport('destination', airport);
-                }
-              }}
-              className="text-sm bg-blue-50 text-blue-600 px-3 py-2 rounded-lg 
-                       hover:bg-blue-100 transition-colors border border-blue-100"
-            >
-              {airport.city || airport.value}
-            </button>
-          ))}
+        {/* Quick Airport Selection */}
+        <div className="mb-8">
+          <p className="text-sm text-muted-foreground mb-3">Popular airports:</p>
+          <div className="flex flex-wrap gap-2">
+            {popularAirports.map((airport) => (
+              <button
+                key={airport.code}
+                type="button"
+                onClick={() => {
+                  if (!formData.origin) {
+                    setFormData(prev => ({ ...prev, origin: airport.code }));
+                  } else if (!formData.destination) {
+                    setFormData(prev => ({ ...prev, destination: airport.code }));
+                  }
+                }}
+                className="text-sm bg-accent/20 text-accent-foreground px-3 py-2 rounded-lg 
+                         hover:bg-accent/30 transition-colors border border-accent/20"
+              >
+                {airport.city} ({airport.code})
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Search Button */}
-      <div>
+        {/* Search Button */}
         <Button
           type="submit"
           disabled={loading || !formData.origin || !formData.destination}
           className="w-full py-4 text-lg font-semibold rounded-xl 
-                   bg-gradient-to-r from-blue-600 to-purple-600 
-                   hover:from-blue-700 hover:to-purple-700 
+                   bg-gradient-to-r from-primary to-accent
+                   hover:opacity-90
                    transition-all duration-300 transform hover:-translate-y-0.5 
                    shadow-lg hover:shadow-xl"
         >
@@ -446,8 +355,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
             </>
           )}
         </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 };
 
