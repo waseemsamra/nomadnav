@@ -248,10 +248,8 @@ class TravelpayoutsApiService {
           label: `${airport.city_name || airport.name} (${airport.code})`,
           city: airport.city_name,
           country: airport.country_name,
-          fullLabel: `${airport.city_name || airport.name} (${airport.code}) - ${airport.country_name}`,
         }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .slice(0, 100); // Limit for performance
+        .sort((a, b) => a.label.localeCompare(b.label));
     } catch (error) {
       console.error('Error getting airport options:', error);
       return this.getStaticAirportOptions();
@@ -259,28 +257,35 @@ class TravelpayoutsApiService {
   }
 
   async searchAirports(query: string): Promise<AirportOption[]> {
+    if (!query) {
+      return [];
+    }
     try {
-      const options = await this.getAirportOptions();
-      
-      if (!query.trim()) {
-        return options.slice(0, 20); // Return popular airports
+      const response = await axios.get(
+        `${API_BASE}/v1/suggests/airports`,
+        {
+          params: {
+            q: query,
+            lang: 'en'
+          }
+        }
+      );
+
+      if (response.data && response.data.suggestions) {
+        return response.data.suggestions.map((airport: any) => ({
+          value: airport.iata,
+          label: `${airport.name} (${airport.iata})`,
+          city: airport.city,
+          country: airport.country,
+        }));
       }
-      
-      const searchTerm = query.toLowerCase().trim();
-      
-      return options
-        .filter(option => 
-          option.label.toLowerCase().includes(searchTerm) ||
-          option.city.toLowerCase().includes(searchTerm) ||
-          option.country.toLowerCase().includes(searchTerm) ||
-          option.value.toLowerCase() === searchTerm
-        )
-        .slice(0, 20);
+      return [];
     } catch (error) {
-      console.error('Error searching airports:', error);
-      return this.getStaticAirportOptions();
+      console.error('Error searching airports live:', error);
+      return []; // Return empty array on error
     }
   }
+
 
   // ==================== STATIC DATA (Fallbacks) ====================
   private getStaticAirports(): Airport[] {
@@ -404,7 +409,6 @@ class TravelpayoutsApiService {
       label: `${airport.city_name} (${airport.code})`,
       city: airport.city_name,
       country: airport.country_name,
-      fullLabel: `${airport.city_name} (${airport.code}) - ${airport.country_name}`,
     }));
   }
 
@@ -557,3 +561,5 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { AirportOption, FlightSearchParams };
+
+    
