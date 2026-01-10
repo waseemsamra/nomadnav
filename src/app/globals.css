@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -64,5 +65,315 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+  
+  @keyframes zoomInOut {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+}
+
+@layer components {
+  .hero-section {
+    @apply relative min-h-[90vh] flex items-center overflow-hidden;
+  }
+
+  .hero-background {
+    @apply absolute inset-0 bg-cover bg-center bg-fixed;
+    animation: zoomInOut 20s infinite alternate;
+  }
+
+  .hero-overlay {
+    @apply absolute inset-0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+    mix-blend-mode: multiply;
+  }
+
+  .hero-content {
+    @apply relative z-[2] max-w-4xl mx-auto px-5 text-center text-white;
+  }
+
+  .hero-title {
+    @apply text-5xl font-extrabold leading-tight mb-6;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    animation: fadeInUp 1s ease-out;
+  }
+
+  .hero-subtitle {
+    @apply text-lg mb-8 opacity-90 max-w-2xl mx-auto leading-relaxed;
+  }
+
+  .hero-buttons {
+    @apply flex gap-4 justify-center flex-wrap;
+  }
+
+  .btn-primary, .btn-secondary {
+    @apply py-4 px-8 rounded-full font-semibold text-base transition-all duration-300 inline-flex items-center justify-center no-underline cursor-pointer;
+  }
+
+  .btn-primary {
+    @apply text-white border-none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    @apply text-white;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  .main-search-section {
+    @apply py-16 -mt-20 relative z-10;
+  }
+
+  .search-wrapper {
+    @apply bg-white rounded-2xl p-8 shadow-2xl;
+  }
+  
+  .search-card-animated {
+    animation: slideUp 0.8s ease-out;
+  }
+
+  .section-header, .search-header {
+    @apply text-center mb-8;
+  }
+
+  .section-title {
+    @apply text-4xl font-bold text-gray-800 mb-2;
+  }
+
+  .section-subtitle {
+    @apply text-lg text-gray-500 max-w-2xl mx-auto;
+  }
+
+  .features-section {
+    @apply py-24;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+
+  .features-grid {
+    @apply grid gap-8 mt-12;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .feature-card {
+    @apply bg-white p-8 rounded-2xl text-center transition-all duration-300 border border-gray-200;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-10px);
+    @apply shadow-xl border-purple-400;
+  }
+  
+  .feature-icon-wrapper {
+    @apply w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6;
+  }
+  
+  .feature-icon {
+    @apply w-10 h-10;
+  }
+  
+  .feature-title {
+    @apply text-xl font-semibold text-gray-800 mb-3;
+  }
+
+  .feature-description {
+    @apply text-gray-500 leading-relaxed;
+  }
+  
+  .destinations-section {
+    @apply py-24;
+  }
+
+  .destination-grid-container {
+    @apply mt-12;
+  }
+
+  .destination-filters {
+    @apply flex gap-3 justify-center flex-wrap mb-12;
+  }
+
+  .destination-filter {
+    @apply py-2 px-6 rounded-full border-2 border-gray-200 bg-white text-gray-500 font-medium cursor-pointer transition-all duration-300;
+  }
+  
+  .destination-filter:hover {
+    @apply border-purple-400 text-purple-500;
+  }
+
+  .destination-filter.active {
+    @apply text-white border-transparent;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .destinations-grid {
+    @apply grid gap-8 mb-16;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+  
+  .destination-card {
+    @apply bg-white rounded-2xl overflow-hidden shadow-lg transition-all duration-300 opacity-0;
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  
+  .destination-card:hover {
+    transform: translateY(-10px);
+    @apply shadow-2xl;
+  }
+  
+  .destination-image {
+    @apply relative h-52 overflow-hidden;
+  }
+  
+  .destination-image img {
+    @apply w-full h-full object-cover transition-transform duration-500;
+  }
+  
+  .destination-card:hover .destination-image img {
+    transform: scale(1.1);
+  }
+
+  .destination-overlay {
+    @apply absolute top-4 left-4 right-4 flex justify-between items-start;
+  }
+  
+  .destination-wishlist {
+    @apply bg-white w-10 h-10 rounded-full flex items-center justify-center border-none cursor-pointer text-2xl text-red-500 transition-all duration-300;
+  }
+
+  .destination-wishlist:hover {
+    @apply bg-red-50;
+    transform: scale(1.1);
+  }
+  
+  .destination-price {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    @apply py-2 px-4 rounded-full font-semibold text-gray-800;
+  }
+  
+  .destination-content {
+    @apply p-6;
+  }
+
+  .destination-header {
+    @apply flex justify-between items-start mb-2;
+  }
+  
+  .destination-name {
+    @apply text-xl font-semibold text-gray-800;
+  }
+  
+  .destination-rating {
+    @apply flex items-center gap-1 text-amber-500 font-semibold;
+  }
+  
+  .star-icon {
+    @apply w-4 h-4 fill-current;
+  }
+  
+  .destination-location {
+    @apply flex items-center gap-2 text-gray-500 text-sm mb-3;
+  }
+
+  .location-icon {
+    @apply w-4 h-4;
+  }
+
+  .destination-description {
+    @apply text-gray-500 text-sm leading-relaxed mb-6;
+  }
+  
+  .destination-footer {
+    @apply flex gap-3;
+  }
+  
+  .destination-explore, .destination-quick-view {
+    @apply flex-1 py-3 rounded-lg font-medium text-sm cursor-pointer transition-all duration-300 text-center no-underline;
+  }
+  
+  .destination-explore {
+    @apply text-white border-none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .destination-explore:hover {
+    opacity: 0.9;
+  }
+
+  .destination-quick-view {
+    @apply bg-white text-purple-500;
+    border: 2px solid #8B5CF6;
+  }
+
+  .destination-quick-view:hover {
+    @apply bg-gray-50;
+  }
+  
+  .cheap-flights-section {
+    @apply mt-16;
+  }
+  
+  .cheap-flights-title {
+    @apply text-2xl font-semibold text-gray-800 mb-6 text-center;
+  }
+  
+  .cheap-flights-grid {
+    @apply grid gap-4 mb-8;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+
+  .cheap-flight-card {
+    @apply bg-white p-6 rounded-xl shadow-md flex items-center justify-between transition-all duration-300;
+  }
+  
+  .cheap-flight-card:hover {
+    transform: translateY(-4px);
+    @apply shadow-lg;
+  }
+  
+  .cheap-flight-route {
+    @apply flex items-center gap-2 font-medium;
+  }
+
+  .destination-cta {
+    @apply text-center;
+  }
+
+  .view-all-destinations {
+    @apply inline-block py-3 px-8 rounded-lg font-semibold cursor-pointer transition-all duration-300 no-underline;
+    @apply bg-white text-purple-500;
+    border: 2px solid #8B5CF6;
+  }
+  
+  .view-all-destinations:hover {
+    @apply bg-gray-50;
   }
 }

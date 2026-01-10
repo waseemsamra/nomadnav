@@ -2,45 +2,75 @@
   "placeholderImages": [
     {
       "id": "hero",
-      "description": "A beautiful tropical beach with a plane flying overhead",
-      "imageUrl": "https://images.unsplash.com/photo-1571043281665-9debfed10719?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx0cm9waWNhbCUyMGJlYWNofGVufDB8fHx8MTc2ODA1NTg0OXww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "tropical beach"
+      "description": "Airplane flying in the sky",
+      "imageUrl": "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+      "imageHint": "airplane sky"
     },
     {
-      "id": "hotel-1",
-      "description": "A modern hotel room with a view",
-      "imageUrl": "https://images.unsplash.com/photo-1711059985570-4c32ed12a12c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxob3RlbCUyMHJvb218ZW58MHx8fHwxNzY3OTgyMjQwfDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "hotel room"
-    },
-    {
-      "id": "hotel-2",
-      "description": "A luxury hotel lobby",
-      "imageUrl": "https://images.unsplash.com/photo-1625244724120-1fd1d34d00f6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxob3RlbCUyMGxvYmJ5fGVufDB8fHx8MTc2ODAyMDY1MXww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "hotel lobby"
-    },
-    {
-      "id": "flight-dest-1",
+      "id": "dest-paris",
       "description": "Paris",
-      "imageUrl": "https://images.unsplash.com/photo-1502602898657-3e91760c0337?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      "imageHint": "Paris city"
+      "summary": "The city of love and lights, offering iconic landmarks and romantic strolls.",
+      "country": "France",
+      "imageUrl": "https://images.unsplash.com/photo-1502602890543-3e327cf5d0b9",
+      "imageHint": "Paris city eiffel",
+      "price": 299,
+      "rating": 4.8,
+      "iata": "CDG"
     },
     {
-      "id": "flight-dest-2",
-      "description": "New York",
-      "imageUrl": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      "imageHint": "New York city"
-    },
-    {
-      "id": "flight-dest-3",
-      "description": "London",
-      "imageUrl": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      "imageHint": "London city"
-    },
-    {
-      "id": "flight-dest-4",
+      "id": "dest-tokyo",
       "description": "Tokyo",
-      "imageUrl": "https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      "imageHint": "Tokyo city"
+      "summary": "A vibrant metropolis blending ancient tradition with futuristic innovation.",
+      "country": "Japan",
+      "imageUrl": "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf",
+      "imageHint": "Tokyo city street",
+      "price": 599,
+      "rating": 4.9,
+      "iata": "HND"
+    },
+    {
+      "id": "dest-new-york",
+      "description": "New York",
+      "summary": "The city that never sleeps, full of energy, culture, and endless possibilities.",
+      "country": "USA",
+      "imageUrl": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9",
+      "imageHint": "New York city",
+      "price": 399,
+      "rating": 4.7,
+      "iata": "JFK"
+    },
+    {
+      "id": "dest-bali",
+      "description": "Bali",
+      "summary": "A tropical paradise offering stunning beaches, lush rice paddies, and rich culture.",
+      "country": "Indonesia",
+      "imageUrl": "https://images.unsplash.com/photo-1537953773345-d172ccf13cf1",
+      "imageHint": "Bali temple",
+      "price": 499,
+      "rating": 4.9,
+      "iata": "DPS"
+    },
+    {
+      "id": "dest-rome",
+      "description": "Rome",
+      "summary": "The Eternal City, where ancient history and vibrant street life collide.",
+      "country": "Italy",
+      "imageUrl": "https://images.unsplash.com/photo-1552832230-c0197dd311b5",
+      "imageHint": "Rome colosseum",
+      "price": 349,
+      "rating": 4.6,
+      "iata": "FCO"
+    },
+    {
+      "id": "dest-dubai",
+      "description": "Dubai",
+      "summary": "A modern marvel in the desert, known for luxury shopping and futuristic architecture.",
+      "country": "UAE",
+      "imageUrl": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c",
+      "imageHint": "Dubai skyline",
+      "price": 449,
+      "rating": 4.8,
+      "iata": "DXB"
     },
     {
       "id": "user-avatar",
