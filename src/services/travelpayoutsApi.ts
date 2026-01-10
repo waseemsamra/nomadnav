@@ -1,3 +1,4 @@
+
 'use client';
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 import { cache } from 'react';
@@ -89,8 +90,8 @@ class TravelpayoutsApiService {
         children: 0,
         infants: 0,
       },
-      cabin_class: cabinClassMapping[params.cabin_class as keyof typeof cabinClassMapping] || 'Y',
       marker: MARKER,
+      cabin_class: cabinClassMapping[params.cabin_class as keyof typeof cabinClassMapping] || 'Y',
       "know_english": "true"
     };
     
