@@ -76,6 +76,12 @@ class TravelpayoutsApiService {
       });
     }
 
+    const cabinClassMapping = {
+        economy: 'Y',
+        business: 'C',
+        first: 'F',
+    };
+
     const searchPayload = {
       segments: segments,
       passengers: {
@@ -83,7 +89,7 @@ class TravelpayoutsApiService {
         children: 0,
         infants: 0,
       },
-      class: 'Y', // Y for economy
+      cabin_class: cabinClassMapping[params.cabin_class as keyof typeof cabinClassMapping] || 'Y',
       marker: MARKER,
       "know_english": "true"
     };
