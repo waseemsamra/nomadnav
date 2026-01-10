@@ -31,22 +31,25 @@ function SearchResults() {
   };
 
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold font-headline mb-2">
-        Search Results for{' '}
-        <span className="text-primary capitalize">{destination}</span>
-      </h1>
-      <p className="text-muted-foreground mb-8">
-        Review the available options below and make your selection.
-      </p>
-
-      <div className="flex flex-col gap-8">
-        {(type === 'flights' || type === 'combined') && (
-          <FlightResults params={flightParams} />
-        )}
-        {(type === 'hotels' || type === 'combined') && (
-          <HotelResults params={hotelParams} />
-        )}
+    <div className="bg-primary/10">
+      <div className="container py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          <h1 className="text-3xl font-bold font-headline mb-2">
+            Search Results for{' '}
+            <span className="text-primary capitalize">{destination}</span>
+          </h1>
+          <p className="text-muted-foreground mb-8">
+            Review the available options below and make your selection.
+          </p>
+          <div className="flex flex-col gap-8">
+            {(type === 'flights' || type === 'combined') && (
+              <FlightResults params={flightParams} />
+            )}
+            {(type === 'hotels' || type === 'combined') && (
+              <HotelResults params={hotelParams} />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
