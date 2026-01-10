@@ -11,22 +11,22 @@ function SearchResults() {
   const type = searchParams.get('type') || 'flights';
   const destination = searchParams.get('destination');
   const origin = searchParams.get('origin');
-  const checkin = searchParams.get('checkin');
-  const checkout = searchParams.get('checkout');
+  const depart_date = searchParams.get('depart_date');
+  const return_date = searchParams.get('return_date');
   const travelers = searchParams.get('travelers');
 
   const flightParams = {
     origin,
     destination,
-    depart_date: checkin,
-    return_date: checkout,
+    depart_date: depart_date,
+    return_date: return_date,
     passengers: travelers,
   };
 
   const hotelParams = {
     location: destination,
-    checkIn: checkin,
-    checkOut: checkout,
+    checkIn: depart_date,
+    checkOut: return_date,
     guests: travelers,
   };
 

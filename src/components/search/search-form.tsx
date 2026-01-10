@@ -60,11 +60,11 @@ export function SearchForm() {
     const params = new URLSearchParams({
       type: activeTab,
       destination: data.destination,
-      checkin: format(data.dates.from, 'yyyy-MM-dd'),
+      depart_date: format(data.dates.from, 'yyyy-MM-dd'),
       travelers: String(data.travelers),
     });
     if (data.dates.to) {
-      params.set('checkout', format(data.dates.to, 'yyyy-MM-dd'));
+      params.set('return_date', format(data.dates.to, 'yyyy-MM-dd'));
     }
     router.push(`/search?${params.toString()}`);
   }
