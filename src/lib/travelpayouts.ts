@@ -11,6 +11,14 @@ import {
   HotelSearchParams
 } from '../types/travel';
 
+if (!process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN) {
+    throw new Error('Missing required environment variable: NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN');
+}
+if (!process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER) {
+    throw new Error('Missing required environment variable: NEXT_PUBLIC_TRAVELPAYOUTS_MARKER');
+}
+
+
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN as string;
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.travelpayouts.com';
 const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER as string;
@@ -202,7 +210,7 @@ class TravelpayoutsApi {
   // Static Data APIs
   async getAirports(): Promise<Airport[]> {
     return this.fetchWithCache('airports', async () => {
-      const response: AxiosResponse<Airport[]> = await axios.get(`${API_BASE}/data/en/airports.json`);
+      const response: AxiosResponse<Airport[]> = await axios.get(`https://api.travelpayouts.com/data/en/airports.json`);
       return response.data;
     });
   }
