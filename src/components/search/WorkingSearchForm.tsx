@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
@@ -21,8 +21,8 @@ import type { AirportOption } from '@/services/travelpayoutsApi';
 interface SearchFormData {
   origin: AirportOption | null;
   destination: AirportOption | null;
-  departDate: Date;
-  returnDate: Date;
+  departDate: Date | null;
+  returnDate: Date | null;
   tripType: 'round' | 'oneway';
   passengers: number;
   cabinClass: 'economy' | 'business' | 'first';
@@ -34,12 +34,20 @@ const WorkingSearchForm: React.FC = () => {
   const [formData, setFormData] = useState<SearchFormData>({
     origin: null,
     destination: null,
-    departDate: new Date(),
-    returnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    departDate: null,
+    returnDate: null,
     tripType: 'round',
     passengers: 1,
     cabinClass: 'economy',
   });
+
+  useEffect(() => {
+    setFormData(prev => ({
+        ...prev,
+        departDate: new Date(),
+        returnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    }));
+  }, []);
 
   const loadAirportOptions = async (inputValue: string): Promise<AirportOption[]> => {
     if (inputValue.length < 2) {
@@ -64,12 +72,17 @@ const WorkingSearchForm: React.FC = () => {
       return;
     }
 
+    if (!formData.departDate) {
+        toast.error('Please select a departure date');
+        return;
+    }
+    
     if (formData.origin.value === formData.destination.value) {
       toast.error('Origin and destination cannot be the same');
       return;
     }
 
-    if (formData.tripType === 'round' && formData.departDate > formData.returnDate) {
+    if (formData.tripType === 'round' && (!formData.returnDate || formData.departDate > formData.returnDate)) {
       toast.error('Return date must be after departure date');
       return;
     }
@@ -86,7 +99,7 @@ const WorkingSearchForm: React.FC = () => {
         trip_type: formData.tripType,
       });
 
-      if (formData.tripType === 'round') {
+      if (formData.tripType === 'round' && formData.returnDate) {
         searchParams.append('return_date', format(formData.returnDate, 'yyyy-MM-dd'));
       }
 
@@ -209,7 +222,7 @@ const WorkingSearchForm: React.FC = () => {
             </label>
             <input
               type="date"
-              value={format(formData.departDate, 'yyyy-MM-dd')}
+              value={formData.departDate ? format(formData.departDate, 'yyyy-MM-dd') : ''}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
                 departDate: new Date(e.target.value) 
@@ -229,12 +242,12 @@ const WorkingSearchForm: React.FC = () => {
               </label>
               <input
                 type="date"
-                value={format(formData.returnDate, 'yyyy-MM-dd')}
+                value={formData.returnDate ? format(formData.returnDate, 'yyyy-MM-dd') : ''}
                 onChange={(e) => setFormData(prev => ({ 
                   ...prev, 
                   returnDate: new Date(e.target.value) 
                 }))}
-                min={format(formData.departDate, 'yyyy-MM-dd')}
+                min={formData.departDate ? format(formData.departDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
                 className="w-full px-4 py-3 border border-input bg-background rounded-lg 
                          focus:ring-2 focus:ring-ring focus:border-ring"
                 required={formData.tripType === 'round'}
@@ -339,5 +352,6 @@ const WorkingSearchForm: React.FC = () => {
 };
 
 export default WorkingSearchForm;
+    
 
     

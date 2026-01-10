@@ -177,7 +177,11 @@ function Header() {
 
 
 function Footer() {
-  const currentYear = new Date().getFullYear();
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const footerLinks = {
     Company: [
@@ -278,7 +282,7 @@ function Footer() {
         
         <div className="footer-bottom">
           <div className="footer-copyright">
-            © {currentYear} Nomad Navigator. All rights reserved.
+            © {currentYear || new Date().getFullYear()} Nomad Navigator. All rights reserved.
           </div>
           <div className="footer-meta">
             <div className="footer-made-with">
@@ -326,3 +330,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
