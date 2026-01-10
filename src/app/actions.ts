@@ -23,7 +23,19 @@ const itinerarySchema = z.object({
   destination: z.string().min(2, { message: 'Please enter a valid destination.' }),
   dates: z.string().min(5, { message: 'Please enter valid dates.' }),
   interests: z.string().min(3, { message: 'Please tell us your interests.' }),
+}).superRefine((data, ctx) => {
+  if (data.destination && data.interests && data.destination.toLowerCase().includes(data.interests.toLowerCase())) {
+    // This is a simple example. A more sophisticated check might be needed.
+    if (data.destination === data.interests) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Destination and interests should not be the same.",
+        path: ["interests"],
+      });
+    }
+  }
 });
+
 
 type ItineraryState = {
   success: boolean;

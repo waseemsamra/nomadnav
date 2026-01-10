@@ -27,7 +27,22 @@ const searchSchema = z.object({
     from: z.date({ required_error: "A date is required."}),
     to: z.date().optional(),
   }),
-  travelers: z.coerce.number().min(1, { message: 'At least one traveler is required.' }),
+  travelers: z.coerce.number().min(1, { message: 'At least one traveler is required.' }).max(9, { message: "Maximum 9 travelers."}),
+}).superRefine((data, ctx) => {
+  if (data.origin && data.destination && data.origin === data.destination) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Origin and destination cannot be the same.",
+      path: ["destination"],
+    });
+  }
+  if (data.dates.from && data.dates.to && data.dates.from > data.dates.to) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Return date must be after departure date.",
+      path: ["dates"],
+    });
+  }
 });
 
 type SearchFormValues = z.infer<typeof searchSchema>;
