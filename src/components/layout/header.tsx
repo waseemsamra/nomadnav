@@ -13,8 +13,8 @@ export function Header() {
           </Link>
         </div>
         <nav className="flex items-center space-x-6 text-sm font-medium">
-          <Link href="/#search" className="transition-colors hover:text-primary">Flights</Link>
-          <Link href="/#search" className="transition-colors hover:text-primary">Hotels</Link>
+          <Link href="/search?type=flights" className="transition-colors hover:text-primary">Flights</Link>
+          <Link href="/search?type=hotels" className="transition-colors hover:text-primary">Hotels</Link>
           <Link href="/itinerary-planner" className="transition-colors hover:text-primary">Itinerary Planner</Link>
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
