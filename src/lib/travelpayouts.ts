@@ -68,14 +68,15 @@ export const travelpayoutsApi = {
       },
       trip_class: 'Y', // Y for economy
       marker: MARKER,
+      "know_english": "true"
     };
     
-    const response = await api.post('/api/v3/create_search', searchPayload);
+    const response = await api.post('https://api.travelpayouts.com/api/v3/create_search', searchPayload);
     return response.data.search_id;
   },
 
   getFlightSearchResults: async (searchId: string) => {
-    const response = await api.get(`/api/v3/flights_search_results?search_id=${searchId}`);
+    const response = await api.get(`https://api.travelpayouts.com/api/v3/flights_search_results?search_id=${searchId}&with_request=true`);
     return response.data;
   },
 
@@ -144,7 +145,7 @@ export const travelpayoutsApi = {
 
   getAirlines: async () => {
     return fetchWithCache(
-      `${API_BASE}/data/en/airlines.json`,
+      `https://api.travelpayouts.com/data/en/airlines.json`,
       airlinesCache,
       (data) => { airlinesCache = data; }
     );
