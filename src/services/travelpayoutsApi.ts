@@ -1,4 +1,6 @@
 
+'use client';
+
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 // Types
@@ -65,15 +67,21 @@ if (!API_TOKEN) {
 
 class TravelpayoutsApiService {
   private static instance: TravelpayoutsApiService;
-  private flightSearchApi: AxiosInstance;
+  private api: AxiosInstance;
   private cache: {
     airports: Airport[] | null;
     lastUpdated: number;
   };
 
   private constructor() {
-    this.flightSearchApi = axios.create({
-        timeout: 30000,
+    this.api = axios.create({
+      baseURL: API_BASE,
+      timeout: 30000,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Access-Token': API_TOKEN,
+      },
     });
 
     this.cache = {
@@ -88,63 +96,32 @@ class TravelpayoutsApiService {
     }
     return TravelpayoutsApiService.instance;
   }
-
-  private getApiHeaders() {
-    return {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'X-Access-Token': API_TOKEN,
-    };
-  }
   
   private shouldUseCache(maxAge: number = 24 * 60 * 60 * 1000): boolean {
     return Date.now() - this.cache.lastUpdated < maxAge;
   }
 
-  async searchFlightsRealtime(params: FlightSearchParams): Promise<string> {
-      const cabinClassMapping: { [key: string]: string } = {
-          economy: 'Y',
-          business: 'C',
-          first: 'F',
-      };
-
-      const segments = [{
+  async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
+    try {
+      const response = await this.api.get('/v2/prices/latest', {
+        params: {
           origin: params.origin,
           destination: params.destination,
-          date: params.depart_date,
-      }];
-
-      if (params.trip_type === 'round' && params.return_date) {
-          segments.push({
-              origin: params.destination,
-              destination: params.origin,
-              date: params.return_date,
-          });
+          depart_date: params.depart_date,
+          return_date: params.return_date,
+          currency: params.currency || 'USD',
+          limit: params.limit || 30,
+          token: API_TOKEN
+        }
+      });
+      if (response.data.success && response.data.data) {
+        return response.data.data;
       }
-  
-      const searchPayload = {
-          segments: segments,
-          passengers: {
-              adults: params.passengers || 1,
-              children: 0,
-              infants: 0,
-          },
-          marker: MARKER,
-          cabin_class: cabinClassMapping[params.cabin_class || 'economy'],
-      };
-      
-      const response = await this.flightSearchApi.post(`${API_BASE}/v2/prices/create_search`, searchPayload, { 
-        headers: this.getApiHeaders() 
-      });
-      return response.data.search_id;
-  }
-
-  async getFlightSearchResults(searchId: string): Promise<any> {
-      const response = await this.flightSearchApi.get(`${API_BASE}/v2/prices/search-results`, {
-          params: { uuid: searchId },
-          headers: this.getApiHeaders()
-      });
-      return response.data;
+      return [];
+    } catch(e) {
+       console.error("Could not fetch flights", e);
+       return [];
+    }
   }
 
   async getAirports(): Promise<Airport[]> {
@@ -187,16 +164,4 @@ class TravelpayoutsApiService {
   }
 }
 
-const travelpayoutsApi = TravelpayoutsApiService.getInstance();
-
-export async function searchFlightsRealtime(params: FlightSearchParams): Promise<string> {
-  return travelpayoutsApi.searchFlightsRealtime(params);
-}
-
-export async function getFlightSearchResults(searchId: string): Promise<any> {
-  return travelpayoutsApi.getFlightSearchResults(searchId);
-}
-
-export async function getAirportOptions(): Promise<AirportOption[]> {
-    return travelpayoutsApi.getAirportOptions();
-}
+export const travelpayoutsApi = TravelpayoutsApiService.getInstance();

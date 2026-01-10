@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { getAirportOptions } from '@/services/travelpayoutsApi';
+import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 import type { AirportOption } from '@/services/travelpayoutsApi';
 
@@ -46,7 +46,7 @@ const SimpleTravelSearchForm: React.FC = () => {
   useEffect(() => {
     const loadAirports = async () => {
       try {
-        const options: AirportOption[] = await getAirportOptions();
+        const options: AirportOption[] = await travelpayoutsApi.getAirportOptions();
         const simplifiedOptions = options.map(opt => ({
           value: opt.value,
           label: `${opt.city} (${opt.value})`,
