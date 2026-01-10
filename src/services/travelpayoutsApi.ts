@@ -141,7 +141,7 @@ class TravelpayoutsApiService {
   }
 
   async getFlightSearchResults(searchId: string): Promise<any> {
-      const response = await this.flightSearchApi.get('/api/v3/flights_search_results', {
+      const response = await this.flightSearchApi.get('/v2/prices/search-results', {
           params: { uuid: searchId },
           headers: this.getApiHeaders()
       });
