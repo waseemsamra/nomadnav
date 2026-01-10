@@ -43,6 +43,7 @@ export interface FlightSearchParams {
   passengers?: number;
   limit?: number;
   sort_by?: 'price' | 'duration' | 'route';
+  cabin_class?: 'economy' | 'business' | 'first';
 }
 
 export interface AirportOption {
@@ -151,11 +152,7 @@ class TravelpayoutsApiService {
 
       return response.data.data || [];
     } catch (error: any) {
-      console.error('Error searching flights:', {
-        message: error.message,
-        response: error.response?.data,
-        params,
-      });
+      console.error('Error searching flights:', error);
 
       // Fallback to mock data for development
       if (process.env.NODE_ENV === 'development') {
@@ -207,8 +204,7 @@ class TravelpayoutsApiService {
           country: airport.country_name,
           fullLabel: `${airport.city_name || airport.name} (${airport.code}) - ${airport.country_name}`,
         }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .slice(0, 200); // Limit to 200 airports for performance
+        .sort((a, b) => a.label.localeCompare(b.label));
     } catch (error) {
       console.error('Error getting airport options:', error);
       return this.getBasicAirportOptions();
