@@ -239,7 +239,7 @@ export function FlightResults({params}: {params: any}) {
                 </div>
               </div>
             </div>
-          </Copied>
+          </CollapsibleContent>
         </Collapsible>
       </div>
 
