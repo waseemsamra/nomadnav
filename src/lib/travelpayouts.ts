@@ -12,13 +12,23 @@ const api = axios.create({
   }
 });
 
-// Cache for airports and airlines
-let cache = {
-  airports: null,
-  airlines: null,
-  cities: null,
-  lastUpdated: null
-};
+let airportsCache: any[] | null = null;
+let airlinesCache: any[] | null = null;
+let citiesCache: any[] | null = null;
+
+async function fetchWithCache(url: string, cacheVar: any[] | null, setter: (data: any) => void) {
+  if (cacheVar) {
+    return cacheVar;
+  }
+  try {
+    const response = await axios.get(url);
+    setter(response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch data from ${url}`, error);
+    return [];
+  }
+}
 
 export const travelpayoutsApi = {
   // Flight APIs
@@ -48,56 +58,47 @@ export const travelpayoutsApi = {
   },
 
   // Hotel APIs
-  searchHotels: async (location: string, checkIn: string, checkOut: string) => {
-    const hotelResponse = await axios.get('https://engine.hotellook.com/api/v2/cache.json', {
+  searchHotels: async (location: string, checkIn: string, checkOut: string, adults: string = '1') => {
+    const response = await axios.get('https://engine.hotellook.com/api/v2/cache.json', {
       params: {
         location,
         checkIn,
         checkOut,
+        adults,
+        currency: 'USD',
+        limit: 20,
         token: API_TOKEN,
         marker: MARKER
       }
     });
-    return hotelResponse.data;
+    return response.data;
   },
 
   // Static Data APIs
-  getAirports: async () => {
-    if (cache.airports && Date.now() - cache.lastUpdated < 24 * 60 * 60 * 1000) {
-      return cache.airports;
+  getAirports: async (query?: string) => {
+    const allAirports = await fetchWithCache(
+      `${API_BASE}/data/en/airports.json`,
+      airportsCache,
+      (data) => { airportsCache = data; }
+    );
+    if (query) {
+        return allAirports.filter((airport: any) => 
+            airport.name?.toLowerCase().includes(query.toLowerCase()) ||
+            airport.city_name?.toLowerCase().includes(query.toLowerCase()) ||
+            airport.code?.toLowerCase().includes(query.toLowerCase())
+        ).slice(0, 10);
     }
-    
-    const response = await axios.get(`${API_BASE}/data/en/airports.json`);
-    cache.airports = response.data;
-    cache.lastUpdated = Date.now();
-    return response.data;
+    return allAirports.slice(0,10);
   },
 
   getAirlines: async () => {
-    if (cache.airlines) return cache.airlines;
-    
-    const response = await axios.get(`${API_BASE}/data/en/airlines.json`);
-    cache.airlines = response.data;
-    return response.data;
+    return fetchWithCache(
+      `${API_BASE}/data/en/airlines.json`,
+      airlinesCache,
+      (data) => { airlinesCache = data; }
+    );
   },
 
   getCities: async () => {
-    if (cache.cities) return cache.cities;
-    
-    const response = await axios.get(`${API_BASE}/data/en/cities.json`);
-    cache.cities = response.data;
-    return response.data;
-  },
-
-  // Flight Inspiration
-  getCheapestFlights: async () => {
-    const response = await api.get('/v1/city-directions', {
-      params: {
-        origin: 'NYC',
-        currency: 'USD',
-        marker: MARKER
-      }
-    });
-    return response.data.data || [];
-  }
-};
+    return fetchWithCache(
+      `${API_...

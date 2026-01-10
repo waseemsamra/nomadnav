@@ -14,19 +14,24 @@ export function HotelResults({params}: {params: any}) {
 
   useEffect(() => {
     const fetchHotels = async () => {
-      if (params.location) {
+      if (params.location && params.checkIn && params.checkOut) {
         setLoading(true);
         try {
           const results = await travelpayoutsApi.searchHotels(
             params.location,
             params.checkIn,
-            params.checkOut
+            params.checkOut,
+            params.guests
           );
           setHotels(results);
         } catch (error) {
           console.error('Failed to fetch hotels:', error);
+          setHotels([]);
         }
         setLoading(false);
+      } else {
+        setLoading(false);
+        setHotels([]);
       }
     };
     fetchHotels();
@@ -49,7 +54,7 @@ export function HotelResults({params}: {params: any}) {
         <Hotel /> Available Hotels
       </h2>
       {hotels.length > 0 ? (
-        hotels.slice(0, 5).map(hotel => {
+        hotels.slice(0, 10).map(hotel => {
           return (
             <Card
               key={hotel.hotelId}
@@ -68,23 +73,27 @@ export function HotelResults({params}: {params: any}) {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle>{hotel.label}</CardTitle>
+                        <CardTitle>{hotel.name}</CardTitle>
                         <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                           <MapPin className="h-4 w-4" />
-                          <span>{hotel.location.name}</span>
+                          <span>{hotel.locationName}</span>
                         </div>
                       </div>
-                      <div className="flex items-center shrink-0 gap-1 bg-accent text-accent-foreground rounded-full px-2 py-1 text-sm font-bold">
-                        <Star className="h-4 w-4 fill-current" />
-                        <span>{hotel.stars}</span>
-                      </div>
+                      {hotel.stars > 0 && (
+                        <div className="flex items-center shrink-0 gap-1 bg-accent text-accent-foreground rounded-full px-2 py-1 text-sm font-bold">
+                          <Star className="h-4 w-4 fill-current" />
+                          <span>{hotel.stars}</span>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4 flex flex-col flex-grow justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {hotel.rating} rating
-                      </p>
+                      {hotel.rating && (
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {hotel.rating} rating
+                        </p>
+                      )}
                     </div>
                     <div className="flex justify-between items-center pt-4">
                       <div>
@@ -93,7 +102,15 @@ export function HotelResults({params}: {params: any}) {
                           per night
                         </p>
                       </div>
-                      <Button>Select Hotel</Button>
+                      <Button asChild>
+                        <a
+                          href={`https://hotellook.com/hotels?hotelId=${hotel.hotelId}&marker=${process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Select Hotel
+                        </a>
+                      </Button>
                     </div>
                   </CardContent>
                 </div>
@@ -102,8 +119,11 @@ export function HotelResults({params}: {params: any}) {
           );
         })
       ) : (
-        <p>No hotels found for this location.</p>
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            No hotels found for this location. Try a different search.
+          </CardContent>
+        </Card>
       )}
     </div>
   );
-}

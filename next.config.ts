@@ -36,12 +36,4 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'pics.aviasales.com',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
-};
-
-export default nextConfig;
+        hostname: 'pics.aviasales
