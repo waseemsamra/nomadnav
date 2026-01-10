@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -31,15 +31,30 @@ type SearchFormValues = z.infer<typeof searchSchema>;
 export function SearchForm() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('flights');
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
     defaultValues: {
       destination: '',
-      dates: { from: new Date() },
       travelers: 1,
     },
   });
+
+  useEffect(() => {
+    if (isClient) {
+        form.reset({
+            destination: '',
+            dates: { from: new Date() },
+            travelers: 1,
+        })
+    }
+  }, [isClient, form]);
 
   function onSubmit(data: SearchFormValues) {
     const params = new URLSearchParams({
@@ -80,14 +95,14 @@ export function SearchForm() {
               <FormLabel>
                 {activeTab === 'hotels' ? 'Check-in & Check-out' : 'Departure & Return'}
               </FormLabel>
-              <Popover>
+               {isClient && <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
                       variant={'outline'}
                       className={cn(
                         'w-full justify-start text-left font-normal',
-                        !field.value.from && 'text-muted-foreground'
+                        !field.value?.from && 'text-muted-foreground'
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -116,7 +131,7 @@ export function SearchForm() {
                     disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                   />
                 </PopoverContent>
-              </Popover>
+              </Popover>}
               <FormMessage />
             </FormItem>
           )}
