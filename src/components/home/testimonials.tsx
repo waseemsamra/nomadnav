@@ -1,8 +1,6 @@
 'use client';
-
 import React from 'react';
-import { Quote, Star } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Star, Quote } from 'lucide-react';
 import {
   Carousel,
   CarouselContent,
@@ -10,6 +8,9 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel"
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
+
 
 interface Testimonial {
   id: number;
@@ -26,7 +27,7 @@ const testimonials: Testimonial[] = [
       id: 1,
       name: 'Sarah Johnson',
       role: 'Frequent Traveler',
-      content: 'Travel Explorer helped me save over $500 on my trip to Japan. The hotel recommendations were spot on and the flight prices were unbeatable!',
+      content: 'Nomad Navigator helped me save over $500 on my trip to Japan. The hotel recommendations were spot on and the flight prices were unbeatable!',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       location: 'New York, USA'
@@ -35,7 +36,7 @@ const testimonials: Testimonial[] = [
       id: 2,
       name: 'Michael Chen',
       role: 'Business Traveler',
-      content: 'As someone who travels weekly for work, I rely on Travel Explorer for the best deals. The price tracking feature is a game-changer!',
+      content: 'As someone who travels weekly for work, I rely on Nomad Navigator for the best deals. The price tracking feature is a game-changer!',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       location: 'San Francisco, USA'
@@ -44,7 +45,7 @@ const testimonials: Testimonial[] = [
       id: 3,
       name: 'Emma Wilson',
       role: 'Travel Blogger',
-      content: 'I\'ve used dozens of travel sites, but none compare to Travel Explorer. The interface is beautiful and finding deals is so easy.',
+      content: 'I\'ve used dozens of travel sites, but none compare to Nomad Navigator. The interface is beautiful and finding deals is so easy.',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       location: 'London, UK'
@@ -81,26 +82,32 @@ export function Testimonials() {
           <CarouselContent className="testimonials-slider">
             
             {testimonials.map((testimonial) => (
-              <CarouselItem key={testimonial.id} className="testimonial-card">
-                  <Quote className="testimonial-quote" />
-                  <p className="testimonial-content">{testimonial.content}</p>
-                  <div className="testimonial-rating">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="h-5 w-5 fill-current" />
-                    ))}
-                    <span className="rating-text">{testimonial.rating}/5</span>
-                  </div>
-                  <div className="testimonial-author">
-                    <Avatar className="testimonial-avatar">
-                        <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
-                        <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="testimonial-info">
-                      <h4 className="font-semibold">{testimonial.name}</h4>
-                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                      <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+              <CarouselItem key={testimonial.id} className="testimonial-card basis-full md:basis-1/2 lg:basis-1/3">
+                <Card className='h-full'>
+                  <CardContent className='p-6 flex flex-col justify-between h-full'>
+                    <div>
+                      <Quote className="testimonial-quote" />
+                      <p className="testimonial-content">{testimonial.content}</p>
+                      <div className="testimonial-rating">
+                        {[...Array(testimonial.rating)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current text-accent" />
+                        ))}
+                        <span className="rating-text text-muted-foreground">{testimonial.rating}/5</span>
+                      </div>
                     </div>
-                  </div>
+                    <div className="testimonial-author mt-6">
+                      <Avatar className="testimonial-avatar">
+                          <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
+                          <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="testimonial-info">
+                        <h4 className="font-semibold text-foreground">{testimonial.name}</h4>
+                        <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                        <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </CarouselItem>
             ))}
             

@@ -168,7 +168,7 @@ export default function Home() {
         {heroImage && 
           <div 
             className="hero-background"
-            style={{backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.5)), url('${heroImage.imageUrl}')`}}
+            style={{backgroundImage: `url('${heroImage.imageUrl}')`}}
             data-ai-hint={heroImage.imageHint}
           />
         }
@@ -209,7 +209,7 @@ export default function Home() {
             <div className='features-grid'>
               {features.map((feature, index) => (
                 <div key={index} className='feature-card' style={{animationDelay: `${index * 0.1}s`}}>
-                  <div className='feature-icon-wrapper' style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white'}}>
+                  <div className='feature-icon-wrapper' style={{background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)', color: 'white'}}>
                     {feature.icon}
                   </div>
                   <h3 className='feature-title'>{feature.title}</h3>
@@ -222,6 +222,8 @@ export default function Home() {
 
       <DestinationGrid />
 
+      <CheapestFlights />
+      
       <Testimonials />
     </div>
   );
