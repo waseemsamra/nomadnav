@@ -92,7 +92,6 @@ class TravelpayoutsApiService {
       },
       marker: MARKER,
       cabin_class: cabinClassMapping[params.cabin_class as keyof typeof cabinClassMapping] || 'Y',
-      "know_english": "true"
     };
     
     const response = await this.flightSearchApiV2.post('/create_search', searchPayload);
