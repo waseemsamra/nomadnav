@@ -1,7 +1,7 @@
 
 'use client';
 
-import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 
 // Types
 export interface Airport {
@@ -53,12 +53,10 @@ export interface AirportOption {
   label: string;
   city: string;
   country: string;
-  fullLabel?: string;
 }
 
 // Configuration
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '';
-const API_BASE = 'https://api.travelpayouts.com';
 const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || 'your_marker_here';
 
 if (!API_TOKEN) {
@@ -68,14 +66,9 @@ if (!API_TOKEN) {
 class TravelpayoutsApiService {
   private static instance: TravelpayoutsApiService;
   private api: AxiosInstance;
-  private cache: {
-    airports: Airport[] | null;
-    lastUpdated: number;
-  };
 
   private constructor() {
     this.api = axios.create({
-      baseURL: API_BASE,
       timeout: 30000,
       headers: {
         'Accept': 'application/json',
@@ -83,11 +76,6 @@ class TravelpayoutsApiService {
         'X-Access-Token': API_TOKEN,
       },
     });
-
-    this.cache = {
-      airports: null,
-      lastUpdated: 0,
-    };
   }
 
   public static getInstance(): TravelpayoutsApiService {
@@ -97,71 +85,75 @@ class TravelpayoutsApiService {
     return TravelpayoutsApiService.instance;
   }
   
-  private shouldUseCache(maxAge: number = 24 * 60 * 60 * 1000): boolean {
-    return Date.now() - this.cache.lastUpdated < maxAge;
+  async createFlightSearch(params: FlightSearchParams): Promise<string> {
+    const cabinClassMapping: { [key: string]: string } = {
+        economy: 'Y',
+        business: 'C',
+        first: 'F',
+    };
+
+    const segments = [{
+        origin: params.origin,
+        destination: params.destination,
+        date: params.depart_date,
+    }];
+
+    if (params.trip_type === 'round' && params.return_date) {
+        segments.push({
+            origin: params.destination,
+            destination: params.origin,
+            date: params.return_date,
+        });
+    }
+
+    const searchPayload = {
+        segments: segments,
+        passengers: {
+            adults: params.passengers || 1,
+            children: 0,
+            infants: 0,
+        },
+        marker: MARKER,
+        trip_class: cabinClassMapping[params.cabin_class || 'economy'],
+    };
+    
+    const response = await this.api.post('https://api.travelpayouts.com/v2/prices/create_search', searchPayload);
+    return response.data.search_id;
   }
 
-  async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
+  async getFlightSearchResults(searchId: string): Promise<any> {
+      const response = await this.api.get('https://api.travelpayouts.com/v2/prices/search-results', {
+          params: { uuid: searchId },
+      });
+      return response.data;
+  }
+
+  async searchAirports(term: string): Promise<AirportOption[]> {
+    if (!term || term.length < 2) {
+      return [];
+    }
     try {
-      const response = await this.api.get('/v2/prices/latest', {
+      const response = await this.api.get('https://api.travelpayouts.com/v1/suggests/airports', {
         params: {
-          origin: params.origin,
-          destination: params.destination,
-          depart_date: params.depart_date,
-          return_date: params.return_date,
-          currency: params.currency || 'USD',
-          limit: params.limit || 30,
-          token: API_TOKEN
+          q: term
         }
       });
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+
+      if (response.data && response.data.results) {
+        return response.data.results.map((airport: any) => ({
+          value: airport.iata,
+          label: `${airport.name} (${airport.iata})`,
+          city: airport.city,
+          country: airport.country,
+        }));
       }
       return [];
-    } catch(e) {
-       console.error("Could not fetch flights", e);
-       return [];
-    }
-  }
-
-  async getAirports(): Promise<Airport[]> {
-    if (this.cache.airports && this.shouldUseCache()) {
-      return this.cache.airports;
-    }
-
-    try {
-      const response: AxiosResponse<Airport[]> = await axios.get(
-        `${API_BASE}/data/en/airports.json`,
-        { timeout: 10000 }
-      );
-
-      this.cache.airports = response.data;
-      this.cache.lastUpdated = Date.now();
-      return this.cache.airports;
-    } catch (error: any) {
-      console.error('Error fetching airports:', error.message);
-      return [];
-    }
-  }
-
-  async getAirportOptions(): Promise<AirportOption[]> {
-    try {
-      const airports = await this.getAirports();
-      
-      return airports
-        .map(airport => ({
-          value: airport.code,
-          label: `${airport.city_name || airport.name} (${airport.code})`,
-          city: airport.city_name,
-          country: airport.country_name,
-          fullLabel: `${airport.city_name || airport.name} (${airport.code}) - ${airport.country_name}`,
-        }))
-        .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
     } catch (error) {
-      console.error('Error getting airport options:', error);
-      return [];
+      console.error('Error searching airports:', error);
+      throw error;
     }
   }
+
 }
 
 export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
