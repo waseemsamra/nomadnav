@@ -2,11 +2,18 @@ import Image from 'next/image';
 import {SearchForm} from '@/components/search/search-form';
 import {Suspense} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import {MapPin} from 'lucide-react';
 import {PlaceHolderImages} from '@/lib/placeholder-images';
 import {travelpayoutsApi} from '@/lib/travelpayouts';
+import {Button} from '@/components/ui/button';
+import Link from 'next/link';
 
 const heroImage = PlaceHolderImages.find(img => img.id === 'hero');
+
+const popularDestinations = PlaceHolderImages.filter(img =>
+  ['flight-dest-1', 'flight-dest-2', 'flight-dest-3', 'flight-dest-4'].includes(
+    img.id
+  )
+);
 
 async function TravelInspiration() {
   const cheapFlightsData = await travelpayoutsApi.getCheapestFlights();
@@ -21,7 +28,29 @@ async function TravelInspiration() {
         Get inspired for your next adventure with our curated list of must-visit
         locations around the globe.
       </p>
-      <Card>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        {popularDestinations.map(dest => (
+          <div key={dest.id} className="relative group rounded-lg overflow-hidden h-64">
+            <Image
+              src={dest.imageUrl}
+              alt={dest.description}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              data-ai-hint={dest.imageHint}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+            <div className="absolute bottom-0 left-0 p-4 w-full flex justify-between items-center">
+              <h3 className="text-white font-bold text-lg">{dest.description}</h3>
+              <Button size="sm" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                <Link href="/#search">Explore</Link>
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Card className="bg-background">
         <CardHeader>
           <CardTitle>Cheapest Flights from New York</CardTitle>
         </CardHeader>
@@ -29,7 +58,7 @@ async function TravelInspiration() {
           {cheapFlights.slice(0, 5).map((flight: any) => (
             <div
               key={flight.destination}
-              className="flex justify-between items-center p-3 bg-secondary rounded-lg"
+              className="flex justify-between items-center p-3 bg-card border rounded-lg shadow-sm"
             >
               <div>
                 <p className="font-bold">{flight.destination_name}</p>

@@ -5,6 +5,7 @@ import {useSearchParams} from 'next/navigation';
 import {FlightResults} from '@/components/search/flight-results';
 import {HotelResults} from '@/components/search/hotel-results';
 import {ResultsSkeleton} from '@/components/search/results-skeleton';
+import { FlightSearchParams, HotelSearchParams } from '@/types/travel';
 
 function SearchResults() {
   const searchParams = useSearchParams();
@@ -15,7 +16,7 @@ function SearchResults() {
   const return_date = searchParams.get('return_date');
   const travelers = searchParams.get('travelers');
 
-  const flightParams = {
+  const flightParams: FlightSearchParams = {
     origin,
     destination,
     depart_date: depart_date,
@@ -23,7 +24,7 @@ function SearchResults() {
     passengers: travelers,
   };
 
-  const hotelParams = {
+  const hotelParams: HotelSearchParams = {
     location: destination,
     checkIn: depart_date,
     checkOut: return_date,

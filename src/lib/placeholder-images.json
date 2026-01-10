@@ -20,15 +20,27 @@
     },
     {
       "id": "flight-dest-1",
-      "description": "Paris, France",
-      "imageUrl": "https://images.unsplash.com/photo-1684485442894-8516e58643b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxQYXJpcyUyMGNpdHl8ZW58MHx8fHwxNzY4MDc1OTYzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "Paris",
+      "imageUrl": "https://images.unsplash.com/photo-1502602898657-3e91760c0337?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "Paris city"
     },
     {
       "id": "flight-dest-2",
-      "description": "Kyoto, Japan",
-      "imageUrl": "https://images.unsplash.com/photo-1669954791643-bbe3824aaa5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxLeW90byUyMHRlbXBsZXxlbnwwfHx8fDE3Njc5OTkyNTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "Kyoto temple"
+      "description": "New York",
+      "imageUrl": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "New York city"
+    },
+    {
+      "id": "flight-dest-3",
+      "description": "London",
+      "imageUrl": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "London city"
+    },
+    {
+      "id": "flight-dest-4",
+      "description": "Tokyo",
+      "imageUrl": "https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "Tokyo city"
     },
     {
       "id": "user-avatar",

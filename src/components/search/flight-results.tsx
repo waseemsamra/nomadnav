@@ -29,6 +29,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {Progress} from '../ui/progress';
+import { FlightSearchParams } from '@/types/travel';
 
 const FlightCard = ({
   ticket,
@@ -146,7 +147,7 @@ const FlightCard = ({
   );
 };
 
-export function FlightResults({params}: {params: any}) {
+export function FlightResults({params}: {params: FlightSearchParams}) {
   const [tickets, setTickets] = useState<any[]>([]);
   const [flightLegs, setFlightLegs] = useState<any[]>([]);
   const [airlines, setAirlines] = useState<any[]>([]);

@@ -7,8 +7,9 @@ import {Badge} from '@/components/ui/badge';
 import {useEffect, useState} from 'react';
 import {travelpayoutsApi} from '@/lib/travelpayouts';
 import {Skeleton} from '../ui/skeleton';
+import { HotelSearchParams } from '@/types/travel';
 
-export function HotelResults({params}: {params: any}) {
+export function HotelResults({params}: {params: HotelSearchParams}) {
   const [hotels, setHotels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,12 +18,7 @@ export function HotelResults({params}: {params: any}) {
       if (params.location && params.checkIn && params.checkOut) {
         setLoading(true);
         try {
-          const results = await travelpayoutsApi.searchHotels(
-            params.location,
-            params.checkIn,
-            params.checkOut,
-            params.guests
-          );
+          const results = await travelpayoutsApi.searchHotels(params);
           setHotels(results);
         } catch (error) {
           console.error('Failed to fetch hotels:', error);
@@ -64,7 +60,7 @@ export function HotelResults({params}: {params: any}) {
                 <div className="relative h-48 md:h-full min-h-[150px]">
                   <Image
                     src={`https://photo.hotellook.com/image_v2/limit/${hotel.hotelId}/800/520.auto`}
-                    alt={hotel.label}
+                    alt={hotel.name}
                     fill
                     className="object-cover"
                   />
@@ -127,3 +123,4 @@ export function HotelResults({params}: {params: any}) {
       )}
     </div>
   );
+}
