@@ -282,7 +282,7 @@ function Footer() {
         
         <div className="footer-bottom">
           <div className="footer-copyright">
-            © {currentYear || new Date().getFullYear()} Nomad Navigator. All rights reserved.
+            © {currentYear || ''} Nomad Navigator. All rights reserved.
           </div>
           <div className="footer-meta">
             <div className="footer-made-with">
@@ -330,5 +330,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
