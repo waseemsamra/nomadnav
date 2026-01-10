@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
@@ -40,7 +41,10 @@ const WorkingSearchForm: React.FC = () => {
     cabinClass: 'economy',
   });
 
-  const loadAirportOptions = async (inputValue: string) => {
+  const loadAirportOptions = async (inputValue: string): Promise<AirportOption[]> => {
+    if (inputValue.length < 2) {
+      return [];
+    }
     try {
       const options = await travelpayoutsApi.searchAirports(inputValue);
       return options;
@@ -335,3 +339,5 @@ const WorkingSearchForm: React.FC = () => {
 };
 
 export default WorkingSearchForm;
+
+    
