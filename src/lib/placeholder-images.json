@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "A beautiful tropical beach with a plane flying overhead",
+      "imageUrl": "https://images.unsplash.com/photo-1571043281665-9debfed10719?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx0cm9waWNhbCUyMGJlYWNofGVufDB8fHx8MTc2ODA1NTg0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "tropical beach"
+    },
+    {
+      "id": "hotel-1",
+      "description": "A modern hotel room with a view",
+      "imageUrl": "https://images.unsplash.com/photo-1711059985570-4c32ed12a12c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxob3RlbCUyMHJvb218ZW58MHx8fHwxNzY3OTgyMjQwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hotel room"
+    },
+    {
+      "id": "hotel-2",
+      "description": "A luxury hotel lobby",
+      "imageUrl": "https://images.unsplash.com/photo-1625244724120-1fd1d34d00f6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxob3RlbCUyMGxvYmJ5fGVufDB8fHx8MTc2ODAyMDY1MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hotel lobby"
+    },
+    {
+      "id": "flight-dest-1",
+      "description": "Paris, France",
+      "imageUrl": "https://images.unsplash.com/photo-1684485442894-8516e58643b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxQYXJpcyUyMGNpdHl8ZW58MHx8fHwxNzY4MDc1OTYzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "Paris city"
+    },
+    {
+      "id": "flight-dest-2",
+      "description": "Kyoto, Japan",
+      "imageUrl": "https://images.unsplash.com/photo-1669954791643-bbe3824aaa5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxLeW90byUyMHRlbXBsZXxlbnwwfHx8fDE3Njc5OTkyNTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "Kyoto temple"
+    },
+    {
+      "id": "user-avatar",
+      "description": "User profile avatar",
+      "imageUrl": "https://images.unsplash.com/photo-1521119989659-a83eee488004?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjgwMDU1OTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    }
+  ]
 }
