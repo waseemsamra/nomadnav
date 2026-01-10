@@ -76,7 +76,7 @@ function SearchResultsContent() {
         setFlights(flightData);
         
         if (flightData.length === 0) {
-          toast.info('No flights found. Try different dates or airports.');
+          toast('No flights found. Try different dates or airports.');
         } else {
           toast.success(`Found ${flightData.length} flights`);
         }
