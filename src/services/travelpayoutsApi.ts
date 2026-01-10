@@ -143,7 +143,7 @@ class TravelpayoutsApiService {
 
   async getFlightSearchResults(searchId: string): Promise<any> {
       // Use the full path from the base URL
-      const response = await this.flightSearchApiV2.get('/v2/prices/search_results', {
+      const response = await this.flightSearchApiV2.get('/v2/prices/search-results', {
           params: { uuid: searchId },
           headers: this.getApiHeaders()
       });
