@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plane, Hotel, Shield, TrendingUp, MapPin, Star, Quote, CalendarIcon, Users, Search, ChevronsUpDown, Building2 } from 'lucide-react';
+import { Plane, Hotel, Shield, TrendingUp, MapPin, Star, Quote, CalendarIcon, Users, Search, ChevronsUpDown, Building2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import placeholderImagesData from '@/lib/placeholder-images.json';
 import { Card, CardContent } from '@/components/ui/card';
@@ -70,12 +70,18 @@ const AirportCombobox = ({ field, placeholder }: { field: any, placeholder: stri
               {airports?.map((airport) => (
                 <CommandItem
                   key={airport.code}
-                  value={`${airport.name} (${airport.code})`}
-                  onSelect={() => {
-                    field.onChange(airport.code);
+                  value={airport.code}
+                  onSelect={(currentValue) => {
+                    field.onChange(currentValue === field.value ? "" : currentValue);
                     setOpen(false);
                   }}
                 >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      field.value === airport.code ? "opacity-100" : "opacity-0"
+                    )}
+                  />
                   {airport.name} ({airport.code})
                 </CommandItem>
               ))}
