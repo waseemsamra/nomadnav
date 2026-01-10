@@ -25,7 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
-const searchSchema = z.object({
+const baseSearchSchema = z.object({
   origin: z.string().min(3, { message: 'Origin must be a 3-letter IATA code.' }).optional(),
   destination: z.string().min(3, { message: 'Destination must be a 3-letter IATA code.' }),
   dates: z.object({
@@ -33,7 +33,9 @@ const searchSchema = z.object({
     to: z.date().optional(),
   }),
   travelers: z.coerce.number().min(1, { message: 'At least one traveler is required.' }).max(9, { message: "Maximum 9 travelers."}),
-}).superRefine((data, ctx) => {
+});
+
+const refinedSearchSchema = baseSearchSchema.superRefine((data, ctx) => {
   if (data.origin && data.destination && data.origin === data.destination) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -50,7 +52,7 @@ const searchSchema = z.object({
   }
 });
 
-type SearchFormValues = z.infer<typeof searchSchema>;
+type SearchFormValues = z.infer<typeof refinedSearchSchema>;
 
 const AirportCombobox = ({ field, onSelect, placeholder }: { field: any, onSelect: (value: string) => void, placeholder: string }) => {
   const { data: airports, isLoading } = useAirports();
@@ -113,11 +115,27 @@ function SearchForm() {
     setIsClient(true);
   }, []);
 
-  const formSchema = searchSchema.extend({
+  const formSchema = baseSearchSchema.extend({
     origin: activeTab !== 'hotels' 
       ? z.string().min(3, { message: 'Origin must be a 3-letter IATA code.' }) 
       : z.string().optional(),
+  }).superRefine((data, ctx) => {
+    if (data.origin && data.destination && data.origin === data.destination) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Origin and destination cannot be the same.",
+        path: ["destination"],
+      });
+    }
+    if (data.dates.from && data.dates.to && data.dates.from > data.dates.to) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Return date must be after departure date.",
+        path: ["dates"],
+      });
+    }
   });
+
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(formSchema),
@@ -667,3 +685,5 @@ export default function HomePage() {
     </main>
   );
 }
+
+    

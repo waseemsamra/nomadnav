@@ -72,7 +72,7 @@ const FlightCard = ({
         return total + (lastLeg.arrival_unix_timestamp - firstLeg.departure_unix_timestamp);
       }
       return total;
-    }, 0) / 60;
+    }, 0);
   }, [ticket.segments, flightLegs]);
   
   return (
@@ -261,3 +261,5 @@ export function FlightResults({params, filters}: {params: FlightSearchParams, fi
     </div>
   );
 }
+
+    
