@@ -15,10 +15,14 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plane, Hotel, Building2, CalendarIcon, Users, MapPin, Search } from 'lucide-react';
+import { Plane, Hotel, Building2, CalendarIcon, Users, MapPin, Search, ChevronsUpDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { useAirports } from '@/hooks/use-travel-search';
+import { Skeleton } from '../ui/skeleton';
 
 const searchSchema = z.object({
-  destination: z.string().min(2, { message: 'Destination must be at least 2 characters.' }),
+  origin: z.string().min(3, { message: 'Origin must be a 3-letter IATA code.' }),
+  destination: z.string().min(3, { message: 'Destination must be a 3-letter IATA code.' }),
   dates: z.object({
     from: z.date({ required_error: "A date is required."}),
     to: z.date().optional(),
@@ -27,6 +31,58 @@ const searchSchema = z.object({
 });
 
 type SearchFormValues = z.infer<typeof searchSchema>;
+
+const AirportCombobox = ({ field, onSelect, placeholder }: { field: any, onSelect: (value: string) => void, placeholder: string }) => {
+  const { data: airports, isLoading } = useAirports();
+  const [open, setOpen] = useState(false);
+
+  if (isLoading) {
+    return <Skeleton className="h-10 w-full" />;
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <FormControl>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            {field.value
+              ? airports?.find((airport) => airport.code === field.value)?.name
+              : placeholder}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </FormControl>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0">
+        <Command>
+          <CommandInput placeholder="Search airport..." />
+          <CommandList>
+            <CommandEmpty>No airport found.</CommandEmpty>
+            <CommandGroup>
+              {airports?.map((airport) => (
+                <CommandItem
+                  key={airport.code}
+                  value={`${airport.name} (${airport.code})`}
+                  onSelect={() => {
+                    onSelect(airport.code);
+                    setOpen(false);
+                  }}
+                >
+                  {airport.name} ({airport.code})
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 
 export function SearchForm() {
   const router = useRouter();
@@ -41,6 +97,7 @@ export function SearchForm() {
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
     defaultValues: {
+      origin: '',
       destination: '',
       travelers: 1,
     },
@@ -49,6 +106,7 @@ export function SearchForm() {
   useEffect(() => {
     if (isClient) {
         form.reset({
+            origin: '',
             destination: '',
             dates: { from: new Date() },
             travelers: 1,
@@ -59,6 +117,7 @@ export function SearchForm() {
   function onSubmit(data: SearchFormValues) {
     const params = new URLSearchParams({
       type: activeTab,
+      origin: data.origin,
       destination: data.destination,
       depart_date: format(data.dates.from, 'yyyy-MM-dd'),
       travelers: String(data.travelers),
@@ -70,19 +129,33 @@ export function SearchForm() {
   }
   
   const renderFormFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 items-end p-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-9 gap-4 items-end p-4">
+        <FormField
+          control={form.control}
+          name="origin"
+          render={({ field }) => (
+            <FormItem className="lg:col-span-2">
+              <FormLabel>Origin</FormLabel>
+              <AirportCombobox
+                field={field}
+                onSelect={(value) => form.setValue('origin', value)}
+                placeholder="Select origin"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="destination"
           render={({ field }) => (
             <FormItem className="lg:col-span-2">
               <FormLabel>Destination</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="e.g., Paris, New York" className="pl-10" {...field} />
-                </div>
-              </FormControl>
+               <AirportCombobox
+                field={field}
+                onSelect={(value) => form.setValue('destination', value)}
+                placeholder="Select destination"
+              />
               <FormMessage />
             </FormItem>
           )}
