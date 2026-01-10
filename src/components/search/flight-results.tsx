@@ -2,7 +2,6 @@
 import {
   Plane,
   Clock,
-  Landmark,
   ArrowRightLeft,
   Wallet,
   SlidersHorizontal,
@@ -42,7 +41,6 @@ const FlightCard = ({flight}: {flight: any}) => {
       const parsedDate = parseISO(dateString);
       return format(parsedDate, 'hh:mm a');
     } catch (e) {
-      // If parsing fails, return original string. This can happen if the date is not in a valid ISO format.
       return dateString;
     }
   };
@@ -84,10 +82,7 @@ const FlightCard = ({flight}: {flight: any}) => {
           </div>
           <div className="text-center">
             <p className="font-bold text-lg">
-              {/* Return at is not always available in the API response for one-way */}
-              {flight.return_at
-                ? formatDate(flight.return_at)
-                : 'N/A'}
+              {flight.return_at ? formatDate(flight.return_at) : 'N/A'}
             </p>
             <p className="text-muted-foreground">{flight.destination}</p>
           </div>
@@ -125,7 +120,6 @@ export function FlightResults({params}: {params: any}) {
         setLoading(true);
         try {
           const results = await travelpayoutsApi.searchFlights(params);
-          // Enrich results with airline names
           const airlines = await travelpayoutsApi.getAirlines();
           const airlinesMap = new Map(
             airlines.map((a: any) => [a.code, a.name])
@@ -224,7 +218,7 @@ export function FlightResults({params}: {params: any}) {
                     ${filters.maxPrice}
                   </span>
                 </div>
-                <div className='flex items-center gap-2'>
+                <div className="flex items-center gap-2">
                   <Wallet />
                   <Slider
                     id="max-price"
