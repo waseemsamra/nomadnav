@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,7 +7,6 @@ import {
   Calendar, 
   Users, 
   Plane,
-  MapPin,
   Loader2,
   ArrowRightLeft
 } from 'lucide-react';
@@ -16,11 +14,12 @@ import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
+import Select from 'react-select/async';
 import type { AirportOption } from '@/services/travelpayoutsApi';
 
 interface SearchFormData {
-  origin: string;
-  destination: string;
+  origin: AirportOption | null;
+  destination: AirportOption | null;
   departDate: Date;
   returnDate: Date;
   tripType: 'round' | 'oneway';
@@ -31,10 +30,9 @@ interface SearchFormData {
 const WorkingSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [airportOptions, setAirportOptions] = useState<{ value: string; label: string, city: string }[]>([]);
   const [formData, setFormData] = useState<SearchFormData>({
-    origin: '',
-    destination: '',
+    origin: null,
+    destination: null,
     departDate: new Date(),
     returnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     tripType: 'round',
@@ -42,25 +40,16 @@ const WorkingSearchForm: React.FC = () => {
     cabinClass: 'economy',
   });
 
-  // Load airports on mount
-  useEffect(() => {
-    const loadAirports = async () => {
-      try {
-        const options: AirportOption[] = await travelpayoutsApi.getAirportOptions();
-        const simplifiedOptions = options.map(opt => ({
-          value: opt.value,
-          label: `${opt.city} (${opt.value})`,
-          city: opt.city,
-        }));
-        setAirportOptions(simplifiedOptions);
-      } catch (error) {
-        console.error('Error loading airports:', error);
-        toast.error('Failed to load airport data');
-      }
-    };
-    
-    loadAirports();
-  }, []);
+  const loadAirportOptions = async (inputValue: string) => {
+    try {
+      const options = await travelpayoutsApi.searchAirports(inputValue);
+      return options;
+    } catch (error) {
+      console.error('Error loading airport options:', error);
+      toast.error('Failed to load airport data');
+      return [];
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +60,7 @@ const WorkingSearchForm: React.FC = () => {
       return;
     }
 
-    if (formData.origin === formData.destination) {
+    if (formData.origin.value === formData.destination.value) {
       toast.error('Origin and destination cannot be the same');
       return;
     }
@@ -85,8 +74,8 @@ const WorkingSearchForm: React.FC = () => {
 
     try {
       const searchParams = new URLSearchParams({
-        origin: formData.origin,
-        destination: formData.destination,
+        origin: formData.origin.value,
+        destination: formData.destination.value,
         depart_date: format(formData.departDate, 'yyyy-MM-dd'),
         passengers: formData.passengers.toString(),
         cabin_class: formData.cabinClass,
@@ -115,17 +104,16 @@ const WorkingSearchForm: React.FC = () => {
       destination: prev.origin,
     }));
   };
-
-  // Popular airports for quick selection
-  const popularAirports = [
-    { code: 'JFK', city: 'New York' },
-    { code: 'LAX', city: 'Los Angeles' },
-    { code: 'LHR', city: 'London' },
-    { code: 'CDG', city: 'Paris' },
-    { code: 'HND', city: 'Tokyo' },
-    { code: 'DXB', city: 'Dubai' },
-    { code: 'SIN', city: 'Singapore' },
-    { code: 'SYD', city: 'Sydney' },
+  
+  const popularAirports: AirportOption[] = [
+    { value: 'JFK', label: 'New York (JFK)', city: 'New York', country: 'USA' },
+    { value: 'LAX', label: 'Los Angeles (LAX)', city: 'Los Angeles', country: 'USA' },
+    { value: 'LHR', label: 'London (LHR)', city: 'London', country: 'UK' },
+    { value: 'CDG', label: 'Paris (CDG)', city: 'Paris', country: 'France' },
+    { value: 'HND', label: 'Tokyo (HND)', city: 'Tokyo', country: 'Japan' },
+    { value: 'DXB', label: 'Dubai (DXB)', city: 'Dubai', country: 'UAE' },
+    { value: 'SIN', label: 'Singapore (SIN)', city: 'Singapore', country: 'Singapore' },
+    { value: 'SYD', label: 'Sydney (SYD)', city: 'Sydney', country: 'Australia' },
   ];
 
   return (
@@ -165,23 +153,16 @@ const WorkingSearchForm: React.FC = () => {
                 <Plane className="w-4 h-4 inline mr-1" />
                 From
               </label>
-              <div className="relative">
-                <select
-                  value={formData.origin}
-                  onChange={(e) => setFormData(prev => ({ ...prev, origin: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-3 border border-input bg-background rounded-lg 
-                           focus:ring-2 focus:ring-ring focus:border-ring appearance-none"
-                  required
-                >
-                  <option value="">Select airport</option>
-                  {airportOptions.map((airport) => (
-                    <option key={airport.value} value={airport.value}>
-                      {airport.label}
-                    </option>
-                  ))}
-                </select>
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              </div>
+              <Select
+                className="react-select-container"
+                classNamePrefix="react-select"
+                placeholder="Select origin..."
+                value={formData.origin}
+                onChange={(option) => setFormData(prev => ({ ...prev, origin: option as AirportOption }))}
+                loadOptions={loadAirportOptions}
+                defaultOptions
+                cacheOptions
+              />
             </div>
 
             <div>
@@ -189,23 +170,16 @@ const WorkingSearchForm: React.FC = () => {
                 <Plane className="w-4 h-4 inline mr-1" />
                 To
               </label>
-              <div className="relative">
-                <select
-                  value={formData.destination}
-                  onChange={(e) => setFormData(prev => ({ ...prev, destination: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-3 border border-input bg-background rounded-lg 
-                           focus:ring-2 focus:ring-ring focus:border-ring appearance-none"
-                  required
-                >
-                  <option value="">Select airport</option>
-                  {airportOptions.map((airport) => (
-                    <option key={airport.value} value={airport.value}>
-                      {airport.label}
-                    </option>
-                  ))}
-                </select>
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              </div>
+              <Select
+                className="react-select-container"
+                classNamePrefix="react-select"
+                placeholder="Select destination..."
+                value={formData.destination}
+                onChange={(option) => setFormData(prev => ({ ...prev, destination: option as AirportOption }))}
+                loadOptions={loadAirportOptions}
+                defaultOptions
+                cacheOptions
+              />
             </div>
           </div>
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-3 hidden md:block">
@@ -315,19 +289,19 @@ const WorkingSearchForm: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             {popularAirports.map((airport) => (
               <button
-                key={airport.code}
+                key={airport.value}
                 type="button"
                 onClick={() => {
                   if (!formData.origin) {
-                    setFormData(prev => ({ ...prev, origin: airport.code }));
+                    setFormData(prev => ({ ...prev, origin: airport }));
                   } else if (!formData.destination) {
-                    setFormData(prev => ({ ...prev, destination: airport.code }));
+                    setFormData(prev => ({ ...prev, destination: airport }));
                   }
                 }}
                 className="text-sm bg-accent/20 text-accent-foreground px-3 py-2 rounded-lg 
                          hover:bg-accent/30 transition-colors border border-accent/20"
               >
-                {airport.city} ({airport.code})
+                {airport.label}
               </button>
             ))}
           </div>

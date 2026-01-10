@@ -613,7 +613,7 @@
 
 /* React Select Custom Styles */
 .react-select-container .react-select__control {
-  @apply border border-input bg-background rounded-md shadow-sm;
+  @apply border border-input bg-background rounded-lg shadow-sm text-sm h-[46px];
 }
 .react-select-container .react-select__control--is-focused {
   @apply ring-2 ring-ring;
