@@ -1,7 +1,7 @@
 
 'use client';
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { travelpayoutsApi } from '@/lib/travelpayouts';
+import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { useToast } from '@/hooks/use-toast';
 import type {
   Flight,
@@ -10,7 +10,8 @@ import type {
   HotelSearchParams,
   Airport,
   Airline,
-  City
+  City,
+  AirportOption,
 } from '@/types/travel';
 
 // Flight Search Hook
@@ -73,16 +74,18 @@ export const useHotelSearch = (
   });
 };
 
-// Static Data Hooks
-export const useAirports = (enabled: boolean = true) => {
-  return useQuery<Airport[], Error>({
-    queryKey: ['airports'],
-    queryFn: () => travelpayoutsApi.getAirports(),
+// Airports Hook
+export const useAirportSearch = (query: string, enabled: boolean = true) => {
+  return useQuery<AirportOption[], Error>({
+    queryKey: ['airports', query],
+    queryFn: () => travelpayoutsApi.searchAirports(query),
     enabled,
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 };
 
+
+// Static Data Hooks
 export const useAirlines = (enabled: boolean = true) => {
   return useQuery<Airline[], Error>({
     queryKey: ['airlines'],
@@ -98,14 +101,5 @@ export const useCities = (enabled: boolean = true) => {
     queryFn: () => travelpayoutsApi.getCities(),
     enabled,
     staleTime: 24 * 60 * 60 * 1000,
-  });
-};
-
-// Cheapest Flights Hook
-export const useCheapestFlights = (origin: string = 'JFK') => {
-  return useQuery<any, Error>({
-    queryKey: ['cheapest-flights', origin],
-    queryFn: () => travelpayoutsApi.getCheapestFlights(origin),
-    staleTime: 60 * 60 * 1000, // 1 hour
   });
 };

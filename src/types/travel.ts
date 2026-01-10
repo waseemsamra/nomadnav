@@ -3,8 +3,13 @@
 export interface Airport {
   code: string;
   name: string;
+  city_code: string;
   city_name: string;
   country_code: string;
+  country_name: string;
+  timezone: string;
+  lat: number;
+  lng: number;
 }
 
 export interface Airline {
@@ -86,4 +91,12 @@ export interface FilterState {
   sortBy: 'price' | 'duration' | 'departure';
   departureTime: [number, number];
   arrivalTime: [number, number];
+}
+
+export interface AirportOption {
+  value: string;
+  label: string;
+  city: string;
+  country: string;
+  fullLabel: string;
 }

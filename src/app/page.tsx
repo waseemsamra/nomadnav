@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plane, Hotel, Shield, TrendingUp, MapPin, Star, Quote, CalendarIcon, Users, Search, ChevronsUpDown, Building2, Check } from 'lucide-react';
+import { Plane, Hotel, Shield, TrendingUp, MapPin, Star, Quote, CalendarIcon, Users, Search, ChevronsUpDown, Building2, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import placeholderImagesData from '@/lib/placeholder-images.json';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,9 +20,11 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { useAirports } from '@/hooks/use-travel-search';
+import { useAirportSearch } from '@/hooks/use-travel-search';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useDebounce } from '@/hooks/use-debounce';
+import type { AirportOption } from '@/types/travel';
 
 
 const baseSearchSchema = z.object({
@@ -36,13 +38,8 @@ const baseSearchSchema = z.object({
 
 type SearchFormValues = z.infer<typeof baseSearchSchema> & { origin?: string };
 
-const AirportCombobox = ({ field, placeholder }: { field: any, placeholder: string }) => {
-  const { data: airports, isLoading } = useAirports();
+const AirportCombobox = ({ field, placeholder, airports, isLoading, onSearch }: { field: any, placeholder: string, airports: AirportOption[] | undefined, isLoading: boolean, onSearch: (query: string) => void }) => {
   const [open, setOpen] = useState(false);
-
-  if (isLoading) {
-    return <Skeleton className="h-10 w-full" />;
-  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -55,22 +52,30 @@ const AirportCombobox = ({ field, placeholder }: { field: any, placeholder: stri
             className="w-full justify-between"
           >
             {field.value
-              ? airports?.find((airport) => airport.code === field.value)?.name
+              ? airports?.find((airport) => airport.value === field.value)?.label
               : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </FormControl>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[300px] p-0">
         <Command>
-          <CommandInput placeholder="Search airport..." />
+          <CommandInput 
+            placeholder="Search airport..." 
+            onValueChange={onSearch}
+          />
           <CommandList>
+            {isLoading && (
+              <div className="p-4 text-sm text-center">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin"/>
+              </div>
+            )}
             <CommandEmpty>No airport found.</CommandEmpty>
             <CommandGroup>
               {airports?.map((airport) => (
                 <CommandItem
-                  key={airport.code}
-                  value={airport.code}
+                  key={airport.value}
+                  value={airport.value}
                   onSelect={(currentValue) => {
                     field.onChange(currentValue === field.value ? "" : currentValue);
                     setOpen(false);
@@ -79,10 +84,13 @@ const AirportCombobox = ({ field, placeholder }: { field: any, placeholder: stri
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      field.value === airport.code ? "opacity-100" : "opacity-0"
+                      field.value === airport.value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {airport.name} ({airport.code})
+                  <div>
+                    <p>{airport.label}</p>
+                    <p className="text-xs text-muted-foreground">{airport.country}</p>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -98,6 +106,14 @@ function SearchForm() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('flights');
   const [isClient, setIsClient] = useState(false);
+  const [originQuery, setOriginQuery] = useState('');
+  const [destinationQuery, setDestinationQuery] = useState('');
+
+  const debouncedOriginQuery = useDebounce(originQuery, 300);
+  const debouncedDestinationQuery = useDebounce(destinationQuery, 300);
+
+  const { data: originAirports, isLoading: isOriginLoading } = useAirportSearch(debouncedOriginQuery);
+  const { data: destinationAirports, isLoading: isDestinationLoading } = useAirportSearch(debouncedDestinationQuery);
 
   useEffect(() => {
     setIsClient(true);
@@ -177,6 +193,9 @@ function SearchForm() {
                 <AirportCombobox
                   field={field}
                   placeholder="Select origin"
+                  airports={originAirports}
+                  isLoading={isOriginLoading}
+                  onSearch={setOriginQuery}
                 />
                 <FormMessage />
               </FormItem>
@@ -192,6 +211,9 @@ function SearchForm() {
                <AirportCombobox
                 field={field}
                 placeholder="Select destination"
+                airports={destinationAirports}
+                isLoading={isDestinationLoading}
+                onSearch={setDestinationQuery}
               />
               <FormMessage />
             </FormItem>

@@ -77,7 +77,7 @@ export function HotelResults({params}: {params: HotelSearchParams}) {
                       </div>
                       <Button asChild>
                         <a
-                          href={`https://hotellook.com/hotels?hotelId=${hotel.hotelId}&marker=${process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER}`}
+                          href={`https://hotellook.com/hotels?hotelId=${hotel.hotelId}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
