@@ -170,7 +170,7 @@ function SearchForm() {
       type: activeTab,
       destination: data.destination,
       depart_date: format(data.dates.from, 'yyyy-MM-dd'),
-      travelers: String(data.travelers),
+      passengers: String(data.travelers),
     });
     if (data.origin && activeTab !== 'hotels') {
       params.set('origin', data.origin);
@@ -178,7 +178,7 @@ function SearchForm() {
     if (data.dates.to) {
       params.set('return_date', format(data.dates.to, 'yyyy-MM-dd'));
     }
-    router.push(`/search?${params.toString()}`);
+    router.push(`/flights/search?${params.toString()}`);
   }
   
   const renderFormFields = () => (
@@ -421,7 +421,7 @@ function DestinationGrid() {
                             </p>
                             <div className="flex gap-3">
                                 <Button asChild className="flex-1">
-                                    <Link href={`/search?type=flights&destination=${destination.iata}`}>Explore</Link>
+                                    <Link href={`/flights/search?type=flights&destination=${destination.iata}`}>Explore</Link>
                                 </Button>
                                 <Button variant="outline" className="flex-1">
                                     Quick View
@@ -693,5 +693,7 @@ export default function HomePage() {
     </main>
   );
 }
+
+    
 
     
