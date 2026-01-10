@@ -2,26 +2,26 @@
 
 import React, { Suspense, useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Filter, 
   SortAsc, 
-  SortDesc, 
-  Plane, 
   Clock, 
+  Plane, 
   MapPin,
   Calendar,
   Users,
   ArrowRight,
   Loader2
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
+import { Flight, travelpayoutsApi, FlightSearchParams } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { formatDuration, formatDateString } from '@/lib/utils';
+import { toast as hotToast } from 'react-hot-toast';
 
 function SearchResultsContent() {
   const searchParams = useSearchParams();
@@ -29,7 +29,6 @@ function SearchResultsContent() {
   const { toast } = useToast();
   
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     maxPrice: 5000,
     maxStops: 2,
@@ -43,51 +42,76 @@ function SearchResultsContent() {
     depart_date: searchParams.get('depart_date') || '',
     return_date: searchParams.get('return_date') || '',
     passengers: parseInt(searchParams.get('passengers') || '1'),
-    cabin_class: searchParams.get('cabin_class') || 'economy',
+    cabin_class: (searchParams.get('cabin_class') || 'economy') as 'economy' | 'business' | 'first',
     trip_type: searchParams.get('trip_type') || 'round',
   }), [searchParams]);
 
+  const { data: searchId, error: searchIdError } = useQuery({
+    queryKey: ['flightSearchId', searchData],
+    queryFn: () => {
+        if (!searchData.origin || !searchData.destination || !searchData.depart_date) {
+            throw new Error('Missing search parameters');
+        }
+        hotToast.loading('Finding the best flights...');
+        return travelpayoutsApi.searchFlightsRealtime(searchData as FlightSearchParams);
+    },
+    enabled: !!searchData.origin && !!searchData.destination && !!searchData.depart_date,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: searchResults, isLoading: resultsLoading, error: resultsError } = useQuery({
+    queryKey: ['flightSearchResults', searchId],
+    queryFn: async () => {
+      const results = await travelpayoutsApi.getFlightSearchResults(searchId!);
+      // The actual flight tickets are nested in the response
+      const tickets = results?.tickets || [];
+      return tickets.map((ticket: any) => ({
+        ...ticket,
+        value: ticket.price,
+        depart_date: ticket.departure_at,
+        return_date: ticket.return_at,
+        number_of_changes: ticket.transfers,
+        link: ticket.link,
+      }));
+    },
+    enabled: !!searchId,
+    refetchInterval: (data) => (data && data.length > 0 ? false : 2000), // poll every 2s until we get results
+    onSuccess: (data) => {
+        if (data && data.length > 0) {
+            hotToast.dismiss();
+            hotToast.success('We found flights for you!');
+            setFlights(data);
+        }
+    },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
   useEffect(() => {
-    const fetchFlights = async () => {
-      if (!searchData.origin || !searchData.destination || !searchData.depart_date) {
+    if (searchIdError) {
+      hotToast.dismiss();
+      toast({
+        variant: "destructive",
+        title: "Search Failed",
+        description: searchIdError.message || "Could not initiate flight search."
+      });
+      router.push('/');
+    }
+  }, [searchIdError, router, toast]);
+
+  useEffect(() => {
+    if (resultsError) {
+        hotToast.dismiss();
         toast({
-          variant: "destructive",
-          title: "Incomplete Search",
-          description: "Please provide origin, destination, and departure date."
+            variant: "destructive",
+            title: 'Failed to Load Flights',
+            description: resultsError.message || 'There was an error fetching flight data. Please try again later.'
         });
-        router.push('/');
-        return;
-      }
+    }
+  }, [resultsError, toast]);
 
-      setLoading(true);
-      try {
-        const flightData = await travelpayoutsApi.searchFlights({
-          origin: searchData.origin,
-          destination: searchData.destination,
-          depart_date: searchData.depart_date,
-          return_date: searchData.return_date || undefined,
-          passengers: searchData.passengers,
-          currency: 'USD',
-          limit: 100,
-        });
-        
-        setFlights(flightData);
-      } catch (error) {
-        console.error('Error fetching flights:', error);
-        toast({
-          variant: "destructive",
-          title: 'Failed to Load Flights',
-          description: 'There was an error fetching flight data. Please try again later.'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFlights();
-  }, [searchData, router, toast]);
-
-  const filteredFlights = useMemo(() => flights
+  const filteredFlights = useMemo(() => (flights || [])
     .filter(flight => {
       const priceFilter = flight.value <= filters.maxPrice;
       const stopsFilter = flight.number_of_changes <= filters.maxStops;
@@ -120,14 +144,17 @@ function SearchResultsContent() {
       });
     }
   };
+  
+  const isLoading = resultsLoading || (flights.length === 0 && !resultsError);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container py-8">
           <div className="text-center py-20">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">Searching for the best flights...</p>
+            <p className="text-sm text-muted-foreground/50">This may take a moment.</p>
           </div>
         </div>
       </div>

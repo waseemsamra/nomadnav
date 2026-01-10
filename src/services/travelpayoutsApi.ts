@@ -73,6 +73,8 @@ if (!API_TOKEN) {
 class TravelpayoutsApiService {
   private static instance: TravelpayoutsApiService;
   private api: AxiosInstance;
+  private flightSearchApiV2: AxiosInstance;
+  private realtimeApi: AxiosInstance;
   private cache: {
     airports: Airport[] | null;
     airlines: any[] | null;
@@ -87,7 +89,28 @@ class TravelpayoutsApiService {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'X-Access-Token': API_TOKEN,
       },
+    });
+
+    this.flightSearchApiV2 = axios.create({
+        baseURL: `${API_BASE}/v2`,
+        timeout: 30000,
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Access-Token': API_TOKEN,
+        },
+    });
+    
+    this.realtimeApi = axios.create({
+        baseURL: `${API_BASE}/api/v3`,
+        timeout: 30000,
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Access-Token': API_TOKEN,
+        },
     });
 
     this.cache = {
@@ -114,6 +137,49 @@ class TravelpayoutsApiService {
   private shouldUseCache(maxAge: number = 24 * 60 * 60 * 1000): boolean {
     return Date.now() - this.cache.lastUpdated < maxAge;
   }
+
+    async searchFlightsRealtime(params: FlightSearchParams): Promise<string> {
+        const cabinClassMapping = {
+            economy: 'Y',
+            business: 'C',
+            first: 'F',
+        };
+
+        const segments = [{
+            origin: params.origin,
+            destination: params.destination,
+            date: params.depart_date,
+        }];
+
+        if (params.trip_type === 'round' && params.return_date) {
+            segments.push({
+                origin: params.destination,
+                destination: params.origin,
+                date: params.return_date,
+            });
+        }
+    
+        const searchPayload = {
+            segments: segments,
+            passengers: {
+                adults: params.passengers || 1,
+                children: 0,
+                infants: 0,
+            },
+            marker: MARKER,
+            cabin_class: cabinClassMapping[params.cabin_class || 'economy'],
+        };
+        
+        const response = await this.flightSearchApiV2.post('/create_search', searchPayload);
+        return response.data.search_id;
+    }
+
+    async getFlightSearchResults(searchId: string): Promise<any> {
+        const response = await this.realtimeApi.get('/flights_search_results', {
+            params: { uuid: searchId },
+        });
+        return response.data;
+    }
 
   // ==================== FLIGHT SEARCH - CORRECT ENDPOINTS ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
@@ -169,7 +235,7 @@ class TravelpayoutsApiService {
   
       return flightsWithLinks;
     } catch (error: any) {
-      console.error('Error searching flights:', error.message);
+      console.error('Error searching flights:', error);
   
       if (process.env.NODE_ENV === 'development') {
         console.log('Using mock flight data for development');
@@ -220,7 +286,7 @@ class TravelpayoutsApiService {
           country: airport.country_name,
           fullLabel: `${airport.city_name || airport.name} (${airport.code}) - ${airport.country_name}`,
         }))
-        .sort((a, b) => a.label.localeCompare(b.label));
+        .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
     } catch (error) {
       console.error('Error getting airport options:', error);
       return this.getBasicAirportOptions();
@@ -239,10 +305,10 @@ class TravelpayoutsApiService {
       
       return options
         .filter(option => 
-          option.label.toLowerCase().includes(searchTerm) ||
+          (option.label && option.label.toLowerCase().includes(searchTerm)) ||
           (option.city && option.city.toLowerCase().includes(searchTerm)) ||
           (option.country && option.country.toLowerCase().includes(searchTerm)) ||
-          option.value.toLowerCase() === searchTerm
+          (option.value && option.value.toLowerCase() === searchTerm)
         )
         .slice(0, 50);
     } catch (error) {
