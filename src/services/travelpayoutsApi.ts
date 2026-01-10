@@ -73,7 +73,7 @@ class TravelpayoutsApiService {
 
   private constructor() {
     this.flightSearchApiV2 = axios.create({
-        baseURL: `${API_BASE}/v2/prices`,
+        baseURL: API_BASE, // Correct base URL
         timeout: 30000,
     });
 
@@ -134,14 +134,16 @@ class TravelpayoutsApiService {
           cabin_class: cabinClassMapping[params.cabin_class || 'economy'],
       };
       
-      const response = await this.flightSearchApiV2.post('/create_search', searchPayload, { 
+      // Use the full path from the base URL
+      const response = await this.flightSearchApiV2.post('/v2/prices/create_search', searchPayload, { 
         headers: this.getApiHeaders() 
       });
       return response.data.search_id;
   }
 
   async getFlightSearchResults(searchId: string): Promise<any> {
-      const response = await this.flightSearchApiV2.get('/search_results', {
+      // Use the full path from the base URL
+      const response = await this.flightSearchApiV2.get('/v2/prices/search_results', {
           params: { uuid: searchId },
           headers: this.getApiHeaders()
       });
