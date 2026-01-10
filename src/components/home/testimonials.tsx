@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -64,12 +63,12 @@ const testimonials: Testimonial[] = [
 
 export function Testimonials() {
   return (
-    <section className="testimonials-section py-16 bg-background">
+    <section className="testimonials-section">
       <div className="container">
-        <div className="section-header text-center mb-12">
-          <h2 className="section-title text-3xl md:text-4xl font-bold font-headline mb-4">What Our Travelers Say</h2>
-          <p className="section-subtitle text-muted-foreground max-w-2xl mx-auto">
-            Join thousands of satisfied customers who trust us with their travels.
+        <div className="section-header">
+          <h2 className="section-title">What Our Travelers Say</h2>
+          <p className="section-subtitle">
+            Join thousands of satisfied customers who trust us with their travels
           </p>
         </div>
 
@@ -78,41 +77,34 @@ export function Testimonials() {
             align: "start",
             loop: true,
           }}
-          className="w-full max-w-4xl mx-auto"
+          className="testimonials-container"
         >
-          <CarouselContent>
+          <CarouselContent className="testimonials-slider">
+            
             {testimonials.map((testimonial) => (
-              <CarouselItem key={testimonial.id} className="md:basis-1/2">
-                <div className="p-1 h-full">
-                  <Card className="testimonial-card h-full flex flex-col">
-                    <CardContent className="flex flex-col flex-grow items-start justify-between p-6 space-y-6">
-                        <Quote className="testimonial-quote h-8 w-8 text-primary" />
-                        <p className="testimonial-content text-muted-foreground text-base flex-grow">
-                            {testimonial.content}
-                        </p>
-                        <div className="testimonial-author flex items-center gap-4 w-full pt-4 border-t">
-                            <Avatar className='testimonial-avatar'>
-                                <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
-                                <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="testimonial-info flex-grow">
-                                <h4 className="testimonial-name font-semibold">{testimonial.name}</h4>
-                                <p className="testimonial-role text-sm text-muted-foreground">{testimonial.role} - {testimonial.location}</p>
-                            </div>
-                            <div className="testimonial-rating flex items-center gap-1 shrink-0">
-                                {[...Array(testimonial.rating)].map((_, i) => (
-                                    <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                                ))}
-                                {[...Array(5 - testimonial.rating)].map((_, i) => (
-                                    <Star key={i} className="h-4 w-4 text-muted-foreground/50" />
-                                ))}
-                            </div>
-                        </div>
-                    </CardContent>
-                  </Card>
-                </div>
+              <CarouselItem key={testimonial.id} className="testimonial-card">
+                  <Quote className="testimonial-quote" />
+                  <p className="testimonial-content">{testimonial.content}</p>
+                  <div className="testimonial-rating">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                        <Star key={i} className="h-5 w-5 fill-current" />
+                    ))}
+                    <span className="rating-text">{testimonial.rating}/5</span>
+                  </div>
+                  <div className="testimonial-author">
+                    <Avatar className="testimonial-avatar">
+                        <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
+                        <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="testimonial-info">
+                      <h4 className="font-semibold">{testimonial.name}</h4>
+                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                    </div>
+                  </div>
               </CarouselItem>
             ))}
+            
           </CarouselContent>
           <CarouselPrevious className="testimonial-nav prev" />
           <CarouselNext className="testimonial-nav next" />
@@ -120,4 +112,4 @@ export function Testimonials() {
       </div>
     </section>
   );
-};
+}

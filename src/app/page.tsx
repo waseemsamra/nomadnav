@@ -6,7 +6,6 @@ import { MapPin, Star, Plane, Briefcase, Award, LifeBuoy } from 'lucide-react';
 import { useCheapestFlights } from '@/hooks/use-travel-search';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Testimonials } from '@/components/home/testimonials';
 import { SearchForm } from '@/components/search/search-form';
 
@@ -169,7 +168,7 @@ export default function Home() {
         {heroImage && 
           <div 
             className="hero-background"
-            style={{backgroundImage: `url(${heroImage.imageUrl})`}}
+            style={{backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.5)), url('${heroImage.imageUrl}')`}}
             data-ai-hint={heroImage.imageHint}
           />
         }
