@@ -2,7 +2,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster as RadixToaster } from "@/components/ui/toaster";
+import { Toaster as HotToaster } from 'react-hot-toast';
 import { TravelProvider } from '@/context/TravelContext';
 import Link from 'next/link';
 import { Facebook, Twitter, Instagram, Linkedin, Heart, Menu, X, User, Search, Bell, Globe } from 'lucide-react';
@@ -47,8 +48,7 @@ function Header() {
 
   const navLinks = [
     { href: '/', label: 'Home' },
-    { href: '/search?type=flights', label: 'Flights' },
-    { href: '/search?type=hotels', label: 'Hotels' },
+    { href: '/flights/search', label: 'Flights' },
     { href: '/itinerary-planner', label: 'Itinerary Planner' },
   ];
 
@@ -79,7 +79,7 @@ function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`navbar-link ${pathname === link.href ? 'active' : ''}`}
+                className={`navbar-link ${pathname.startsWith(link.href) && link.href !== '/' ? 'active' : (pathname === '/' && link.href === '/') ? 'active' : ''}`}
               >
                 {link.label}
               </Link>
@@ -154,7 +154,7 @@ function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`mobile-menu-link ${pathname === link.href ? 'active' : ''}`}
+                  className={`mobile-menu-link ${pathname.startsWith(link.href) && link.href !== '/' ? 'active' : (pathname === '/' && link.href === '/') ? 'active' : ''}`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}
@@ -313,7 +313,13 @@ export default function RootLayout({
             <main className="flex-grow">{children}</main>
             <Footer />
             </div>
-            <Toaster />
+            <RadixToaster />
+            <HotToaster 
+              position="top-center"
+              toastOptions={{
+                duration: 3000,
+              }}
+            />
           </TravelProvider>
         </Providers>
       </body>
