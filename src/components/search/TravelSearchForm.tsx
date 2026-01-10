@@ -41,6 +41,12 @@ const TravelSearchForm: React.FC<TravelSearchFormProps> = ({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const [formData, setFormData] = useState<SearchFormData>({
     origin: null,
     destination: null,
@@ -167,6 +173,10 @@ const TravelSearchForm: React.FC<TravelSearchFormProps> = ({
       </div>
     </div>
   );
+
+  if (!isClient) {
+    return null; // or a loading skeleton
+  }
 
   return (
     <form 
@@ -439,20 +449,12 @@ const TravelSearchForm: React.FC<TravelSearchFormProps> = ({
                   key={route.label}
                   type="button"
                   onClick={() => {
+                    const originOption = airportOptions.find(o => o.value === route.origin);
+                    const destinationOption = airportOptions.find(o => o.value === route.destination);
                     setFormData(prev => ({
                       ...prev,
-                      origin: { 
-                        value: route.origin, 
-                        label: route.origin, 
-                        city: route.origin, 
-                        country: '' 
-                      },
-                      destination: { 
-                        value: route.destination, 
-                        label: route.destination, 
-                        city: route.destination, 
-                        country: '' 
-                      },
+                      origin: originOption || { value: route.origin, label: route.origin, city: route.origin, country: '', fullLabel: '' },
+                      destination: destinationOption || { value: route.destination, label: route.destination, city: route.destination, country: '', fullLabel: '' },
                     }));
                   }}
                   className="text-sm bg-primary/10 text-primary px-3 py-2 rounded-lg 
@@ -502,3 +504,6 @@ const TravelSearchForm: React.FC<TravelSearchFormProps> = ({
 };
 
 export default TravelSearchForm;
+
+
+    
