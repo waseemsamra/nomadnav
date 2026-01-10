@@ -9,7 +9,8 @@ import {travelpayoutsApi} from '@/lib/travelpayouts';
 const heroImage = PlaceHolderImages.find(img => img.id === 'hero');
 
 async function TravelInspiration() {
-  const cheapFlights = await travelpayoutsApi.getCheapestFlights();
+  const cheapFlightsData = await travelpayoutsApi.getCheapestFlights();
+  const cheapFlights = cheapFlightsData ? Object.values(cheapFlightsData) : [];
 
   return (
     <section className="container text-center">
