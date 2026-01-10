@@ -2,7 +2,7 @@
 
 import { personalizedTravelRecommendations } from '@/ai/flows/personalized-travel-recommendations';
 import { generateItinerarySuggestions } from '@/ai/flows/generate-itinerary-suggestions';
-import { mockUser } from './lib/placeholder-data';
+import { mockUser } from '@/lib/placeholder-data';
 import { z } from 'zod';
 
 export async function getPersonalizedRecommendations() {
