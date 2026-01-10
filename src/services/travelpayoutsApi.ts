@@ -87,31 +87,16 @@ class TravelpayoutsApiService {
     this.api = axios.create({
       baseURL: API_BASE,
       timeout: 30000,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-Access-Token': API_TOKEN,
-      },
     });
 
     this.flightSearchApiV2 = axios.create({
         baseURL: `${API_BASE}/v2`,
         timeout: 30000,
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-Access-Token': API_TOKEN,
-        },
     });
     
     this.realtimeApi = axios.create({
         baseURL: `${API_BASE}/api/v3`,
         timeout: 30000,
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-Access-Token': API_TOKEN,
-        },
     });
 
     this.cache = {
@@ -131,6 +116,8 @@ class TravelpayoutsApiService {
 
   private getApiHeaders() {
     return {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
       'X-Access-Token': API_TOKEN,
     };
   }
@@ -171,13 +158,14 @@ class TravelpayoutsApiService {
             cabin_class: cabinClassMapping[params.cabin_class || 'economy'],
         };
         
-        const response = await this.flightSearchApiV2.post('/create_search', searchPayload);
+        const response = await this.flightSearchApiV2.post('/create_search', searchPayload, { headers: this.getApiHeaders() });
         return response.data.search_id;
     }
 
     async getFlightSearchResults(searchId: string): Promise<any> {
         const response = await this.realtimeApi.get('/flights_search_results', {
             params: { uuid: searchId },
+            headers: this.getApiHeaders()
         });
         return response.data;
     }
@@ -463,10 +451,10 @@ class TravelpayoutsApiService {
   private getBasicAirportOptions(): AirportOption[] {
     return this.getBasicAirports().map(airport => ({
       value: airport.code,
-      label: `${airport.city_name} (${airport.code})`,
+      label: `${airport.city_name || airport.name} (${airport.code})`,
       city: airport.city_name,
       country: airport.country_name,
-      fullLabel: `${airport.city_name} (${airport.code}) - ${airport.country_name}`,
+      fullLabel: `${airport.city_name || airport.name} (${airport.code}) - ${airport.country_name}`,
     }));
   }
 
@@ -614,5 +602,3 @@ class TravelpayoutsApiService {
 
 // Export singleton instance
 export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
-
-    
