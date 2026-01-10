@@ -44,15 +44,55 @@ export const travelpayoutsApi = {
     return response.data.data || [];
   },
 
+  searchFlightsRealtime: async (params: any) => {
+    const segments = [{
+      origin: params.origin,
+      destination: params.destination,
+      date: params.depart_date,
+    }];
+
+    if (params.return_date) {
+      segments.push({
+        origin: params.destination,
+        destination: params.origin,
+        date: params.return_date,
+      });
+    }
+
+    const searchPayload = {
+      segments: segments,
+      passengers: {
+        adults: params.passengers || 1,
+        children: 0,
+        infants: 0,
+      },
+      trip_class: 'Y', // Y for economy
+      marker: MARKER,
+    };
+    
+    const response = await api.post('/api/v3/create_search', searchPayload);
+    return response.data.search_id;
+  },
+
+  getFlightSearchResults: async (searchId: string) => {
+    const response = await api.get(`/api/v3/flights_search_results?search_id=${searchId}`);
+    return response.data;
+  },
+
   getCheapestFlights: async () => {
-    const response = await api.get('/v1/prices/cheap', {
-      params: {
-        origin: 'JFK',
-        currency: 'USD',
-        marker: MARKER
-      }
-    });
-    return response.data.data || {};
+    try {
+      const response = await api.get('/v1/prices/cheap', {
+        params: {
+          origin: 'JFK',
+          currency: 'USD',
+          marker: MARKER
+        }
+      });
+      return response.data.data || {};
+    } catch (error) {
+      console.error('Failed to fetch cheapest flights:', error);
+      return {};
+    }
   },
 
   getMonthPrices: async (origin: string, destination: string, month: string) => {

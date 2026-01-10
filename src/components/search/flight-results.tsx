@@ -28,8 +28,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Progress } from '../ui/progress';
 
-const FlightCard = ({flight}: {flight: any}) => {
+const FlightCard = ({flight, airline}: {flight: any; airline: any}) => {
   const formatDuration = (duration: number) => {
     const hours = Math.floor(duration / 60);
     const minutes = duration % 60;
@@ -46,6 +47,8 @@ const FlightCard = ({flight}: {flight: any}) => {
   };
 
   const airlineLogoUrl = `https://pics.aviasales.com/200/200/${flight.airline}.png`;
+  const mainSegment = flight.segments[0];
+  const returnSegment = flight.segments.length > 1 ? flight.segments[1] : null;
 
   return (
     <Card className="transition-shadow hover:shadow-lg">
@@ -53,13 +56,13 @@ const FlightCard = ({flight}: {flight: any}) => {
         <div className="flex items-center gap-4 col-span-2 md:col-span-2">
           <img
             src={airlineLogoUrl}
-            alt={flight.airline}
+            alt={airline?.name || flight.airline}
             className="h-10 w-10 object-contain"
           />
           <div>
-            <p className="font-semibold">{flight.airline_name}</p>
+            <p className="font-semibold">{airline?.name || flight.airline}</p>
             <p className="text-xs text-muted-foreground">
-              Flight {flight.flight_number}
+              Flight {mainSegment.flight_number}
             </p>
           </div>
         </div>
@@ -67,9 +70,9 @@ const FlightCard = ({flight}: {flight: any}) => {
         <div className="flex items-center justify-between md:justify-center gap-4 col-span-2 md:col-span-3 text-sm">
           <div className="text-center">
             <p className="font-bold text-lg">
-              {formatDate(flight.departure_at)}
+              {formatDate(mainSegment.departure_at)}
             </p>
-            <p className="text-muted-foreground">{flight.origin}</p>
+            <p className="text-muted-foreground">{mainSegment.origin}</p>
           </div>
           <div className="text-center text-muted-foreground min-w-24">
             <Clock className="mx-auto mb-1 h-4 w-4" />
@@ -77,14 +80,14 @@ const FlightCard = ({flight}: {flight: any}) => {
             <Separator className="my-1" />
             <Badge variant="outline">
               <ArrowRightLeft className="mr-1 h-3 w-3" />
-              {flight.transfers} stops
+              {mainSegment.transfers} stops
             </Badge>
           </div>
           <div className="text-center">
             <p className="font-bold text-lg">
-              {flight.return_at ? formatDate(flight.return_at) : 'N/A'}
+              {formatDate(mainSegment.arrival_at)}
             </p>
-            <p className="text-muted-foreground">{flight.destination}</p>
+            <p className="text-muted-foreground">{mainSegment.destination}</p>
           </div>
         </div>
 
@@ -108,7 +111,9 @@ const FlightCard = ({flight}: {flight: any}) => {
 
 export function FlightResults({params}: {params: any}) {
   const [flights, setFlights] = useState<any[]>([]);
+  const [airlines, setAirlines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [filters, setFilters] = useState({
     maxPrice: 5000,
     sortBy: 'price',
@@ -118,17 +123,36 @@ export function FlightResults({params}: {params: any}) {
     const fetchFlights = async () => {
       if (params.origin && params.destination) {
         setLoading(true);
+        setLoadingProgress(0);
+        setFlights([]);
         try {
-          const results = await travelpayoutsApi.searchFlights(params);
-          const airlines = await travelpayoutsApi.getAirlines();
-          const airlinesMap = new Map(
-            airlines.map((a: any) => [a.code, a.name])
-          );
-          const enrichedResults = results.map((flight: any) => ({
-            ...flight,
-            airline_name: airlinesMap.get(flight.airline) || flight.airline,
-          }));
-          setFlights(enrichedResults);
+          const searchId = await travelpayoutsApi.searchFlightsRealtime(params);
+          setLoadingProgress(20);
+
+          let results:any = {};
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          while(attempts < maxAttempts) {
+            results = await travelpayoutsApi.getFlightSearchResults(searchId);
+            const currentProgress = (attempts + 1) / maxAttempts * 80 + 20;
+            setLoadingProgress(currentProgress > 100 ? 100 : currentProgress);
+            if (results.flights && results.flights.length > 0) {
+              setLoadingProgress(100);
+              break;
+            }
+            if (results.search_completed) {
+              setLoadingProgress(100);
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Poll every 2 seconds
+            attempts++;
+          }
+
+          const airlinesData = await travelpayoutsApi.getAirlines();
+          setAirlines(airlinesData);
+
+          setFlights(results.flights || []);
         } catch (error) {
           console.error('Failed to fetch flights:', error);
           setFlights([]);
@@ -143,7 +167,13 @@ export function FlightResults({params}: {params: any}) {
   }, [params]);
 
   const filteredAndSortedFlights = useMemo(() => {
+    const airlinesMap = new Map(airlines.map((a: any) => [a.code, a]));
+    
     return flights
+      .map(flight => ({
+        ...flight,
+        airlineDetails: airlinesMap.get(flight.airline)
+      }))
       .filter(flight => flight.price <= filters.maxPrice)
       .sort((a, b) => {
         switch (filters.sortBy) {
@@ -153,22 +183,25 @@ export function FlightResults({params}: {params: any}) {
             return a.duration - b.duration;
           case 'departure':
             return (
-              new Date(a.departure_at).getTime() -
-              new Date(b.departure_at).getTime()
+              new Date(a.segments[0].departure_at).getTime() -
+              new Date(b.segments[0].departure_at).getTime()
             );
           default:
             return 0;
         }
       });
-  }, [flights, filters]);
+  }, [flights, filters, airlines]);
 
   if (loading) {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <Skeleton className="h-8 w-1/4" />
-          <Skeleton className="h-10 w-24" />
+          <h2 className="text-2xl font-bold font-headline flex items-center gap-2">
+            <Plane /> Searching for Flights...
+          </h2>
         </div>
+        <Progress value={loadingProgress} className="w-full" />
+        <p className='text-center text-muted-foreground'>Please wait while we find the best deals for you. This may take a moment.</p>
         {[...Array(3)].map((_, i) => (
           <Skeleton key={i} className="h-32 w-full" />
         ))}
@@ -239,7 +272,7 @@ export function FlightResults({params}: {params: any}) {
 
       {filteredAndSortedFlights.length > 0 ? (
         filteredAndSortedFlights.map((flight, index) => (
-          <FlightCard key={`${flight.link}-${index}`} flight={flight} />
+          <FlightCard key={`${flight.id}-${index}`} flight={flight} airline={flight.airlineDetails} />
         ))
       ) : (
         <Card>
