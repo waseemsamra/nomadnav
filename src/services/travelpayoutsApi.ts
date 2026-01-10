@@ -66,7 +66,6 @@ if (!API_TOKEN) {
 class TravelpayoutsApiService {
   private static instance: TravelpayoutsApiService;
   private flightSearchApiV2: AxiosInstance;
-  private realtimeApi: AxiosInstance;
   private cache: {
     airports: Airport[] | null;
     lastUpdated: number;
@@ -74,12 +73,7 @@ class TravelpayoutsApiService {
 
   private constructor() {
     this.flightSearchApiV2 = axios.create({
-        baseURL: `${API_BASE}/v2`,
-        timeout: 30000,
-    });
-    
-    this.realtimeApi = axios.create({
-        baseURL: `${API_BASE}/api/v3`,
+        baseURL: `${API_BASE}/v2/prices`,
         timeout: 30000,
     });
 
@@ -147,7 +141,7 @@ class TravelpayoutsApiService {
   }
 
   async getFlightSearchResults(searchId: string): Promise<any> {
-      const response = await this.realtimeApi.get('/flights_search_results', {
+      const response = await this.flightSearchApiV2.get('/search_results', {
           params: { uuid: searchId },
           headers: this.getApiHeaders()
       });
