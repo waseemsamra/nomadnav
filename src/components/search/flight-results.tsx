@@ -1,35 +1,18 @@
 'use client';
 import {
   Plane,
-  Clock,
-  Wallet,
-  SlidersHorizontal,
-  ArrowRight,
 } from 'lucide-react';
 import {Card, CardContent} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
-import {Separator} from '@/components/ui/separator';
-import {Badge} from '@/components/ui/badge';
 import {useEffect, useState, useMemo} from 'react';
 import {travelpayoutsApi} from '@/lib/travelpayouts';
 import {Skeleton} from '../ui/skeleton';
 import {format, parseISO} from 'date-fns';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {Label} from '@/components/ui/label';
-import {Slider} from '@/components/ui/slider';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import {Progress} from '../ui/progress';
 import { FlightSearchParams } from '@/types/travel';
+import { useFlightSearch } from '@/hooks/use-travel-search';
+import { useAirlines } from '@/hooks/use-travel-search';
+
 
 const FlightCard = ({
   ticket,
@@ -148,128 +131,18 @@ const FlightCard = ({
 };
 
 export function FlightResults({params}: {params: FlightSearchParams}) {
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [flightLegs, setFlightLegs] = useState<any[]>([]);
-  const [airlines, setAirlines] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [visibleCount, setVisibleCount] = useState(5);
-  const [filters, setFilters] = useState({
-    maxPrice: 5000,
-    sortBy: 'price',
-    stops: 'all',
-  });
-
-  useEffect(() => {
-    const fetchFlights = async () => {
-      if (params.origin && params.destination) {
-        setLoading(true);
-        setLoadingProgress(0);
-        setTickets([]);
-        try {
-          const searchId = await travelpayoutsApi.searchFlightsRealtime(params);
-          setLoadingProgress(20);
-
-          let results: any = {};
-          let attempts = 0;
-          const maxAttempts = 10;
-
-          while (attempts < maxAttempts) {
-            results = await travelpayoutsApi.getFlightSearchResults(searchId);
-            const currentProgress = ((attempts + 1) / maxAttempts) * 80 + 20;
-            setLoadingProgress(currentProgress > 100 ? 100 : currentProgress);
-
-            if (results.tickets && results.tickets.length > 0) {
-              setTickets(results.tickets || []);
-              setFlightLegs(results.flight_legs || []);
-              setAgents(Object.values(results.agents || {}));
-            }
-
-            if (results.is_over) {
-              setLoadingProgress(100);
-              break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Poll every 2 seconds
-            attempts++;
-          }
-
-          const airlinesData = await travelpayoutsApi.getAirlines();
-          setAirlines(airlinesData);
-        } catch (error) {
-          console.error('Failed to fetch flights:', error);
-          setTickets([]);
-        }
-        setLoading(false);
-      } else {
-        setLoading(false);
-        setTickets([]);
-      }
-    };
-    fetchFlights();
-  }, [params]);
-
-  const filteredAndSortedFlights = useMemo(() => {
-    if (!tickets || tickets.length === 0) return [];
-
-    return tickets
-      .filter(ticket => {
-        const stops = ticket.segments.reduce(
-          (acc: number, seg: any) => acc + seg.transfers.length,
-          0
-        );
-        const price = ticket.proposals[0].price.value;
-        const stopFilter =
-          filters.stops === 'all' ||
-          (filters.stops === 'direct' && stops === 0) ||
-          (filters.stops === '1' && stops === 1) ||
-          (filters.stops === '2+' && stops >= 2);
-
-        return price <= filters.maxPrice && stopFilter;
-      })
-      .sort((a, b) => {
-        switch (filters.sortBy) {
-          case 'price':
-            return a.proposals[0].price.value - b.proposals[0].price.value;
-          case 'duration':
-            const durationA = a.segments.reduce(
-              (total: number, segment: any) => {
-                const departure =
-                  flightLegs[segment.flights[0]].departure_unix_timestamp;
-                const arrival =
-                  flightLegs[segment.flights[segment.flights.length - 1]]
-                    .arrival_unix_timestamp;
-                return total + (arrival - departure) / 60;
-              },
-              0
-            );
-            const durationB = b.segments.reduce(
-              (total: number, segment: any) => {
-                const departure =
-                  flightLegs[segment.flights[0]].departure_unix_timestamp;
-                const arrival =
-                  flightLegs[segment.flights[segment.flights.length - 1]]
-                    .arrival_unix_timestamp;
-                return total + (arrival - departure) / 60;
-              },
-              0
-            );
-            return durationA - durationB;
-          case 'departure':
-            const departureA =
-              flightLegs[a.segments[0].flights[0]].departure_unix_timestamp;
-            const departureB =
-              flightLegs[b.segments[0].flights[0]].departure_unix_timestamp;
-            return departureA - departureB;
-          default:
-            return 0;
-        }
-      });
-  }, [tickets, filters, flightLegs]);
+  const { data: airlinesData } = useAirlines();
+  
+  const { data: flightData, isLoading } = useFlightSearch(params, !!(params.origin && params.destination));
+  
+  const tickets = flightData?.tickets || [];
+  const flightLegs = flightData?.flight_legs || [];
+  const agents = Object.values(flightData?.agents || {});
 
   const airlinesMap = useMemo(
-    () => new Map(airlines.map((a: any) => [a.code, a])),
-    [airlines]
+    () => new Map(airlinesData?.map((a: any) => [a.code, a]) || []),
+    [airlinesData]
   );
 
   const agentsMap = useMemo(
@@ -282,7 +155,7 @@ export function FlightResults({params}: {params: FlightSearchParams}) {
   };
 
 
-  if (loading) {
+  if (isLoading && !flightData) {
     return (
       <Card>
         <CardContent className="space-y-4 p-6">
@@ -291,7 +164,7 @@ export function FlightResults({params}: {params: FlightSearchParams}) {
               <Plane /> Searching for Flights...
             </h2>
           </div>
-          <Progress value={loadingProgress} className="w-full" />
+          <Progress value={flightData?.is_over ? 100 : undefined} className="w-full" />
           <p className="text-center text-muted-foreground">
             Please wait while we find the best deals for you. This may take a
             moment.
@@ -310,28 +183,11 @@ export function FlightResults({params}: {params: FlightSearchParams}) {
         <CardContent className="p-4 space-y-4">
             <div className='flex justify-between items-center'>
                 <h2 className="text-xl font-bold font-headline">Available Flights</h2>
-                 <Select
-                  value={filters.sortBy}
-                  onValueChange={value =>
-                    setFilters(prev => ({...prev, sortBy: value}))
-                  }
-                >
-                  <SelectTrigger id="sort-by" className="w-auto">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="price">Price: Low to High</SelectItem>
-                    <SelectItem value="duration">Shortest Duration</SelectItem>
-                    <SelectItem value="departure">
-                      Earliest Departure
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
             </div>
           
-            {filteredAndSortedFlights.length > 0 ? (
+            {tickets.length > 0 ? (
                 <>
-                {filteredAndSortedFlights.slice(0, visibleCount).map((ticket, index) => (
+                {tickets.slice(0, visibleCount).map((ticket, index) => (
                     <FlightCard
                     key={`${ticket.signature}-${index}`}
                     ticket={ticket}
@@ -340,7 +196,7 @@ export function FlightResults({params}: {params: FlightSearchParams}) {
                     agents={agentsMap}
                     />
                 ))}
-                {visibleCount < filteredAndSortedFlights.length && (
+                {visibleCount < tickets.length && (
                     <Button onClick={showMoreFlights} variant="outline" className="w-full">
                     Show More Flights
                     </Button>

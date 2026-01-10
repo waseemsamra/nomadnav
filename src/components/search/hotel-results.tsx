@@ -3,37 +3,14 @@ import Image from 'next/image';
 import {Star, MapPin, Hotel} from 'lucide-react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
-import {Badge} from '@/components/ui/badge';
-import {useEffect, useState} from 'react';
-import {travelpayoutsApi} from '@/lib/travelpayouts';
 import {Skeleton} from '../ui/skeleton';
 import { HotelSearchParams } from '@/types/travel';
+import { useHotelSearch } from '@/hooks/use-travel-search';
 
 export function HotelResults({params}: {params: HotelSearchParams}) {
-  const [hotels, setHotels] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: hotels, isLoading } = useHotelSearch(params);
 
-  useEffect(() => {
-    const fetchHotels = async () => {
-      if (params.location && params.checkIn && params.checkOut) {
-        setLoading(true);
-        try {
-          const results = await travelpayoutsApi.searchHotels(params);
-          setHotels(results);
-        } catch (error) {
-          console.error('Failed to fetch hotels:', error);
-          setHotels([]);
-        }
-        setLoading(false);
-      } else {
-        setLoading(false);
-        setHotels([]);
-      }
-    };
-    fetchHotels();
-  }, [params]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-1/4 mb-4" />
@@ -49,7 +26,7 @@ export function HotelResults({params}: {params: HotelSearchParams}) {
       <h2 className="text-2xl font-bold font-headline flex items-center gap-2">
         <Hotel /> Available Hotels
       </h2>
-      {hotels.length > 0 ? (
+      {hotels && hotels.length > 0 ? (
         hotels.slice(0, 10).map(hotel => {
           return (
             <Card

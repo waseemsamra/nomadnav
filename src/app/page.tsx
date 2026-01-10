@@ -1,11 +1,13 @@
+
+'use client';
 import Image from 'next/image';
 import {SearchForm} from '@/components/search/search-form';
 import {Suspense} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {PlaceHolderImages} from '@/lib/placeholder-images';
-import {travelpayoutsApi} from '@/lib/travelpayouts';
 import {Button} from '@/components/ui/button';
 import Link from 'next/link';
+import { useCheapestFlights } from '@/hooks/use-travel-search';
 
 const heroImage = PlaceHolderImages.find(img => img.id === 'hero');
 
@@ -15,8 +17,8 @@ const popularDestinations = PlaceHolderImages.filter(img =>
   )
 );
 
-async function TravelInspiration() {
-  const cheapFlightsData = await travelpayoutsApi.getCheapestFlights();
+function TravelInspiration() {
+  const { data: cheapFlightsData, isLoading } = useCheapestFlights('JFK');
   const cheapFlights = cheapFlightsData ? Object.values(cheapFlightsData) : [];
 
   return (
@@ -55,7 +57,7 @@ async function TravelInspiration() {
           <CardTitle>Cheapest Flights from New York</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {cheapFlights.slice(0, 5).map((flight: any) => (
+          {isLoading ? <p>Loading deals...</p> : cheapFlights.slice(0, 5).map((flight: any) => (
             <div
               key={flight.destination}
               className="flex justify-between items-center p-3 bg-card border rounded-lg shadow-sm"
