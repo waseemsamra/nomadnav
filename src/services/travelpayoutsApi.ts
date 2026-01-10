@@ -23,10 +23,20 @@ class TravelpayoutsApiService {
   private readonly CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
   private realtimeApi: AxiosInstance;
   private hotelApi: AxiosInstance;
+  private flightSearchApiV2: AxiosInstance;
 
   private constructor() {
     this.realtimeApi = axios.create({
         baseURL: 'https://api.travelpayouts.com/api/v3',
+        headers: {
+            'X-Access-Token': API_TOKEN,
+            'Accept': 'application/json',
+        },
+        timeout: 30000,
+    });
+    
+    this.flightSearchApiV2 = axios.create({
+        baseURL: 'https://api.travelpayouts.com/v2',
         headers: {
             'X-Access-Token': API_TOKEN,
             'Accept': 'application/json',
@@ -73,12 +83,12 @@ class TravelpayoutsApiService {
         children: 0,
         infants: 0,
       },
-      trip_class: 'Y', // Y for economy
+      class: 'Y', // Y for economy
       marker: MARKER,
       "know_english": "true"
     };
     
-    const response = await this.realtimeApi.post('/create_search', searchPayload);
+    const response = await this.flightSearchApiV2.post('/create_search', searchPayload);
     return response.data.search_id;
   }
 
