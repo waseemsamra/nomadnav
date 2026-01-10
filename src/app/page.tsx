@@ -346,7 +346,7 @@ function HeroSection() {
                 </p>
                 <div className="flex flex-wrap gap-4 justify-center">
                     <Button asChild size="lg" className="px-8">
-                        <Link href="/search">Start Your Adventure</Link>
+                        <Link href="/flights/search">Start Your Adventure</Link>
                     </Button>
                     <Button asChild size="lg" variant="outline" className="px-8 bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white/20">
                         <Link href="/dashboard">My Dashboard</Link>
@@ -693,7 +693,6 @@ export default function HomePage() {
     </main>
   );
 }
-
     
 
     
