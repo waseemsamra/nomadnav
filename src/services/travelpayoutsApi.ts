@@ -1,3 +1,4 @@
+
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 // Types
@@ -139,7 +140,7 @@ class TravelpayoutsApiService {
   }
 
     async searchFlightsRealtime(params: FlightSearchParams): Promise<string> {
-        const cabinClassMapping = {
+        const cabinClassMapping: { [key: string]: string } = {
             economy: 'Y',
             business: 'C',
             first: 'F',
@@ -180,71 +181,6 @@ class TravelpayoutsApiService {
         });
         return response.data;
     }
-
-  // ==================== FLIGHT SEARCH - CORRECT ENDPOINTS ====================
-  async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
-    try {
-      const searchParams = new URLSearchParams({
-        currency: params.currency || 'USD',
-        limit: (params.limit || 50).toString(),
-        origin: params.origin,
-        destination: params.destination,
-        depart_date: params.depart_date,
-        token: API_TOKEN
-      });
-  
-      if (params.return_date) {
-        searchParams.append('return_date', params.return_date);
-      }
-      if (params.trip_type) {
-        searchParams.append('one_way', params.trip_type === 'oneway' ? 'true' : 'false');
-      }
-  
-      const response = await axios.get<ApiResponse<Flight[]>>(
-        `${API_BASE}/v2/prices/latest?${searchParams.toString()}`,
-        {
-          headers: this.getApiHeaders(),
-          timeout: 15000,
-        }
-      );
-  
-      if (!response.data.success) {
-        console.error('API Error:', response.data.error);
-        throw new Error(response.data.error || 'Failed to fetch flights');
-      }
-  
-      const flightsWithLinks = (response.data.data || []).map(flight => {
-        const linkParams = new URLSearchParams({
-          origin_iata: flight.origin,
-          destination_iata: flight.destination,
-          depart_date: flight.depart_date,
-          adults: (params.passengers || 1).toString(),
-          children: '0',
-          infants: '0',
-          trip_class: flight.trip_class.toString(),
-          marker: MARKER,
-        });
-        if (flight.return_date) {
-          linkParams.append('return_date', flight.return_date);
-        }
-        return {
-          ...flight,
-          link: `/flights?${linkParams.toString()}`,
-        };
-      }).filter(flight => flight.link); // Ensure link is not empty
-  
-      return flightsWithLinks;
-    } catch (error: any) {
-      console.error('Error searching flights:', error);
-  
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Using mock flight data for development');
-        return this.getMockFlights(params);
-      }
-  
-      throw new Error(error.response?.data?.error || error.message || 'Failed to search flights');
-    }
-  }
 
   // ==================== AIRPORTS DATA ====================
   async getAirports(): Promise<Airport[]> {
@@ -589,7 +525,27 @@ class TravelpayoutsApiService {
       },
     ];
 
-    return mockFlights;
+    const flightsWithLinks = mockFlights.map(flight => {
+        const linkParams = new URLSearchParams({
+          origin_iata: flight.origin,
+          destination_iata: flight.destination,
+          depart_date: flight.depart_date,
+          adults: (params.passengers || 1).toString(),
+          children: '0',
+          infants: '0',
+          trip_class: flight.trip_class.toString(),
+          marker: MARKER,
+        });
+        if (flight.return_date) {
+          linkParams.append('return_date', flight.return_date);
+        }
+        return {
+          ...flight,
+          link: `/flights?${linkParams.toString()}`,
+        };
+      }).filter(flight => flight.link);
+  
+      return flightsWithLinks;
   }
 
   // ==================== API HEALTH CHECK ====================
@@ -624,13 +580,13 @@ class TravelpayoutsApiService {
       };
       
       try {
-        const flights = await Promise.race([
-          this.searchFlights(testFlightParams),
-          new Promise((_, reject) => 
+        const searchId = await Promise.race([
+          this.searchFlightsRealtime(testFlightParams),
+          new Promise<string>((_, reject) => 
             setTimeout(() => reject(new Error('Flight API timeout')), 5000)
           ),
         ]);
-        results.flights = Array.isArray(flights);
+        results.flights = !!searchId;
       } catch (flightError) {
         console.log('Flight API test skipped or failed:', flightError);
       }
@@ -658,6 +614,3 @@ class TravelpayoutsApiService {
 
 // Export singleton instance
 export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
-
-// Export types
-export type { AirportOption, FlightSearchParams };
