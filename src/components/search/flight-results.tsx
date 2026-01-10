@@ -10,12 +10,13 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {useEffect, useState, useMemo} from 'react';
 import {Skeleton} from '../ui/skeleton';
-import {format, parseISO, getHours} from 'date-fns';
+import {parseISO, getHours} from 'date-fns';
 import {Progress} from '../ui/progress';
 import { FlightSearchParams, FilterState } from '@/types/travel';
 import { useFlightSearch } from '@/hooks/use-travel-search';
 import { useAirlines } from '@/hooks/use-travel-search';
 import { Badge } from '@/components/ui/badge';
+import { formatDuration, formatDateString } from '@/lib/utils';
 
 
 const FlightCard = ({
@@ -29,16 +30,9 @@ const FlightCard = ({
   airlines: Map<string, any>;
   agents: Map<string, any>;
 }) => {
-  const formatDuration = (durationInMinutes: number) => {
-    const hours = Math.floor(durationInMinutes / 60);
-    const minutes = durationInMinutes % 60;
-    return `${hours}h ${minutes}m`;
-  };
-
   const formatDate = (dateString: string) => {
     try {
-      const parsedDate = parseISO(dateString);
-      return format(parsedDate, 'hh:mm a');
+      return formatDateString(dateString, 'hh:mm a');
     } catch (e) {
       return dateString;
     }
