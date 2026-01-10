@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Globe, Facebook, Twitter, Instagram, Linkedin, Heart } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Logo } from '../shared/logo';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -37,10 +38,10 @@ export function Footer() {
   };
 
   const socialLinks = [
-    { icon: <Facebook />, label: 'Facebook', url: 'https://facebook.com' },
-    { icon: <Twitter />, label: 'Twitter', url: 'https://twitter.com' },
-    { icon: <Instagram />, label: 'Instagram', url: 'https://instagram.com' },
-    { icon: <Linkedin />, label: 'LinkedIn', url: 'https://linkedin.com' }
+    { icon: <Facebook size={20} />, label: 'Facebook', url: 'https://facebook.com' },
+    { icon: <Twitter size={20} />, label: 'Twitter', url: 'https://twitter.com' },
+    { icon: <Instagram size={20} />, label: 'Instagram', url: 'https://instagram.com' },
+    { icon: <Linkedin size={20} />, label: 'LinkedIn', url: 'https://linkedin.com' }
   ];
 
   return (
@@ -49,10 +50,7 @@ export function Footer() {
         <div className="footer-main">
           <div className="footer-brand">
             <div className="footer-logo">
-              <Globe className="footer-logo-icon" />
-              <span className="footer-logo-text">
-                Travel<span className="logo-highlight">Explorer</span>
-              </span>
+              <Logo />
             </div>
             <p className="footer-tagline">
               Your gateway to unforgettable journeys around the world.
@@ -74,8 +72,8 @@ export function Footer() {
           </div>
           <div className="footer-links-grid">
             {Object.entries(footerLinks).map(([category, links]) => (
-              <div key={category} className="footer-links-column">
-                <h3 className="footer-links-title">{category}</h3>
+              <div key={category}>
+                <h3 className='footer-links-column'>{category}</h3>
                 <ul className="footer-links-list">
                   {links.map(link => (
                     <li key={link.label}>
@@ -89,6 +87,7 @@ export function Footer() {
             ))}
           </div>
         </div>
+
         <div className="footer-newsletter">
           <h3 className="footer-newsletter-title">
             Get Exclusive Travel Deals
@@ -107,6 +106,7 @@ export function Footer() {
             </Button>
           </form>
         </div>
+        
         <div className="footer-bottom">
           <div className="footer-copyright">
             © {currentYear} TravelExplorer. All rights reserved.
@@ -120,4 +120,3 @@ export function Footer() {
       </div>
     </footer>
   );
-};

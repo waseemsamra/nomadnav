@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Quote, Star } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Carousel,
@@ -110,6 +109,4 @@ export function Testimonials() {
           <CarouselNext className="testimonial-nav next" />
         </Carousel>
       </div>
-    </section>
-  );
-}
+    </section

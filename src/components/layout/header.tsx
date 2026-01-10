@@ -1,11 +1,15 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+'use client';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Menu, X, User, Search, Bell, Globe } from 'lucide-react';
 import { Logo } from "@/components/shared/logo";
-import { User, Search, Bell, Menu, X } from "lucide-react";
 
 export function Header() {
-  // Note: Mobile menu state and functionality would need to be implemented
-  // For now, this is a static representation.
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const pathname = usePathname();
+
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/search?type=flights', label: 'Flights' },
@@ -13,47 +17,118 @@ export function Header() {
     { href: '/itinerary-planner', label: 'Itinerary Planner' },
   ];
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 1024) {
+        setIsMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <div className="mr-8 flex">
-          <Link href="/" className="flex items-center space-x-2">
+    <>
+      <header className="navbar">
+        <div className="navbar-container">
+          <Link href="/" className="navbar-logo">
             <Logo />
           </Link>
-        </div>
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href} className="transition-colors hover:text-primary">
-              {link.label}
+
+          <nav className="navbar-links">
+            {navLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`navbar-link ${pathname === link.href ? 'active' : ''}`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="navbar-actions">
+            <button
+              className="navbar-action-icon"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search"
+            >
+              <Search />
+            </button>
+            <button className="navbar-action-icon" aria-label="Notifications">
+              <Bell />
+              <span className="notification-badge">3</span>
+            </button>
+            <Link href="/dashboard" className="navbar-action-icon" aria-label="Profile">
+              <User />
             </Link>
-          ))}
-        </nav>
-        <div className="flex flex-1 items-center justify-end space-x-2">
-          <Button variant="ghost" size="icon">
-            <Search className="h-4 w-4" />
-            <span className="sr-only">Search</span>
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Bell className="h-4 w-4" />
-            <span className="sr-only">Notifications</span>
-          </Button>
-           <Button variant="ghost" size="icon" asChild>
-            <Link href="/login">
-              <User className="h-4 w-4" />
-               <span className="sr-only">Login</span>
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/signup">
+            <Link href="/login" className="navbar-auth-btn">
               Sign In
             </Link>
-          </Button>
-           <Button variant="ghost" size="icon" className="md:hidden">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
+          </div>
+
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMenuOpen ? <X /> : <Menu />}
+          </button>
         </div>
-      </div>
-    </header>
-  );
-}
+
+        {isSearchOpen && (
+            <div
+              className="search-overlay"
+              onClick={() => setIsSearchOpen(false)}
+            >
+              <div className="search-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="search-header">
+                  <h3 className="search-title">Search Flights & Hotels</h3>
+                  <button
+                    className="search-close"
+                    onClick={() => setIsSearchOpen(false)}
+                    aria-label="Close search"
+                  >
+                    <X />
+                  </button>
+                </div>
+                <div className="search-input-container">
+                  <Search className="search-input-icon" />
+                  <input
+                    type="text"
+                    placeholder="Where do you want to go?"
+                    className="search-input"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </div>
+        )}
+      </header>
+
+      {isMenuOpen && (
+          <div
+            className="mobile-menu"
+          >
+            <div className="mobile-menu-links">
+              {navLinks.map(link => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`mobile-menu-link ${pathname === link.href ? 'active' : ''}`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+            <div className="mobile-menu-actions">
+              <Link href="/login" className="mobile-auth-btn">
+                Sign In
+              </Link>
+              <Link href="/signup" className="mobile-auth-btn secondary">
+                Sign
