@@ -133,18 +133,20 @@ class TravelpayoutsApiService {
       return [];
     }
     try {
-      const response = await this.api.get('https://api.travelpayouts.com/v1/suggests/airports', {
+      const response = await this.api.get('https://autocomplete.travelpayouts.com/jravia/places/v2', {
         params: {
-          q: term
+          term: term,
+          locale: 'en',
+          types: ['city', 'airport']
         }
       });
 
-      if (response.data && response.data.results) {
-        return response.data.results.map((airport: any) => ({
-          value: airport.iata,
-          label: `${airport.name} (${airport.iata})`,
-          city: airport.city,
-          country: airport.country,
+      if (response.data && Array.isArray(response.data)) {
+        return response.data.map((item: any) => ({
+          value: item.code,
+          label: `${item.name}, ${item.country_name} (${item.code})`,
+          city: item.city_name || item.name,
+          country: item.country_name,
         }));
       }
       return [];
@@ -157,3 +159,5 @@ class TravelpayoutsApiService {
 }
 
 export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
+
+    
