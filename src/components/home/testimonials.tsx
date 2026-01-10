@@ -26,7 +26,7 @@ const testimonials: Testimonial[] = [
       id: 1,
       name: 'Sarah Johnson',
       role: 'Frequent Traveler',
-      content: 'Nomad Navigator helped me save over $500 on my trip to Japan. The hotel recommendations were spot on and the flight prices were unbeatable!',
+      content: 'Travel Explorer helped me save over $500 on my trip to Japan. The hotel recommendations were spot on and the flight prices were unbeatable!',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       location: 'New York, USA'
@@ -35,7 +35,7 @@ const testimonials: Testimonial[] = [
       id: 2,
       name: 'Michael Chen',
       role: 'Business Traveler',
-      content: 'As someone who travels weekly for work, I rely on Nomad Navigator for the best deals. The price tracking feature is a game-changer!',
+      content: 'As someone who travels weekly for work, I rely on Travel Explorer for the best deals. The price tracking feature is a game-changer!',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       location: 'San Francisco, USA'
@@ -44,7 +44,7 @@ const testimonials: Testimonial[] = [
       id: 3,
       name: 'Emma Wilson',
       role: 'Travel Blogger',
-      content: 'I\'ve used dozens of travel sites, but none compare to Nomad Navigator. The interface is beautiful and finding deals is so easy.',
+      content: 'I\'ve used dozens of travel sites, but none compare to Travel Explorer. The interface is beautiful and finding deals is so easy.',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       location: 'London, UK'
@@ -109,4 +109,6 @@ export function Testimonials() {
           <CarouselNext className="testimonial-nav next" />
         </Carousel>
       </div>
-    </section
+    </section>
+  );
+}
