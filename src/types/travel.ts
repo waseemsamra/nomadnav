@@ -57,15 +57,15 @@ export interface ApiResponse<T> {
 export interface FlightSearchParams {
   origin?: string | null;
   destination?: string | null;
-  depart_date?: string;
-  return_date?: string;
+  depart_date?: string | null;
+  return_date?: string | null;
   passengers?: string | null;
 }
 
 export interface HotelSearchParams {
   location?: string | null;
-  checkIn?: string;
-  checkOut?: string;
+  checkIn?: string | null;
+  checkOut?: string | null;
   guests?: string | null;
 }
 
@@ -77,4 +77,13 @@ export interface SearchFormData {
         to?: Date;
     };
     travelers: number;
+}
+
+export interface FilterState {
+  maxPrice: number;
+  maxStops: number;
+  airlines: string[];
+  sortBy: 'price' | 'duration' | 'departure';
+  departureTime: [number, number];
+  arrivalTime: [number, number];
 }

@@ -1,11 +1,14 @@
 'use client';
 
-import {Suspense} from 'react';
+import {Suspense, useState, useMemo} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {FlightResults} from '@/components/search/flight-results';
 import {HotelResults} from '@/components/search/hotel-results';
 import {ResultsSkeleton} from '@/components/search/results-skeleton';
 import { FlightSearchParams, HotelSearchParams } from '@/types/travel';
+import { Filters, FilterState } from '@/components/search/filters';
+import { useFlightSearch } from '@/hooks/use-travel-search';
+import { useAirlines } from '@/hooks/use-travel-search';
 
 function SearchResults() {
   const searchParams = useSearchParams();
@@ -31,9 +34,43 @@ function SearchResults() {
     guests: travelers,
   };
 
+  const { data: flightData } = useFlightSearch(flightParams, !!(flightParams.origin && flightParams.destination));
+  const { data: airlinesData } = useAirlines();
+  
+  const tickets = useMemo(() => flightData?.tickets || [], [flightData]);
+  const airlinesMap = useMemo(() => new Map(airlinesData?.map((a: any) => [a.code, a]) || []), [airlinesData]);
+
+  const allAirlines = useMemo(() => {
+    const airlineSet = new Set<string>();
+    tickets.forEach(ticket => {
+      const airlineIata = ticket.segments[0].flights[0] && flightData?.flight_legs[ticket.segments[0].flights[0]]?.operating_carrier_designator.carrier;
+      if (airlineIata && airlinesMap.has(airlineIata)) {
+        airlineSet.add(airlinesMap.get(airlineIata).name);
+      }
+    });
+    return Array.from(airlineSet);
+  }, [tickets, flightData?.flight_legs, airlinesMap]);
+  
+
+  const [filters, setFilters] = useState<FilterState>({
+    maxPrice: 5000,
+    maxStops: 2,
+    airlines: [],
+    sortBy: 'price',
+    departureTime: [0, 24],
+    arrivalTime: [0, 24],
+  });
+
   return (
     <div className="bg-primary/10">
       <div className="container py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-1">
+          <Filters 
+            filters={filters}
+            setFilters={setFilters}
+            allAirlines={allAirlines}
+          />
+        </div>
         <div className="lg:col-span-3">
           <h1 className="text-3xl font-bold font-headline mb-2">
             Search Results for{' '}
@@ -44,7 +81,7 @@ function SearchResults() {
           </p>
           <div className="flex flex-col gap-8">
             {(type === 'flights' || type === 'combined') && (
-              <FlightResults params={flightParams} />
+              <FlightResults params={flightParams} filters={filters} />
             )}
             {(type === 'hotels' || type === 'combined') && (
               <HotelResults params={hotelParams} />

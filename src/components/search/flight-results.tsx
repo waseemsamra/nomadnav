@@ -4,19 +4,18 @@ import {
   Clock,
   Landmark,
   ArrowRight,
+  MoreHorizontal,
 } from 'lucide-react';
-import {Card, CardContent} from '@/components/ui/card';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {useEffect, useState, useMemo} from 'react';
-import {travelpayoutsApi} from '@/lib/travelpayouts';
 import {Skeleton} from '../ui/skeleton';
-import {format, parseISO} from 'date-fns';
+import {format, parseISO, getHours} from 'date-fns';
 import {Progress} from '../ui/progress';
-import { FlightSearchParams } from '@/types/travel';
+import { FlightSearchParams, FilterState } from '@/types/travel';
 import { useFlightSearch } from '@/hooks/use-travel-search';
 import { useAirlines } from '@/hooks/use-travel-search';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronsUpDown } from "lucide-react"
+import { Badge } from '@/components/ui/badge';
 
 
 const FlightCard = ({
@@ -54,9 +53,13 @@ const FlightCard = ({
 
   const firstSegment = ticket.segments[0];
   const lastSegment = ticket.segments[ticket.segments.length - 1];
+  
+  if (!firstSegment || !lastSegment) return null;
 
   const firstLegOfFirstSegment = flightLegs[firstSegment.flights[0]];
   const lastLegOfLastSegment = flightLegs[lastSegment.flights[lastSegment.flights.length - 1]];
+
+  if (!firstLegOfFirstSegment || !lastLegOfLastSegment) return null;
 
   const departureTime = firstLegOfFirstSegment.local_departure_date_time;
   const arrivalTime = lastLegOfLastSegment.local_arrival_date_time;
@@ -69,16 +72,20 @@ const FlightCard = ({
 
   const totalDuration = useMemo(() => {
     return ticket.segments.reduce((total: number, segment: any) => {
-        const departure = flightLegs[segment.flights[0]].departure_unix_timestamp;
-        const arrival = flightLegs[segment.flights[segment.flights.length - 1]].arrival_unix_timestamp;
-        return total + (arrival - departure);
-      }, 0) / 60;
+      const firstLeg = flightLegs[segment.flights[0]];
+      const lastLeg = flightLegs[segment.flights[segment.flights.length - 1]];
+      if (firstLeg && lastLeg) {
+        return total + (lastLeg.arrival_unix_timestamp - firstLeg.departure_unix_timestamp);
+      }
+      return total;
+    }, 0) / 60;
   }, [ticket.segments, flightLegs]);
-
+  
   return (
     <Card className="transition-shadow hover:shadow-lg">
-      <CardContent className="p-4 grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-        <div className="flex items-center gap-4 col-span-6 md:col-span-2">
+      <CardContent className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        {/* Airline Info */}
+        <div className="flex items-center gap-4 col-span-12 md:col-span-3">
           {airlineLogoUrl && <img src={airlineLogoUrl} alt={airline?.name || airlineIata} className="h-10 w-10 object-contain rounded-md" />}
           <div>
             <p className="font-semibold">{airline?.name || airlineIata}</p>
@@ -86,28 +93,31 @@ const FlightCard = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-between md:justify-center gap-4 col-span-6 md:col-span-3 text-sm">
-          <div className="text-left">
+        {/* Flight Details */}
+        <div className="flex items-center justify-between col-span-12 md:col-span-6 text-sm">
+          <div className="text-left w-28">
             <p className="font-bold text-lg">{formatDate(departureTime)}</p>
             <p className="text-muted-foreground">{firstLegOfFirstSegment.origin}</p>
           </div>
-          <div className="text-center text-muted-foreground min-w-24">
+          <div className="flex-grow text-center text-muted-foreground mx-4">
             <p className="text-xs">{formatDuration(totalDuration)}</p>
             <div className="relative h-px w-full bg-border my-1">
-              <div className="absolute -left-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-muted-foreground"></div>
-              <div className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-muted-foreground"></div>
+              {ticket.segments.flatMap((seg: any) => seg.transfers).map((transfer: any, i: number) => (
+                  <div key={i} className="absolute -top-0.5 h-1.5 w-1.5 rounded-full bg-primary" style={{left: `${(i+1)/(totalStops+1) * 100}%`}}></div>
+              ))}
             </div>
-            <p className="text-xs">{totalStops === 0 ? 'Direct' : `${totalStops} stop(s)`}</p>
+            <p className="text-xs font-semibold text-primary">{totalStops === 0 ? 'Direct' : `${totalStops} stop(s)`}</p>
           </div>
-          <div className="text-right">
+          <div className="text-right w-28">
             <p className="font-bold text-lg">{formatDate(arrivalTime)}</p>
             <p className="text-muted-foreground">{lastLegOfLastSegment.destination}</p>
           </div>
         </div>
 
-        <div className="col-span-6 md:col-span-1 flex justify-between items-center md:flex-col md:items-end md:text-right gap-2 border-t md:border-t-0 pt-4 md:pt-0">
+        {/* Pricing & Booking */}
+        <div className="col-span-12 md:col-span-3 flex justify-between items-center md:flex-col md:items-end md:text-right gap-2 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4">
           <div className='text-left md:text-right'>
-            <p className="text-xl font-bold text-primary">
+            <p className="text-2xl font-bold text-primary">
               ${mainProposal.price.value.toFixed(0)}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -125,15 +135,12 @@ const FlightCard = ({
   );
 };
 
-
-export function FlightResults({params}: {params: FlightSearchParams}) {
+export function FlightResults({params, filters}: {params: FlightSearchParams, filters: FilterState}) {
   const [visibleCount, setVisibleCount] = useState(5);
   const { data: airlinesData } = useAirlines();
   
   const { data: flightData, isLoading } = useFlightSearch(params, !!(params.origin && params.destination));
   
-  const tickets = flightData?.tickets || [];
-  const flightLegs = flightData?.flight_legs || [];
   const agents = Object.values(flightData?.agents || {});
 
   const airlinesMap = useMemo(
@@ -146,6 +153,56 @@ export function FlightResults({params}: {params: FlightSearchParams}) {
     [agents]
   );
   
+  const filteredAndSortedFlights = useMemo(() => {
+    if (!flightData || !flightData.tickets) return [];
+    
+    let filtered = flightData.tickets.filter((ticket: any) => {
+      if (!ticket.proposals || ticket.proposals.length === 0) return false;
+      const mainProposal = ticket.proposals[0];
+      const totalStops = ticket.segments.reduce((acc: number, seg: any) => acc + seg.transfers.length, 0);
+
+      const firstLeg = flightData.flight_legs[ticket.segments[0].flights[0]];
+      const departureHour = getHours(parseISO(firstLeg.local_departure_date_time));
+
+      const lastLeg = flightData.flight_legs[ticket.segments[ticket.segments.length-1].flights[ticket.segments[ticket.segments.length-1].flights.length-1]];
+      const arrivalHour = getHours(parseISO(lastLeg.local_arrival_date_time));
+
+      const airlineIata = firstLeg.operating_carrier_designator.carrier;
+      const airline = airlinesMap.get(airlineIata);
+
+      const priceFilter = mainProposal.price.value <= filters.maxPrice;
+      const stopsFilter = totalStops <= filters.maxStops;
+      const airlineFilter = filters.airlines.length === 0 || (airline && filters.airlines.includes(airline.name));
+      const departureFilter = departureHour >= filters.departureTime[0] && departureHour <= filters.departureTime[1];
+      const arrivalFilter = arrivalHour >= filters.arrivalTime[0] && arrivalHour <= filters.arrivalTime[1];
+
+      return priceFilter && stopsFilter && airlineFilter && departureFilter && arrivalFilter;
+    });
+
+    return filtered.sort((a: any, b: any) => {
+      const priceA = a.proposals[0].price.value;
+      const priceB = b.proposals[0].price.value;
+      
+      const durationA = a.segments.reduce((total: number, segment: any) => total + (flightData.flight_legs[segment.flights[segment.flights.length-1]].arrival_unix_timestamp - flightData.flight_legs[segment.flights[0]].departure_unix_timestamp), 0);
+      const durationB = b.segments.reduce((total: number, segment: any) => total + (flightData.flight_legs[segment.flights[segment.flights.length-1]].arrival_unix_timestamp - flightData.flight_legs[segment.flights[0]].departure_unix_timestamp), 0);
+
+      const departureA = flightData.flight_legs[a.segments[0].flights[0]].departure_unix_timestamp;
+      const departureB = flightData.flight_legs[b.segments[0].flights[0]].departure_unix_timestamp;
+
+      switch (filters.sortBy) {
+        case 'price':
+          return priceA - priceB;
+        case 'duration':
+          return durationA - durationB;
+        case 'departure':
+          return departureA - departureB;
+        default:
+          return 0;
+      }
+    });
+
+  }, [flightData, filters, airlinesMap]);
+  
   const showMoreFlights = () => {
     setVisibleCount(prevCount => prevCount + 5);
   };
@@ -154,15 +211,21 @@ export function FlightResults({params}: {params: FlightSearchParams}) {
   if (isLoading && !flightData) {
     return (
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold font-headline flex items-center gap-2">
-          <Plane /> Searching for Flights...
-        </h2>
-        <Progress value={flightData?.is_over ? 100 : undefined} className="w-full" />
-        <p className="text-center text-muted-foreground">
-          Please wait while we find the best deals for you. This may take a moment.
-        </p>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plane /> Searching for Flights...
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Progress value={flightData?.is_over ? 100 : undefined} className="w-full" />
+            <p className="text-center text-muted-foreground">
+              Please wait while we find the best deals for you. This may take a moment.
+            </p>
+          </CardContent>
+        </Card>
         {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full" />
+          <Skeleton key={i} className="h-40 w-full" />
         ))}
       </div>
     );
@@ -170,22 +233,26 @@ export function FlightResults({params}: {params: FlightSearchParams}) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold font-headline">Available Flights</h2>
+      <div className='flex justify-between items-center'>
+        <h2 className="text-2xl font-bold font-headline">Available Flights</h2>
+        <Badge variant="secondary">{filteredAndSortedFlights.length} results</Badge>
+      </div>
       
-      {tickets.length > 0 ? (
+      {filteredAndSortedFlights.length > 0 ? (
           <>
-          {tickets.slice(0, visibleCount).map((ticket, index) => (
+          {filteredAndSortedFlights.slice(0, visibleCount).map((ticket, index) => (
               <FlightCard
               key={`${ticket.signature}-${index}`}
               ticket={ticket}
-              flightLegs={flightLegs}
+              flightLegs={flightData.flight_legs}
               airlines={airlinesMap}
               agents={agentsMap}
               />
           ))}
-          {visibleCount < tickets.length && (
+          {visibleCount < filteredAndSortedFlights.length && (
               <Button onClick={showMoreFlights} variant="outline" className="w-full">
-              Show More Flights
+                <MoreHorizontal className="mr-2"/>
+                Show More Flights
               </Button>
           )}
           </>
