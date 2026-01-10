@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import { Star, Quote } from 'lucide-react';
@@ -63,11 +64,13 @@ const testimonials: Testimonial[] = [
 
 export function Testimonials() {
   return (
-    <section className="testimonials-section">
-      <div className="container">
-        <div className="section-header">
-          <h2 className="section-title">What Our Travelers Say</h2>
-          <p className="section-subtitle">
+    <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            What Our Travelers Say
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             Join thousands of satisfied customers who trust us with their travels
           </p>
         </div>
@@ -77,43 +80,47 @@ export function Testimonials() {
             align: "start",
             loop: true,
           }}
-          className="testimonials-container"
+          className="w-full max-w-4xl mx-auto"
         >
-          <CarouselContent className="testimonials-slider">
-            
+          <CarouselContent>
             {testimonials.map((testimonial) => (
-              <CarouselItem key={testimonial.id} className="testimonial-card basis-full md:basis-1/2 lg:basis-1/3">
-                <Card className='h-full'>
-                  <CardContent className='p-6 flex flex-col justify-between h-full'>
-                    <div>
-                      <Quote className="testimonial-quote" />
-                      <p className="testimonial-content">{testimonial.content}</p>
-                      <div className="testimonial-rating">
-                        {[...Array(testimonial.rating)].map((_, i) => (
-                            <Star key={i} className="h-5 w-5 fill-current text-accent" />
-                        ))}
-                        <span className="rating-text text-muted-foreground">{testimonial.rating}/5</span>
+              <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/2">
+                <div className="p-4 h-full">
+                  <Card className='h-full shadow-lg hover:shadow-xl transition-shadow'>
+                    <CardContent className='p-6 flex flex-col justify-between h-full'>
+                      <div>
+                        <Quote className="w-8 h-8 text-primary opacity-20 mb-4" />
+                        <p className="text-muted-foreground italic mb-6">
+                          "{testimonial.content}"
+                        </p>
+                        <div className="flex items-center mb-4">
+                          <div className="flex text-yellow-400">
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} className={`w-5 h-5 ${i < testimonial.rating ? 'fill-current' : ''}`} />
+                            ))}
+                          </div>
+                          <span className="ml-2 text-sm text-muted-foreground">{testimonial.rating}/5</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="testimonial-author mt-6">
-                      <Avatar className="testimonial-avatar">
-                          <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
-                          <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="testimonial-info">
-                        <h4 className="font-semibold text-foreground">{testimonial.name}</h4>
-                        <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                        <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                      <div className="flex items-center mt-6">
+                        <Avatar>
+                            <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
+                            <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="ml-4">
+                          <h4 className="font-semibold text-foreground">{testimonial.name}</h4>
+                          <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                          <p className="text-sm text-muted-foreground/80">{testimonial.location}</p>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               </CarouselItem>
             ))}
-            
           </CarouselContent>
-          <CarouselPrevious className="testimonial-nav prev" />
-          <CarouselNext className="testimonial-nav next" />
+          <CarouselPrevious className="absolute left-[-50px] top-1/2 -translate-y-1/2" />
+          <CarouselNext className="absolute right-[-50px] top-1/2 -translate-y-1/2" />
         </Carousel>
       </div>
     </section>

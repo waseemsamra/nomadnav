@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plane, Hotel, Building2, CalendarIcon, Users, MapPin, Search, ChevronsUpDown } from 'lucide-react';
+import { Plane, Hotel, Building2, CalendarIcon, Users, Search, ChevronsUpDown } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useAirports } from '@/hooks/use-travel-search';
 import { Skeleton } from '../ui/skeleton';
@@ -248,35 +249,33 @@ export function SearchForm() {
   );
 
   return (
-    <Card className="shadow-2xl">
-      <CardContent className="p-0">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 md:w-auto md:rounded-b-none md:rounded-t-lg md:border-b">
-                <TabsTrigger value="flights">
-                  <Plane className="mr-2 h-4 w-4" /> Flights
-                </TabsTrigger>
-                <TabsTrigger value="hotels">
-                  <Hotel className="mr-2 h-4 w-4" /> Hotels
-                </TabsTrigger>
-                <TabsTrigger value="combined">
-                  <Building2 className="mr-2 h-4 w-4" /> Flight + Hotel
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="flights">
-                {renderFormFields()}
-              </TabsContent>
-              <TabsContent value="hotels">
-                {renderFormFields()}
-              </TabsContent>
-              <TabsContent value="combined">
-                {renderFormFields()}
-              </TabsContent>
-            </Tabs>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 md:w-auto rounded-lg">
+              <TabsTrigger value="flights">
+                <Plane className="mr-2 h-4 w-4" /> Flights
+              </TabsTrigger>
+              <TabsTrigger value="hotels">
+                <Hotel className="mr-2 h-4 w-4" /> Hotels
+              </TabsTrigger>
+              <TabsTrigger value="combined">
+                <Building2 className="mr-2 h-4 w-4" /> Flight + Hotel
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="flights">
+              {renderFormFields()}
+            </TabsContent>
+            <TabsContent value="hotels">
+              {renderFormFields()}
+            </TabsContent>
+            <TabsContent value="combined">
+              {renderFormFields()}
+            </TabsContent>
+          </Tabs>
+        </form>
+      </Form>
   );
 }
+
+    

@@ -1,230 +1,182 @@
+
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useState } from 'react';
-import { MapPin, Star, Plane, Briefcase, Award, LifeBuoy } from 'lucide-react';
-import { useCheapestFlights } from '@/hooks/use-travel-search';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import { Plane, Hotel, Shield, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Testimonials } from '@/components/home/testimonials';
 import { SearchForm } from '@/components/search/search-form';
+import { Testimonials } from '@/components/home/Testimonials';
 
-const popularDestinations = PlaceHolderImages.filter(img =>
-  ['dest-paris', 'dest-tokyo', 'dest-new-york', 'dest-bali', 'dest-rome', 'dest-dubai'].includes(img.id)
-);
+// Dynamically import components that might be heavy
+const DestinationGrid = dynamic(() => import('@/components/home/DestinationGrid'), {
+  loading: () => <div className="h-64 bg-gray-100 animate-pulse rounded-lg" />
+});
 
-const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'europe', label: 'Europe' },
-    { id: 'asia', label: 'Asia' },
-    { id: 'america', label: 'America' },
-    { id: 'beach', label: 'Beach' },
-    { id: 'city', label: 'City' }
-];
+const HeroSection = dynamic(() => import('@/components/home/HeroSection'), {
+  loading: () => <div className="h-[600px] bg-gradient-to-r from-blue-500 to-purple-600 animate-pulse" />
+});
 
-const features = [
-  {
-    icon: <Briefcase className="feature-icon" />,
-    title: 'Curated Packages',
-    description: 'Explore our hand-picked selection of travel packages that suit every taste and budget.'
-  },
-  {
-    icon: <Award className="feature-icon" />,
-    title: 'Best-Price Guarantee',
-    description: 'We offer competitive pricing and ensure you get the best value for your money.'
-  },
-  {
-    icon: <LifeBuoy className="feature-icon" />,
-    title: '24/7 Support',
-    description: 'Our dedicated team is here to assist you anytime, ensuring a smooth and worry-free journey.'
-  }
-];
+export default function HomePage() {
+  const features = [
+    {
+      icon: <Plane className="h-10 w-10" />,
+      title: "Best Flight Deals",
+      description: "Find the cheapest flights from top airlines worldwide",
+      color: "text-blue-600 bg-blue-100"
+    },
+    {
+      icon: <Hotel className="h-10 w-10" />,
+      title: "500k+ Hotels",
+      description: "Luxury stays to budget rooms with best price guarantee",
+      color: "text-green-600 bg-green-100"
+    },
+    {
+      icon: <Shield className="h-10 w-10" />,
+      title: "Secure Booking",
+      description: "Your data is protected with bank-level security",
+      color: "text-purple-600 bg-purple-100"
+    },
+    {
+      icon: <TrendingUp className="h-10 w-10" />,
+      title: "Price Tracking",
+      description: "Get alerts when prices drop for your favorite routes",
+      color: "text-orange-600 bg-orange-100"
+    }
+  ];
 
-
-function DestinationGrid() {
-  const [activeFilter, setActiveFilter] = useState<string>('all');
-  
   return (
-    <section className="destinations-section">
-      <div className='container'>
-        <div className="section-header">
-            <h2 className="section-title">Top Destinations</h2>
-            <p className="section-subtitle">Explore our handpicked selection of the world's most captivating places. Your next great adventure starts here.</p>
-        </div>
-        <div className="destination-grid-container">
-            <div className="destination-filters">
-                {filters.map(filter => (
-                    <button
-                        key={filter.id}
-                        className={`destination-filter ${activeFilter === filter.id ? 'active' : ''}`}
-                        onClick={() => setActiveFilter(filter.id)}
-                    >
-                        {filter.label}
-                    </button>
-                ))}
+    <main className="min-h-screen">
+      {/* Hero Section */}
+      <Suspense fallback={<div className="h-[600px] bg-gradient-to-r from-blue-500 to-purple-600 animate-pulse" />}>
+        <HeroSection />
+      </Suspense>
+
+      {/* Main Search */}
+      <section className="py-8 md:py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 -mt-24 relative z-10">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                Find Your Perfect Trip
+              </h2>
+              <p className="text-gray-600">
+                Compare prices from 1000+ travel sites in one search
+              </p>
             </div>
-            <div className="destinations-grid">
-                {popularDestinations.map((dest, index) => (
-                    <div
-                      key={dest.id}
-                      className="destination-card"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <div className="destination-image">
-                        <Image 
-                          src={dest.imageUrl} 
-                          alt={dest.description}
-                          fill
-                          className="object-cover"
-                          data-ai-hint={dest.imageHint}
-                        />
-                        <div className="destination-overlay">
-                          <button className="destination-wishlist">
-                            ♥
-                          </button>
-                          <div className="destination-price">
-                            From ${dest.price}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="destination-content">
-                        <div className="destination-header">
-                          <h3 className="destination-name">{dest.description}</h3>
-                          <div className="destination-rating">
-                            <Star className="star-icon" />
-                            <span>{dest.rating}</span>
-                          </div>
-                        </div>
-                        <div className="destination-location">
-                          <MapPin className="location-icon" />
-                          <span>{dest.country}</span>
-                        </div>
-                        <p className="destination-description">{dest.summary}</p>
-                        <div className="destination-footer">
-                          <Link 
-                            href={`/search?type=flights&destination=${dest.iata}`}
-                            className="destination-explore"
-                          >
-                            Explore
-                          </Link>
-                          <button className="destination-quick-view">
-                            Quick View
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                ))}
-            </div>
-             <div className="destination-cta">
-                <Link href="/search" className="view-all-destinations">
-                View All Destinations
-                </Link>
-            </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
-function CheapestFlights() {
-    const { data: cheapFlightsData, isLoading } = useCheapestFlights('JFK');
-    const cheapFlights = cheapFlightsData ? Object.values(cheapFlightsData) : [];
-
-    return (
-        <div className="cheap-flights-section">
-            <h3 className="cheap-flights-title">Cheapest Flights Right Now</h3>
-            {isLoading ? (
-                <p className="text-center">Loading best deals...</p>
-            ) : (
-                <div className="container">
-                  <div className="cheap-flights-grid">
-                      {cheapFlights.slice(0, 6).map((flight: any) => (
-                          <div key={flight.destination} className="cheap-flight-card">
-                              <div className="cheap-flight-route">
-                                  <span className="cheap-flight-origin">{flight.origin}</span>
-                                  <span className="cheap-flight-arrow">→</span>
-                                  <span className="cheap-flight-destination">{flight.destination}</span>
-                              </div>
-                              <div className="cheap-flight-price">${flight.price}</div>
-                              <Button size="sm" className="cheap-flight-book">
-                                Book Now
-                              </Button>
-                          </div>
-                      ))}
-                  </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-
-export default function Home() {
-  const heroImage = PlaceHolderImages.find(img => img.id === 'hero');
-  return (
-    <div className="homepage">
-      <section className="hero-section">
-        {heroImage && 
-          <div 
-            className="hero-background"
-            style={{backgroundImage: `url('${heroImage.imageUrl}')`}}
-            data-ai-hint={heroImage.imageHint}
-          />
-        }
-        <div className="hero-overlay" />
-        <div className="hero-content">
-          <h1 className="hero-title">
-            Your Journey, <span className="text-gradient">Reimagined</span>
-          </h1>
-          <p className="hero-subtitle">
-            Discover and book flights and hotels with personalized
-            recommendations. Nomad Navigator makes travel planning effortless.
-          </p>
-           <div className='hero-buttons'>
-              <Link href="/search" className="btn-primary">
-                <Plane className='mr-2'/> Start Your Adventure
-              </Link>
-              <Link href="/dashboard" className="btn-secondary">
-                My Dashboard
-              </Link>
-            </div>
+            <SearchForm />
+          </div>
         </div>
       </section>
 
-      <section className='main-search-section'>
-        <div className='container'>
-            <div className='search-wrapper search-card-animated'>
-              <SearchForm />
-            </div>
+      {/* Features */}
+      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Why Choose Nomad Navigator
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              We make travel planning simple, affordable, and enjoyable
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, index) => (
+              <div
+                key={feature.title}
+                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
+              >
+                <div className={`inline-flex p-3 rounded-full ${feature.color} mb-4`}>
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
-      
-      <section className='features-section'>
-        <div className='container'>
-            <div className="section-header">
-                <h2 className="section-title">Why Choose Us</h2>
-                <p className="section-subtitle">We provide a seamless and personalized travel experience, making your dream vacation a reality.</p>
-            </div>
-            <div className='features-grid'>
-              {features.map((feature, index) => (
-                <div key={index} className='feature-card' style={{animationDelay: `${index * 0.1}s`}}>
-                  <div className='feature-icon-wrapper' style={{background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)', color: 'white'}}>
-                    {feature.icon}
-                  </div>
-                  <h3 className='feature-title'>{feature.title}</h3>
-                  <p className='feature-description'>{feature.description}</p>
-                </div>
+
+      {/* Popular Destinations */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Trending Destinations
+            </h2>
+            <p className="text-gray-600">
+              Discover the most popular places to visit right now
+            </p>
+          </div>
+          
+          <Suspense fallback={
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-64 bg-gray-100 animate-pulse rounded-lg" />
               ))}
             </div>
+          }>
+            <DestinationGrid />
+          </Suspense>
+          
+          <div className="text-center mt-12">
+            <Button size="lg" variant="outline" className="px-8">
+              View All Destinations
+            </Button>
+          </div>
         </div>
       </section>
 
-      <DestinationGrid />
+      {/* Stats */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-4xl md:text-5xl font-bold mb-2">2M+</div>
+              <div className="text-blue-100">Happy Travelers</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-bold mb-2">150+</div>
+              <div className="text-blue-100">Countries</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-bold mb-2">4.8</div>
+              <div className="text-blue-100">Rating</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-bold mb-2">24/7</div>
+              <div className="text-blue-100">Support</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <CheapestFlights />
-      
+      {/* Testimonials */}
       <Testimonials />
-    </div>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-500 to-purple-600">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+            Ready to Start Your Journey?
+          </h2>
+          <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
+            Sign up today and get 10% off your first booking
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="px-8 bg-white text-blue-600 hover:bg-gray-100">
+              Create Free Account
+            </Button>
+            <Button size="lg" variant="outline" className="px-8 border-white text-white hover:bg-white/10">
+              Explore Deals
+            </Button>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

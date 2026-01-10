@@ -7,7 +7,7 @@
       "imageHint": "airplane sky"
     },
     {
-      "id": "dest-paris",
+      "id": "paris",
       "description": "Paris",
       "summary": "The city of love and lights, offering iconic landmarks and romantic strolls.",
       "country": "France",
@@ -18,7 +18,7 @@
       "iata": "CDG"
     },
     {
-      "id": "dest-tokyo",
+      "id": "tokyo",
       "description": "Tokyo",
       "summary": "A vibrant metropolis blending ancient tradition with futuristic innovation.",
       "country": "Japan",
@@ -29,7 +29,7 @@
       "iata": "HND"
     },
     {
-      "id": "dest-new-york",
+      "id": "new-york",
       "description": "New York",
       "summary": "The city that never sleeps, full of energy, culture, and endless possibilities.",
       "country": "USA",
@@ -40,7 +40,7 @@
       "iata": "JFK"
     },
     {
-      "id": "dest-bali",
+      "id": "bali",
       "description": "Bali",
       "summary": "A tropical paradise offering stunning beaches, lush rice paddies, and rich culture.",
       "country": "Indonesia",
@@ -51,7 +51,7 @@
       "iata": "DPS"
     },
     {
-      "id": "dest-rome",
+      "id": "rome",
       "description": "Rome",
       "summary": "The Eternal City, where ancient history and vibrant street life collide.",
       "country": "Italy",
@@ -62,7 +62,7 @@
       "iata": "FCO"
     },
     {
-      "id": "dest-dubai",
+      "id": "dubai",
       "description": "Dubai",
       "summary": "A modern marvel in the desert, known for luxury shopping and futuristic architecture.",
       "country": "UAE",
