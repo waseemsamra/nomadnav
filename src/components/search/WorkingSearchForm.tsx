@@ -28,7 +28,7 @@ interface SearchFormData {
   cabinClass: 'economy' | 'business' | 'first';
 }
 
-const SimpleTravelSearchForm: React.FC = () => {
+const WorkingSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [airportOptions, setAirportOptions] = useState<{ value: string; label: string, city: string }[]>([]);
@@ -360,4 +360,4 @@ const SimpleTravelSearchForm: React.FC = () => {
   );
 };
 
-export default SimpleTravelSearchForm;
+export default WorkingSearchForm;
