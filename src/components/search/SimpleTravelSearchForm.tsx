@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { AirportOption, travelpayoutsApi } from '@/services/travelpayoutsApi';
+import { getAirportOptions, type AirportOption } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 
 interface SearchFormData {
@@ -62,7 +63,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
   useEffect(() => {
     const loadAirports = async () => {
       try {
-        const options = await travelpayoutsApi.getAirportOptions();
+        const options = await getAirportOptions();
         setAirportOptions(options);
       } catch (error) {
         console.error('Error loading airports:', error);
@@ -416,7 +417,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
               className="text-sm bg-blue-50 text-blue-600 px-3 py-2 rounded-lg 
                        hover:bg-blue-100 transition-colors border border-blue-100"
             >
-              {airport.city} ({airport.value})
+              {airport.city || airport.value}
             </button>
           ))}
         </div>

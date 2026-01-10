@@ -1,10 +1,11 @@
+
 'use server';
 
 import { personalizedTravelRecommendations } from '@/ai/flows/personalized-travel-recommendations';
 import { generateItinerarySuggestions } from '@/ai/flows/generate-itinerary-suggestions';
 import { mockUser } from '@/lib/placeholder-data';
 import { z } from 'zod';
-import { travelpayoutsApi, type Flight, type FlightSearchParams } from '@/services/travelpayoutsApi';
+import { getFlightSearchResults, searchFlightsRealtime, type Flight, type FlightSearchParams } from '@/services/travelpayoutsApi';
 
 export async function getPersonalizedRecommendations() {
   try {
@@ -74,7 +75,7 @@ export async function searchFlightsAction(
   params: FlightSearchParams
 ): Promise<{ success: boolean; data?: Flight[]; error?: string }> {
   try {
-    const searchId = await travelpayoutsApi.searchFlightsRealtime(params);
+    const searchId = await searchFlightsRealtime(params);
     if (!searchId) {
       throw new Error('Failed to initiate flight search.');
     }
@@ -83,7 +84,7 @@ export async function searchFlightsAction(
     const maxAttempts = 15;
 
     while (attempts < maxAttempts) {
-      const results = await travelpayoutsApi.getFlightSearchResults(searchId);
+      const results = await getFlightSearchResults(searchId);
       
       const tickets = results?.tickets || [];
       if (tickets.length > 0) {

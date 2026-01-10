@@ -1,5 +1,4 @@
 
-'use server';
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 // Types
@@ -195,4 +194,16 @@ class TravelpayoutsApiService {
   }
 }
 
-export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
+const travelpayoutsApi = TravelpayoutsApiService.getInstance();
+
+export async function searchFlightsRealtime(params: FlightSearchParams): Promise<string> {
+  return travelpayoutsApi.searchFlightsRealtime(params);
+}
+
+export async function getFlightSearchResults(searchId: string): Promise<any> {
+  return travelpayoutsApi.getFlightSearchResults(searchId);
+}
+
+export async function getAirportOptions(): Promise<AirportOption[]> {
+    return travelpayoutsApi.getAirportOptions();
+}
