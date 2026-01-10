@@ -1,326 +1,16 @@
 
 'use client';
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plane, Hotel, Shield, TrendingUp, MapPin, Star, Quote, CalendarIcon, Users, Search, ChevronsUpDown, Building2, Check, Loader2 } from 'lucide-react';
+import { Plane, Hotel, Shield, TrendingUp, MapPin, Star, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import placeholderImagesData from '@/lib/placeholder-images.json';
 import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { useRouter } from 'next/navigation';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { useAirportSearch } from '@/hooks/use-travel-search';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useDebounce } from '@/hooks/use-debounce';
-import type { AirportOption } from '@/types/travel';
-
-
-const baseSearchSchema = z.object({
-  destination: z.string().min(3, { message: 'Destination must be a 3-letter IATA code.' }),
-  dates: z.object({
-    from: z.date({ required_error: "A date is required."}),
-    to: z.date().optional(),
-  }),
-  travelers: z.coerce.number().min(1, { message: 'At least one traveler is required.' }).max(9, { message: "Maximum 9 travelers."}),
-});
-
-type SearchFormValues = z.infer<typeof baseSearchSchema> & { origin?: string };
-
-const AirportCombobox = ({ field, placeholder, airports, isLoading, onSearch }: { field: any, placeholder: string, airports: AirportOption[] | undefined, isLoading: boolean, onSearch: (query: string) => void }) => {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <FormControl>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            {field.value
-              ? airports?.find((airport) => airport.value === field.value)?.label
-              : placeholder}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </FormControl>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
-        <Command>
-          <CommandInput 
-            placeholder="Search airport..." 
-            onValueChange={onSearch}
-          />
-          <CommandList>
-            {isLoading && (
-              <div className="p-4 text-sm text-center">
-                <Loader2 className="mx-auto h-6 w-6 animate-spin"/>
-              </div>
-            )}
-            <CommandEmpty>No airport found.</CommandEmpty>
-            <CommandGroup>
-              {airports?.map((airport) => (
-                <CommandItem
-                  key={airport.value}
-                  value={airport.value}
-                  onSelect={(currentValue) => {
-                    field.onChange(currentValue === field.value ? "" : currentValue);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      field.value === airport.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div>
-                    <p>{airport.label}</p>
-                    <p className="text-xs text-muted-foreground">{airport.country}</p>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-};
-
-
-function SearchForm() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('flights');
-  const [isClient, setIsClient] = useState(false);
-  const [originQuery, setOriginQuery] = useState('');
-  const [destinationQuery, setDestinationQuery] = useState('');
-
-  const debouncedOriginQuery = useDebounce(originQuery, 300);
-  const debouncedDestinationQuery = useDebounce(destinationQuery, 300);
-
-  const { data: originAirports, isLoading: isOriginLoading } = useAirportSearch(debouncedOriginQuery);
-  const { data: destinationAirports, isLoading: isDestinationLoading } = useAirportSearch(debouncedDestinationQuery);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const formSchema = baseSearchSchema.extend({
-    origin: activeTab !== 'hotels' 
-      ? z.string().min(3, { message: 'Origin must be a 3-letter IATA code.' }) 
-      : z.string().optional(),
-  }).superRefine((data, ctx) => {
-    if (activeTab !== 'hotels' && data.origin && data.destination && data.origin === data.destination) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Origin and destination cannot be the same.",
-        path: ["destination"],
-      });
-    }
-    if (data.dates.from && data.dates.to && data.dates.from > data.dates.to) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Return date must be after departure date.",
-        path: ["dates"],
-      });
-    }
-  });
-
-
-  const form = useForm<SearchFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      origin: '',
-      destination: '',
-      travelers: 1,
-    },
-  });
-  
-  useEffect(() => {
-    if (isClient) {
-        form.reset({
-            origin: '',
-            destination: '',
-            dates: { from: new Date() },
-            travelers: 1,
-        })
-    }
-  }, [isClient, form]);
-
-  useEffect(() => {
-    form.trigger();
-  }, [activeTab, form]);
-
-  function onSubmit(data: SearchFormValues) {
-    const params = new URLSearchParams({
-      type: activeTab,
-      destination: data.destination,
-      depart_date: format(data.dates.from, 'yyyy-MM-dd'),
-      passengers: String(data.travelers),
-    });
-    if (data.origin && activeTab !== 'hotels') {
-      params.set('origin', data.origin);
-    }
-    if (data.dates.to) {
-      params.set('return_date', format(data.dates.to, 'yyyy-MM-dd'));
-    }
-    router.push(`/flights/search?${params.toString()}`);
-  }
-  
-  const renderFormFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-9 gap-4 items-end p-4">
-        {activeTab !== 'hotels' && (
-          <FormField
-            control={form.control}
-            name="origin"
-            render={({ field }) => (
-              <FormItem className="lg:col-span-2">
-                <FormLabel>Origin</FormLabel>
-                <AirportCombobox
-                  field={field}
-                  placeholder="Select origin"
-                  airports={originAirports}
-                  isLoading={isOriginLoading}
-                  onSearch={setOriginQuery}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-        <FormField
-          control={form.control}
-          name="destination"
-          render={({ field }) => (
-            <FormItem className={cn("lg:col-span-2", activeTab === 'hotels' && "lg:col-span-4")}>
-              <FormLabel>Destination</FormLabel>
-               <AirportCombobox
-                field={field}
-                placeholder="Select destination"
-                airports={destinationAirports}
-                isLoading={isDestinationLoading}
-                onSearch={setDestinationQuery}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="dates"
-          render={({ field }) => (
-            <FormItem className="flex flex-col lg:col-span-2">
-              <FormLabel>
-                {activeTab === 'hotels' ? 'Check-in & Check-out' : 'Departure & Return'}
-              </FormLabel>
-               {isClient && <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={'outline'}
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !field.value?.from && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value?.from ? (
-                        field.value.to ? (
-                          <>
-                            {format(field.value.from, 'LLL dd, y')} -{' '}
-                            {format(field.value.to, 'LLL dd, y')}
-                          </>
-                        ) : (
-                          format(field.value.from, 'LLL dd, y')
-                        )
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    defaultMonth={field.value?.from}
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    numberOfMonths={2}
-                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                  />
-                </PopoverContent>
-              </Popover>}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="travelers"
-          render={({ field }) => (
-            <FormItem className="lg:col-span-2">
-              <FormLabel>{activeTab === 'hotels' ? 'Guests' : 'Travelers'}</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input type="number" min="1" placeholder="e.g., 2" className="pl-10" {...field} />
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full lg:col-span-1">
-          <Search className="mr-2 h-4 w-4" />
-          Search
-        </Button>
-    </div>
-  );
-
-  return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 md:w-auto rounded-lg">
-              <TabsTrigger value="flights">
-                <Plane className="mr-2 h-4 w-4" /> Flights
-              </TabsTrigger>
-              <TabsTrigger value="hotels">
-                <Hotel className="mr-2 h-4 w-4" /> Hotels
-              </TabsTrigger>
-              <TabsTrigger value="combined">
-                <Building2 className="mr-2 h-4 w-4" /> Flight + Hotel
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="flights">
-              {renderFormFields()}
-            </TabsContent>
-            <TabsContent value="hotels">
-              {renderFormFields()}
-            </TabsContent>
-            <TabsContent value="combined">
-              {renderFormFields()}
-            </TabsContent>
-          </Tabs>
-        </form>
-      </Form>
-  );
-}
-
+import TravelSearchForm from '@/components/search/TravelSearchForm';
 
 function HeroSection() {
     const heroImage = placeholderImagesData.placeholderImages.find(img => img.id === 'hero');
@@ -572,16 +262,16 @@ export default function HomePage() {
 
       <section className="py-8 md:py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 -mt-24 relative z-10">
+          <div className="bg-card rounded-2xl shadow-2xl p-6 md:p-8 -mt-24 relative z-10">
             <div className="text-center mb-8">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
                 Find Your Perfect Trip
               </h2>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Compare prices from 1000+ travel sites in one search
               </p>
             </div>
-            <SearchForm />
+            <TravelSearchForm />
           </div>
         </div>
       </section>
@@ -693,6 +383,8 @@ export default function HomePage() {
     </main>
   );
 }
+    
+
     
 
     
