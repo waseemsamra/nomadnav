@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -72,10 +71,11 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
   // Filter airports based on search input
   useEffect(() => {
     if (searchInput.origin.trim()) {
+      const searchTerm = searchInput.origin.toLowerCase();
       const filtered = airportOptions.filter(option =>
-        option.label.toLowerCase().includes(searchInput.origin.toLowerCase()) ||
-        option.city.toLowerCase().includes(searchInput.origin.toLowerCase()) ||
-        option.value.toLowerCase().includes(searchInput.origin.toLowerCase())
+        (option.label && option.label.toLowerCase().includes(searchTerm)) ||
+        (option.city && option.city.toLowerCase().includes(searchTerm)) ||
+        (option.value && option.value.toLowerCase().includes(searchTerm))
       ).slice(0, 10);
       setFilteredAirports(filtered);
     } else {
@@ -157,7 +157,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
   return (
     <form 
       onSubmit={handleSubmit} 
-      className={`bg-card rounded-2xl shadow-2xl p-6 ${className}`}
+      className={`bg-white rounded-2xl shadow-2xl p-6 ${className}`}
     >
       {/* Trip Type Toggle */}
       <div className="flex gap-2 mb-6">
@@ -166,8 +166,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
           onClick={() => setFormData(prev => ({ ...prev, tripType: 'round' }))}
           className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
             formData.tripType === 'round'
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Round Trip
@@ -177,8 +177,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
           onClick={() => setFormData(prev => ({ ...prev, tripType: 'oneway' }))}
           className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
             formData.tripType === 'oneway'
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           One Way
@@ -190,7 +190,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Origin Airport */}
           <div className="relative">
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               <Plane className="w-4 h-4 inline mr-1" />
               From
             </label>
@@ -203,32 +203,32 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                   setShowOriginDropdown(true);
                 }}
                 onFocus={() => setShowOriginDropdown(true)}
-                onBlur={() => setTimeout(() => setShowOriginDropdown(false), 150)}
+                onBlur={() => setTimeout(() => setShowOriginDropdown(false), 200)}
                 placeholder="City or airport"
-                className="w-full pl-10 pr-4 py-3 border border-border rounded-lg 
-                         focus:ring-2 focus:ring-ring focus:border-primary"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
+                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
             
             {showOriginDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
                 {filteredAirports.length > 0 ? (
                   filteredAirports.map((airport) => (
                     <button
                       key={airport.value}
                       type="button"
-                      onClick={() => selectAirport('origin', airport)}
-                      className="w-full text-left px-4 py-3 hover:bg-secondary border-b border-border last:border-b-0"
+                      onMouseDown={() => selectAirport('origin', airport)}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                     >
-                      <div className="font-medium">{airport.city}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium">{airport.city || airport.label}</div>
+                      <div className="text-sm text-gray-500">
                         {airport.country} ({airport.value})
                       </div>
                     </button>
                   ))
                 ) : searchInput.origin.trim() ? (
-                  <div className="px-4 py-3 text-muted-foreground">
+                  <div className="px-4 py-3 text-gray-500">
                     No airports found
                   </div>
                 ) : null}
@@ -238,7 +238,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
 
           {/* Destination Airport */}
           <div className="relative">
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               <Plane className="w-4 h-4 inline mr-1" />
               To
             </label>
@@ -251,32 +251,34 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                   setShowDestinationDropdown(true);
                 }}
                 onFocus={() => setShowDestinationDropdown(true)}
-                onBlur={() => setTimeout(() => setShowDestinationDropdown(false), 150)}
+                onBlur={() => setTimeout(() => setShowDestinationDropdown(false), 200)}
                 placeholder="City or airport"
-                className="w-full pl-10 pr-4 py-3 border border-border rounded-lg 
-                         focus:ring-2 focus:ring-ring focus:border-primary"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
+                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
             
             {showDestinationDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
                 {airportOptions
-                  .filter(option =>
-                    option.label.toLowerCase().includes(searchInput.destination.toLowerCase()) ||
-                    option.city.toLowerCase().includes(searchInput.destination.toLowerCase()) ||
-                    option.value.toLowerCase().includes(searchInput.destination.toLowerCase())
+                  .filter(option => {
+                      const searchTerm = searchInput.destination.toLowerCase();
+                      return (option.label && option.label.toLowerCase().includes(searchTerm)) ||
+                             (option.city && option.city.toLowerCase().includes(searchTerm)) ||
+                             (option.value && option.value.toLowerCase().includes(searchTerm))
+                    }
                   )
                   .slice(0, 10)
                   .map((airport) => (
                     <button
                       key={airport.value}
                       type="button"
-                      onClick={() => selectAirport('destination', airport)}
-                      className="w-full text-left px-4 py-3 hover:bg-secondary border-b border-border last:border-b-0"
+                      onMouseDown={() => selectAirport('destination', airport)}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                     >
-                      <div className="font-medium">{airport.city}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium">{airport.city || airport.label}</div>
+                      <div className="text-sm text-gray-500">
                         {airport.country} ({airport.value})
                       </div>
                     </button>
@@ -291,12 +293,12 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
           type="button"
           onClick={handleSwapAirports}
           className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 
-                    bg-background border-2 border-border rounded-full p-2 
-                    hover:bg-secondary hover:border-primary transition-colors
+                    bg-white border-2 border-gray-300 rounded-full p-2 
+                    hover:bg-gray-50 hover:border-blue-500 transition-colors
                     shadow-md z-10"
           title="Swap airports"
         >
-          <ArrowRightLeft className="w-5 h-5 text-muted-foreground" />
+          <ArrowRightLeft className="w-5 h-5 text-gray-600" />
         </button>
       </div>
 
@@ -304,7 +306,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Departure Date */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             <Calendar className="w-4 h-4 inline mr-1" />
             Departure
           </label>
@@ -316,15 +318,15 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
               departDate: new Date(e.target.value) 
             }))}
             min={format(new Date(), 'yyyy-MM-dd')}
-            className="w-full px-4 py-3 border border-border rounded-lg 
-                     focus:ring-2 focus:ring-ring focus:border-primary"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
         {/* Return Date (only for round trips) */}
         {formData.tripType === 'round' && (
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               <Calendar className="w-4 h-4 inline mr-1" />
               Return
             </label>
@@ -336,8 +338,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                 returnDate: new Date(e.target.value) 
               }))}
               min={format(formData.departDate, 'yyyy-MM-dd')}
-              className="w-full px-4 py-3 border border-border rounded-lg 
-                       focus:ring-2 focus:ring-ring focus:border-primary"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         )}
@@ -345,7 +347,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
         {/* Passengers & Class */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               <Users className="w-4 h-4 inline mr-1" />
               Passengers
             </label>
@@ -355,8 +357,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                 ...prev, 
                 passengers: parseInt(e.target.value) 
               }))}
-              className="w-full px-4 py-3 border border-border rounded-lg 
-                       focus:ring-2 focus:ring-ring focus:border-primary"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                 <option key={num} value={num}>
@@ -367,7 +369,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Class
             </label>
             <select
@@ -376,8 +378,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                 ...prev, 
                 cabinClass: e.target.value as 'economy' | 'business' | 'first' 
               }))}
-              className="w-full px-4 py-3 border border-border rounded-lg 
-                       focus:ring-2 focus:ring-ring focus:border-primary"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="economy">Economy</option>
               <option value="business">Business</option>
@@ -389,7 +391,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
 
       {/* Popular Airports */}
       <div className="mb-6">
-        <p className="text-sm text-muted-foreground mb-2">Popular airports:</p>
+        <p className="text-sm text-gray-600 mb-2">Popular airports:</p>
         <div className="flex flex-wrap gap-2">
           {popularAirports.map((airport) => (
             <button
@@ -402,8 +404,8 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
                   selectAirport('destination', airport);
                 }
               }}
-              className="text-sm bg-primary/10 text-primary px-3 py-2 rounded-lg 
-                       hover:bg-primary/20 transition-colors border border-primary/20"
+              className="text-sm bg-blue-50 text-blue-600 px-3 py-2 rounded-lg 
+                       hover:bg-blue-100 transition-colors border border-blue-100"
             >
               {airport.city} ({airport.value})
             </button>
@@ -417,7 +419,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
           type="submit"
           disabled={loading || !formData.origin || !formData.destination}
           className="w-full py-4 text-lg font-semibold rounded-xl 
-                   bg-gradient-to-r from-primary to-accent 
+                   bg-gradient-to-r from-blue-600 to-purple-600 
                    hover:from-blue-700 hover:to-purple-700 
                    transition-all duration-300 transform hover:-translate-y-0.5 
                    shadow-lg hover:shadow-xl"
