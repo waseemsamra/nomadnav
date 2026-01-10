@@ -611,4 +611,29 @@
   to { transform: rotate(360deg); }
 }
 
+/* React Select Custom Styles */
+.react-select-container .react-select__control {
+  @apply border border-input bg-background rounded-md shadow-sm;
+}
+.react-select-container .react-select__control--is-focused {
+  @apply ring-2 ring-ring;
+}
+.react-select-container .react-select__menu {
+  @apply mt-1 border border-border bg-popover text-popover-foreground shadow-lg rounded-md;
+}
+.react-select-container .react-select__option--is-focused {
+  @apply bg-accent text-accent-foreground;
+}
+.react-select-container .react-select__option--is-selected {
+  @apply bg-primary text-primary-foreground;
+}
+.react-select-container .react-select__indicator-separator {
+  @apply bg-border;
+}
+.react-select-container .react-select__placeholder {
+  @apply text-muted-foreground;
+}
+.react-select-container .react-select__single-value {
+  @apply text-foreground;
+}
     
