@@ -65,15 +65,15 @@ if (!API_TOKEN) {
 
 class TravelpayoutsApiService {
   private static instance: TravelpayoutsApiService;
-  private flightSearchApi: AxiosInstance;
+  private flightSearchApiV2: AxiosInstance;
   private cache: {
     airports: Airport[] | null;
     lastUpdated: number;
   };
 
   private constructor() {
-    this.flightSearchApi = axios.create({
-        baseURL: API_BASE,
+    this.flightSearchApiV2 = axios.create({
+        baseURL: `${API_BASE}/v2/prices`,
         timeout: 30000,
     });
 
@@ -134,14 +134,14 @@ class TravelpayoutsApiService {
           cabin_class: cabinClassMapping[params.cabin_class || 'economy'],
       };
       
-      const response = await this.flightSearchApi.post('/v2/prices/create_search', searchPayload, { 
+      const response = await this.flightSearchApiV2.post('/create_search', searchPayload, { 
         headers: this.getApiHeaders() 
       });
       return response.data.search_id;
   }
 
   async getFlightSearchResults(searchId: string): Promise<any> {
-      const response = await this.flightSearchApi.get('/v2/prices/search-results', {
+      const response = await this.flightSearchApiV2.get('/search-results', {
           params: { uuid: searchId },
           headers: this.getApiHeaders()
       });
