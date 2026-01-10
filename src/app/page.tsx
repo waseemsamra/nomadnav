@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import TravelSearchForm from '@/components/search/TravelSearchForm';
+import SimpleTravelSearchForm from '@/components/search/SimpleTravelSearchForm';
 
 function HeroSection() {
     const heroImage = placeholderImagesData.placeholderImages.find(img => img.id === 'hero');
@@ -271,7 +271,7 @@ export default function HomePage() {
                 Compare prices from 1000+ travel sites in one search
               </p>
             </div>
-            <TravelSearchForm />
+            <SimpleTravelSearchForm />
           </div>
         </div>
       </section>
