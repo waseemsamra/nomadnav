@@ -36,4 +36,15 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'pics.aviasales
+        hostname: 'pics.aviasales.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
+  serverActions: {
+    bodySizeLimit: '20mb',
+  }
+};
+
+export default nextConfig;

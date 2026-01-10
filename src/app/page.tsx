@@ -4,7 +4,7 @@ import Image from 'next/image';
 import {SearchForm} from '@/components/search/search-form';
 import {Suspense} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import {PlaceHolderImages} from '@/lib/placeholder-images';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {Button} from '@/components/ui/button';
 import Link from 'next/link';
 import { useCheapestFlights } from '@/hooks/use-travel-search';
@@ -45,7 +45,7 @@ function TravelInspiration() {
             <div className="absolute bottom-0 left-0 p-4 w-full flex justify-between items-center">
               <h3 className="text-white font-bold text-lg">{dest.description}</h3>
               <Button size="sm" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Link href="/#search">Explore</Link>
+                <Link href="/search">Explore</Link>
               </Button>
             </div>
           </div>
