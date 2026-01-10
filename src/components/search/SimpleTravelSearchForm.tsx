@@ -53,7 +53,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
     passengers: 1,
     cabinClass: 'economy',
   });
-
+  
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -161,7 +161,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
   if (!isClient) {
     return null;
   }
-
+  
   return (
     <form 
       onSubmit={handleSubmit} 
