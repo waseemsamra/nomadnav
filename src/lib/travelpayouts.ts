@@ -44,6 +44,17 @@ export const travelpayoutsApi = {
     return response.data.data || [];
   },
 
+  getCheapestFlights: async () => {
+    const response = await api.get('/v1/prices/cheap', {
+      params: {
+        origin: 'JFK',
+        currency: 'USD',
+        marker: MARKER
+      }
+    });
+    return response.data.data || {};
+  },
+
   getMonthPrices: async (origin: string, destination: string, month: string) => {
     const response = await api.get('/v2/prices/month-matrix', {
       params: {
@@ -101,4 +112,9 @@ export const travelpayoutsApi = {
 
   getCities: async () => {
     return fetchWithCache(
-      `${API_...
+      `${API_BASE}/data/en/cities.json`,
+      citiesCache,
+      (data) => { citiesCache = data; }
+    );
+  }
+};
