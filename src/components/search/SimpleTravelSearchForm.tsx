@@ -34,6 +34,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
   className = ''
 }) => {
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
   const [loading, setLoading] = useState(false);
   const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
   const [searchInput, setSearchInput] = useState({
@@ -53,6 +54,10 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
     cabinClass: 'economy',
   });
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Load airports on mount
   useEffect(() => {
     const loadAirports = async () => {
@@ -71,11 +76,10 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
   // Filter airports based on search input
   useEffect(() => {
     if (searchInput.origin.trim()) {
-      const searchTerm = searchInput.origin.toLowerCase();
       const filtered = airportOptions.filter(option =>
-        (option.label && option.label.toLowerCase().includes(searchTerm)) ||
-        (option.city && option.city.toLowerCase().includes(searchTerm)) ||
-        (option.value && option.value.toLowerCase().includes(searchTerm))
+        (option.label && option.label.toLowerCase().includes(searchInput.origin.toLowerCase())) ||
+        (option.city && option.city.toLowerCase().includes(searchInput.origin.toLowerCase())) ||
+        (option.value && option.value.toLowerCase().includes(searchInput.origin.toLowerCase()))
       ).slice(0, 10);
       setFilteredAirports(filtered);
     } else {
@@ -153,6 +157,10 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
   const popularAirports = airportOptions
     .filter(opt => ['JFK', 'LAX', 'LHR', 'CDG', 'HND', 'DXB', 'SIN', 'SYD'].includes(opt.value))
     .slice(0, 8);
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <form 
@@ -263,6 +271,7 @@ const SimpleTravelSearchForm: React.FC<SimpleTravelSearchFormProps> = ({
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
                 {airportOptions
                   .filter(option => {
+                      if (!searchInput.destination.trim()) return false;
                       const searchTerm = searchInput.destination.toLowerCase();
                       return (option.label && option.label.toLowerCase().includes(searchTerm)) ||
                              (option.city && option.city.toLowerCase().includes(searchTerm)) ||
