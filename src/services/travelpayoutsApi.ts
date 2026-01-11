@@ -1,5 +1,5 @@
 
-import axios from 'axios';
+import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 // Types
 export interface Airport {
@@ -28,9 +28,9 @@ export interface Flight {
   distance: number;
   actual: boolean;
   found_at: string;
+  link?: string;
   airline?: string;
   flight_number?: string;
-  link?: string;
 }
 
 export interface FlightSearchParams {
@@ -43,6 +43,7 @@ export interface FlightSearchParams {
   passengers?: number;
   limit?: number;
   sort_by?: 'price' | 'duration' | 'route';
+  cabin_class?: 'economy' | 'business' | 'first';
 }
 
 export interface AirportOption {
@@ -50,26 +51,75 @@ export interface AirportOption {
   label: string;
   city: string;
   country: string;
+  fullLabel?: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: string;
 }
 
 // Configuration
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '';
 const API_BASE = 'https://api.travelpayouts.com';
-const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || 'your_marker';
+const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '403383';
 
 // Check if API token is configured
-if (!API_TOKEN && process.env.NODE_ENV === 'development') {
+if (!API_TOKEN) {
   console.warn('⚠️ Travelpayouts API token is not configured. Please set NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN in .env.local');
-  console.warn('Using mock data for development');
 }
 
 class TravelpayoutsApiService {
   private static instance: TravelpayoutsApiService;
-  private airportsCache: Airport[] | null = null;
-  private lastCacheUpdate: number = 0;
-  private readonly CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+  private api: AxiosInstance;
+  private flightSearchApiV2: AxiosInstance;
+  private realtimeApi: AxiosInstance;
+  private cache: {
+    airports: Airport[] | null;
+    airlines: any[] | null;
+    cities: any[] | null;
+    lastUpdated: number;
+  };
 
-  private constructor() {}
+  private constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE,
+      timeout: 30000,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Access-Token': API_TOKEN,
+      },
+    });
+
+    this.flightSearchApiV2 = axios.create({
+        baseURL: `${API_BASE}/v2`,
+        timeout: 30000,
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Access-Token': API_TOKEN,
+        },
+    });
+    
+    this.realtimeApi = axios.create({
+        baseURL: `${API_BASE}/api/v3`,
+        timeout: 30000,
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Access-Token': API_TOKEN,
+        },
+    });
+
+    this.cache = {
+      airports: null,
+      airlines: null,
+      cities: null,
+      lastUpdated: 0,
+    };
+  }
 
   public static getInstance(): TravelpayoutsApiService {
     if (!TravelpayoutsApiService.instance) {
@@ -81,11 +131,13 @@ class TravelpayoutsApiService {
   private getApiHeaders() {
     return {
       'X-Access-Token': API_TOKEN,
-      'Accept': 'application/json',
     };
   }
 
-  // ==================== FLIGHT SEARCH ====================
+  private shouldUseCache(maxAge: number = 24 * 60 * 60 * 1000): boolean {
+    return Date.now() - this.cache.lastUpdated < maxAge;
+  }
+
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
     if (!API_TOKEN) {
         console.log('Using mock flight data because API token is missing.');
@@ -99,7 +151,6 @@ class TravelpayoutsApiService {
         destination: params.destination,
         depart_date: params.depart_date,
         token: API_TOKEN,
-        marker: MARKER,
         limit: (params.limit || 30).toString(),
       });
 
@@ -114,7 +165,7 @@ class TravelpayoutsApiService {
         timeout: 15000,
       });
 
-      if (response.data.data) {
+      if (response.data.success && response.data.data) {
         const flightsByDestination = response.data.data[params.destination];
         if (flightsByDestination) {
             return Object.values(flightsByDestination).map((flight: any) => ({
@@ -133,7 +184,7 @@ class TravelpayoutsApiService {
                 found_at: new Date().toISOString(),
                 airline: flight.airline,
                 flight_number: flight.flight_number,
-                link: `https://www.aviasales.com${flight.link}`
+                link: `https://www.aviasales.com${flight.link}?marker=${MARKER}`
             }));
         }
       }
@@ -148,8 +199,53 @@ class TravelpayoutsApiService {
       return this.getMockFlights(params);
     }
   }
+  // ==================== AIRPORTS DATA ====================
+  async getAirports(): Promise<Airport[]> {
+    if (this.cache.airports && this.shouldUseCache()) {
+      return this.cache.airports;
+    }
 
-  // ==================== AIRPORTS DATA (Live Search) ====================
+    try {
+      const response: AxiosResponse<Airport[]> = await axios.get(
+        `${API_BASE}/data/en/airports.json`,
+        { timeout: 10000 }
+      );
+
+      this.cache.airports = response.data;
+      this.cache.lastUpdated = Date.now();
+      return this.cache.airports;
+    } catch (error: any) {
+      console.error('Error fetching airports:', error.message);
+      
+      // Fallback to static airports data
+      if (this.cache.airports) {
+        return this.cache.airports;
+      }
+      
+      // Return basic airports if all fails
+      return this.getBasicAirports();
+    }
+  }
+
+  async getAirportOptions(): Promise<AirportOption[]> {
+    try {
+      const airports = await this.getAirports();
+      
+      return airports
+        .map(airport => ({
+          value: airport.code,
+          label: `${airport.city_name || airport.name} (${airport.code})`,
+          city: airport.city_name,
+          country: airport.country_name,
+          fullLabel: `${airport.city_name || airport.name} (${airport.code}) - ${airport.country_name}`,
+        }))
+        .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+    } catch (error) {
+      console.error('Error getting airport options:', error);
+      return this.getBasicAirportOptions();
+    }
+  }
+
   async searchAirports(query: string): Promise<AirportOption[]> {
     if (!query) return [];
     
@@ -174,27 +270,82 @@ class TravelpayoutsApiService {
     } catch (error) {
       console.error('Error searching airports live:', error);
        // Fallback for development without a token
-        return this.getStaticAirportOptions().filter(opt => 
+        return this.getBasicAirportOptions().filter(opt => 
             opt.label.toLowerCase().includes(query.toLowerCase())
         );
     }
   }
 
-
-  // ==================== STATIC DATA (Fallbacks) ====================
-  private getStaticAirportOptions(): AirportOption[] {
+  private getBasicAirports(): Airport[] {
     return [
-        { value: 'JFK', label: 'New York (JFK)', city: 'New York', country: 'United States' },
-        { value: 'LAX', label: 'Los Angeles (LAX)', city: 'Los Angeles', country: 'United States' },
-        { value: 'LHR', label: 'London (LHR)', city: 'London', country: 'United Kingdom' },
-        { value: 'CDG', label: 'Paris (CDG)', city: 'Paris', country: 'France' },
-        { value: 'HND', label: 'Tokyo (HND)', city: 'Tokyo', country: 'Japan' },
-        { value: 'DXB', label: 'Dubai (DXB)', city: 'Dubai', country: 'United Arab Emirates' },
-        { value: 'SIN', label: 'Singapore (SIN)', city: 'Singapore', country: 'Singapore' },
-        { value: 'SYD', label: 'Sydney (SYD)', city: 'Sydney', country: 'Australia' },
+      {
+        code: 'JFK',
+        name: 'John F Kennedy International Airport',
+        city_code: 'NYC',
+        city_name: 'New York',
+        country_code: 'US',
+        country_name: 'United States',
+        timezone: 'America/New_York',
+        lat: 40.6413,
+        lng: -73.7781,
+      },
+      {
+        code: 'LAX',
+        name: 'Los Angeles International Airport',
+        city_code: 'LAX',
+        city_name: 'Los Angeles',
+        country_code: 'US',
+        country_name: 'United States',
+        timezone: 'America/Los_Angeles',
+        lat: 33.9416,
+        lng: -118.4085,
+      },
+      {
+        code: 'LHR',
+        name: 'Heathrow Airport',
+        city_code: 'LON',
+        city_name: 'London',
+        country_code: 'GB',
+        country_name: 'United Kingdom',
+        timezone: 'Europe/London',
+        lat: 51.4700,
+        lng: -0.4543,
+      },
+      {
+        code: 'CDG',
+        name: 'Charles de Gaulle Airport',
+        city_code: 'PAR',
+        city_name: 'Paris',
+        country_code: 'FR',
+        country_name: 'France',
+        timezone: 'Europe/Paris',
+        lat: 49.0097,
+        lng: 2.5479,
+      },
+      {
+        code: 'HND',
+        name: 'Haneda Airport',
+        city_code: 'TYO',
+        city_name: 'Tokyo',
+        country_code: 'JP',
+        country_name: 'Japan',
+        timezone: 'Asia/Tokyo',
+        lat: 35.5494,
+        lng: 139.7798,
+      },
     ];
   }
-  
+
+  private getBasicAirportOptions(): AirportOption[] {
+    return this.getBasicAirports().map(airport => ({
+      value: airport.code,
+      label: `${airport.city_name} (${airport.code})`,
+      city: airport.city_name,
+      country: airport.country_name,
+      fullLabel: `${airport.city_name} (${airport.code}) - ${airport.country_name}`,
+    }));
+  }
+
   private getMockFlights(params: FlightSearchParams): Flight[] {
     const mockFlights: Flight[] = [
       {
@@ -213,7 +364,6 @@ class TravelpayoutsApiService {
         found_at: new Date().toISOString(),
         airline: 'American Airlines',
         flight_number: 'AA123',
-        link: `https://www.aviasales.com/search/${params.origin}${params.depart_date.replace(/-/g, '')}${params.destination}${params.return_date ? params.return_date.replace(/-/g, '') : ''}1`,
       },
       {
         value: 349,
@@ -231,12 +381,47 @@ class TravelpayoutsApiService {
         found_at: new Date().toISOString(),
         airline: 'Delta Airlines',
         flight_number: 'DL456',
-        link: `https://www.aviasales.com/search/${params.origin}${params.depart_date.replace(/-/g, '')}${params.destination}${params.return_date ? params.return_date.replace(/-/g, '') : ''}1`,
+      },
+      {
+        value: 399,
+        trip_class: 1,
+        show_to_affiliates: true,
+        origin: params.origin,
+        destination: params.destination,
+        gate: 'Travelpayouts',
+        depart_date: params.depart_date,
+        return_date: params.return_date || null,
+        number_of_changes: 0,
+        duration: 350,
+        distance: 4000,
+        actual: true,
+        found_at: new Date().toISOString(),
+        airline: 'United Airlines',
+        flight_number: 'UA789',
       },
     ];
 
-    // Sort by price
-    return mockFlights.sort((a, b) => a.value - b.value);
+    const flightsWithLinks = mockFlights.map(flight => {
+        const linkParams = new URLSearchParams({
+          origin_iata: flight.origin,
+          destination_iata: flight.destination,
+          depart_date: flight.depart_date,
+          adults: (params.passengers || 1).toString(),
+          children: '0',
+          infants: '0',
+          trip_class: flight.trip_class.toString(),
+          marker: MARKER,
+        });
+        if (flight.return_date) {
+          linkParams.append('return_date', flight.return_date);
+        }
+        return {
+          ...flight,
+          link: `https://www.aviasales.com/search?${linkParams.toString()}`,
+        };
+      }).filter(flight => flight.link);
+  
+      return flightsWithLinks;
   }
 }
 

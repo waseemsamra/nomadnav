@@ -43,10 +43,14 @@ const WorkingSearchForm: React.FC = () => {
 
   useEffect(() => {
     // Set default dates only on the client-side to avoid hydration errors
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 8);
     setFormData(prev => ({
         ...prev,
-        departDate: new Date(),
-        returnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        departDate: tomorrow,
+        returnDate: nextWeek
     }))
   }, []);
 
