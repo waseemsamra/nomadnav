@@ -204,43 +204,20 @@ class TravelpayoutsApiService {
   // ==================== SEARCH FLIGHTS (REAL API) ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
     console.log('🔍 Searching REAL flights with params:', params);
-
-    // Method 1: Try prices_for_dates endpoint (most reliable)
     try {
       const flights = await this.searchPricesForDates(params);
       if (flights.length > 0) {
         console.log(`✅ Found ${flights.length} real flights from prices_for_dates API`);
         return flights;
       }
+      // If API returns no flights, use mock data
+      console.log('🔄 API returned 0 flights, using realistic mock data');
+      return this.generateRealisticMockFlights(params);
     } catch (error: any) {
-      console.log('Method 1 failed:', error.response?.data || error.message);
+      console.error('API call failed:', error.response?.data || error.message);
+      console.log('🔄 API call failed, using realistic mock data');
+      return this.generateRealisticMockFlights(params);
     }
-
-    // Method 2: Try latest prices endpoint
-    try {
-      const flights = await this.searchLatestPrices(params);
-      if (flights.length > 0) {
-        console.log(`✅ Found ${flights.length} real flights from latest prices API`);
-        return flights;
-      }
-    } catch (error: any) {
-       console.log('Method 2 failed:', error.response?.data || error.message);
-    }
-
-    // Method 3: Try calendar endpoint
-    try {
-      const flights = await this.searchCalendarPrices(params);
-      if (flights.length > 0) {
-        console.log(`✅ Found ${flights.length} real flights from calendar API`);
-        return flights;
-      }
-    } catch (error: any) {
-       console.log('Method 3 failed:', error.response?.data || error.message);
-    }
-
-    // If all APIs fail, throw error
-    console.log('🔄 All APIs failed, using realistic mock data');
-    return this.generateRealisticMockFlights(params);
   }
 
   // ==================== METHOD 1: Prices for Dates (Most Reliable) ====================
@@ -300,113 +277,6 @@ class TravelpayoutsApiService {
         found_at: flight.found_at || new Date().toISOString(),
         seats_available: Math.floor(Math.random() * 10) + 1,
       }));
-    }
-
-    return [];
-  }
-
-  // ==================== METHOD 2: Latest Prices ====================
-  private async searchLatestPrices(params: FlightSearchParams): Promise<Flight[]> {
-    const searchParams = new URLSearchParams({
-      origin: params.origin,
-      destination: params.destination,
-      depart_date: params.depart_date,
-      currency: params.currency || 'USD',
-      limit: (params.limit || 20).toString(),
-    });
-
-    if (params.return_date && params.trip_type === 'round') {
-      searchParams.append('return_date', params.return_date);
-    }
-
-    if (API_TOKEN) {
-      searchParams.append('token', API_TOKEN);
-    }
-
-    const url = `${ENDPOINTS.latestPrices}?${searchParams.toString()}`;
-    console.log('📡 Calling latest_prices:', url.replace(API_TOKEN, '***'));
-
-    const response = await axios.get(url, {
-      timeout: 15000,
-      headers: {
-        'Accept': 'application/json',
-        ...(API_TOKEN ? { 'X-Access-Token': API_TOKEN } : {}),
-      },
-    });
-
-    if (response.data.data && Array.isArray(response.data.data)) {
-      return response.data.data.map((flight: any, index: number) => ({
-        id: `flight-${flight.origin}-${flight.destination}-${index}`,
-        price: flight.value || flight.price || 0,
-        airline: flight.airline || 'Multiple',
-        airline_code: flight.airline || 'XX',
-        flight_number: flight.flight_number || `FL${2000 + index}`,
-        departure_at: flight.depart_date || params.depart_date,
-        return_at: flight.return_date || params.return_date,
-        origin: flight.origin || params.origin,
-        destination: flight.destination || params.destination,
-        transfers: flight.number_of_changes || 0,
-        duration: flight.duration || this.calculateFlightDuration(params.origin, params.destination),
-        link: this.generateBookingLink(params),
-        currency: params.currency || 'USD',
-        actual: flight.actual || true,
-        gate: flight.gate || 'aviasales',
-        distance: flight.distance || this.calculateDistance(params.origin, params.destination),
-        found_at: flight.found_at || new Date().toISOString(),
-        seats_available: Math.floor(Math.random() * 10) + 1,
-      }));
-    }
-
-    return [];
-  }
-
-  // ==================== METHOD 3: Calendar Prices ====================
-  private async searchCalendarPrices(params: FlightSearchParams): Promise<Flight[]> {
-    const searchParams = new URLSearchParams({
-      origin: params.origin,
-      destination: params.destination,
-      depart_date: params.depart_date,
-      currency: params.currency || 'USD',
-      length: '1', // Stay length in days
-    });
-
-    if (API_TOKEN) {
-      searchParams.append('token', API_TOKEN);
-    }
-
-    const url = `${ENDPOINTS.calendar}?${searchParams.toString()}`;
-    console.log('📡 Calling calendar:', url.replace(API_TOKEN, '***'));
-
-    const response = await axios.get(url, {
-      timeout: 15000,
-      headers: {
-        'Accept': 'application/json',
-        ...(API_TOKEN ? { 'X-Access-Token': API_TOKEN } : {}),
-      },
-    });
-
-    if (response.data.data && response.data.data[params.depart_date]) {
-      const flightData = response.data.data[params.depart_date];
-      return [{
-        id: `flight-${params.origin}-${params.destination}-calendar`,
-        price: flightData.price || 0,
-        airline: 'Multiple',
-        airline_code: 'XX',
-        flight_number: 'FL3000',
-        departure_at: params.depart_date,
-        return_at: params.return_date,
-        origin: params.origin,
-        destination: params.destination,
-        transfers: 0,
-        duration: this.calculateFlightDuration(params.origin, params.destination),
-        link: this.generateBookingLink(params),
-        currency: params.currency || 'USD',
-        actual: true,
-        gate: 'aviasales',
-        distance: this.calculateDistance(params.origin, params.destination),
-        found_at: new Date().toISOString(),
-        seats_available: Math.floor(Math.random() * 10) + 1,
-      }];
     }
 
     return [];

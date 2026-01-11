@@ -31,7 +31,6 @@ function SearchResultsContent() {
   
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     maxPrice: 2000,
     maxStops: 2,
@@ -55,7 +54,6 @@ function SearchResultsContent() {
       }
 
       setLoading(true);
-      setError(null);
 
       try {
         const flightData = await travelpayoutsApi.searchFlights({
@@ -78,7 +76,6 @@ function SearchResultsContent() {
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
-        setError(error.message || 'Failed to load flights. The API might be down or your token may be invalid.');
         toast.error(error.message || 'Failed to load flights.');
         setFlights([]);
       } finally {
@@ -183,18 +180,6 @@ function SearchResultsContent() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center">
-              <Shield className="w-5 h-5 text-red-500 mr-2" />
-              <div>
-                <p className="text-red-700 font-medium">Flight Search Failed</p>
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Filters */}
           <div className="lg:col-span-1">
@@ -306,7 +291,7 @@ function SearchResultsContent() {
               </p>
             </div>
 
-            {filteredFlights.length === 0 && !error ? (
+            {filteredFlights.length === 0 ? (
               <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
