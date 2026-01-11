@@ -49,3 +49,5 @@ export interface FilterState {
   departureTime: [number, number];
   arrivalTime: [number, number];
 }
+
+    

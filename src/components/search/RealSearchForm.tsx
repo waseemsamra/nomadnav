@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { travelpayoutsApi, type AirportOption } from '@/services/travelpayoutsApi';
+import { travelpayoutsApi, type Airport } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 
 interface SearchFormData {
@@ -32,12 +33,12 @@ interface SearchFormData {
 const RealSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [testingApi, setTestingApi] = useState(false);
-  const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
+  const [testingApi, setTestingApi] = useState(true);
+  const [airportOptions, setAirportOptions] = useState<Airport[]>([]);
   const [apiStatus, setApiStatus] = useState<{
     connected: boolean;
     message: string;
-    hasToken: boolean;
+    tokenValid: boolean;
   } | null>(null);
 
   const [formData, setFormData] = useState<SearchFormData>({
@@ -50,10 +51,14 @@ const RealSearchForm: React.FC = () => {
     cabinClass: 'economy',
   });
 
-  // Test API connection on mount
+  // Test API connection and load airports on mount
   useEffect(() => {
-    testApiConnection();
-    loadAirports();
+    const initialize = async () => {
+      await testApiConnection();
+      await loadAirports();
+      setTestingApi(false);
+    };
+    initialize();
   }, []);
 
   const testApiConnection = async () => {
@@ -62,7 +67,7 @@ const RealSearchForm: React.FC = () => {
       const status = await travelpayoutsApi.testApiConnection();
       setApiStatus(status);
       
-      if (!status.connected) {
+      if (!status.tokenValid) {
         toast(status.message, {
           icon: '⚠️',
           duration: 5000,
@@ -77,7 +82,7 @@ const RealSearchForm: React.FC = () => {
 
   const loadAirports = async () => {
     try {
-      const options = await travelpayoutsApi.getAirportOptions();
+      const options = await travelpayoutsApi.getAirports();
       setAirportOptions(options);
     } catch (error) {
       console.error('Error loading airports:', error);
@@ -122,10 +127,8 @@ const RealSearchForm: React.FC = () => {
 
       console.log('🔍 Real API Search:', Object.fromEntries(searchParams));
       
-      // Test the API connection first
-      const apiTest = await travelpayoutsApi.testApiConnection();
-      if (!apiTest.connected && apiTest.hasToken) {
-        toast.error('API Connection Failed. Using demo mode.');
+      if (!apiStatus?.tokenValid) {
+        toast.error('API not connected. Using demo mode.');
       }
 
       router.push(`/flights/search?${searchParams.toString()}`);
@@ -175,7 +178,7 @@ const RealSearchForm: React.FC = () => {
           ) : (
             <>
               <Wifi className="w-3 h-3" />
-              {apiStatus?.hasToken ? 'API Error' : 'Add API Token'}
+              {apiStatus?.tokenValid === false ? 'Invalid Token' : 'API Offline'}
             </>
           )}
         </div>
@@ -230,8 +233,8 @@ const RealSearchForm: React.FC = () => {
               >
                 <option value="">Select departure airport</option>
                 {airportOptions.map((airport) => (
-                  <option key={airport.value} value={airport.value}>
-                    {airport.label}
+                  <option key={airport.code} value={airport.code}>
+                    {airport.city} ({airport.code})
                   </option>
                 ))}
               </select>
@@ -254,8 +257,8 @@ const RealSearchForm: React.FC = () => {
               >
                 <option value="">Select arrival airport</option>
                 {airportOptions.map((airport) => (
-                  <option key={airport.value} value={airport.value}>
-                    {airport.label}
+                  <option key={airport.code} value={airport.code}>
+                     {airport.city} ({airport.code})
                   </option>
                 ))}
               </select>
@@ -396,7 +399,7 @@ const RealSearchForm: React.FC = () => {
               <Shield className="w-5 h-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <p className="text-yellow-700 font-medium">
-                  {apiStatus.hasToken ? 'API Connection Issue' : 'API Token Required'}
+                  {apiStatus.tokenValid ? 'API Connection Issue' : 'API Token Required'}
                 </p>
                 <p className="text-yellow-600 text-sm mt-1">
                   {apiStatus.message}
@@ -420,7 +423,7 @@ const RealSearchForm: React.FC = () => {
         {/* Search Button */}
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || testingApi}
           className="w-full py-4 text-lg font-semibold rounded-xl 
                    bg-gradient-to-r from-blue-600 to-purple-600 
                    hover:from-blue-700 hover:to-purple-700 
@@ -428,15 +431,15 @@ const RealSearchForm: React.FC = () => {
                    relative overflow-hidden group"
         >
           <div className="relative z-10 flex items-center justify-center">
-            {loading ? (
+            {loading || testingApi ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Connecting to API...
+                {testingApi ? 'Initializing...' : 'Searching...'}
               </>
             ) : (
               <>
                 <Search className="w-5 h-5 mr-2" />
-                Search Real Flights
+                Search Flights
               </>
             )}
           </div>
@@ -451,7 +454,7 @@ const RealSearchForm: React.FC = () => {
           <p className="text-xs text-gray-500">
             {apiStatus?.connected 
               ? '✅ Connected to Travelpayouts API - Real flight data'
-              : '⚠️ Using demo data - Add API token for real flights'}
+              : '⚠️ Using demo data - Check token or API status'}
           </p>
         </div>
       </form>
@@ -460,3 +463,5 @@ const RealSearchForm: React.FC = () => {
 };
 
 export default RealSearchForm;
+
+    

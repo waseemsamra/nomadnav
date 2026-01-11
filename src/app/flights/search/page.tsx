@@ -28,7 +28,7 @@ function SearchResultsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
-    maxPrice: 1000,
+    maxPrice: 2000,
     maxStops: 2,
     sortBy: 'price' as 'price' | 'duration',
   });
@@ -40,7 +40,6 @@ function SearchResultsContent() {
   const return_date = searchParams.get('return_date') || '';
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
-  const trip_type = searchParams.get('trip_type') || 'round';
 
   // Fetch flights
   useEffect(() => {
@@ -85,7 +84,6 @@ function SearchResultsContent() {
         setError(error.message || 'Failed to load flights');
         toast.error('Failed to load flights. Showing mock data.');
         
-        // Show mock data even on error
         const mockFlights = await travelpayoutsApi.searchFlights({
           origin,
           destination,
@@ -107,14 +105,14 @@ function SearchResultsContent() {
   // Filter and sort flights
   const filteredFlights = flights
     .filter(flight => {
-      const priceFilter = flight.value <= filters.maxPrice;
-      const stopsFilter = flight.number_of_changes <= filters.maxStops;
+      const priceFilter = flight.price <= filters.maxPrice;
+      const stopsFilter = flight.transfers <= filters.maxStops;
       return priceFilter && stopsFilter;
     })
     .sort((a, b) => {
       switch (filters.sortBy) {
         case 'price':
-          return a.value - b.value;
+          return a.price - b.price;
         case 'duration':
           return a.duration - b.duration;
         default:
@@ -124,12 +122,8 @@ function SearchResultsContent() {
 
   const handleBookFlight = (flight: Flight) => {
     if (flight.link) {
-      window.open(`https://www.aviasales.com${flight.link}`, '_blank', 'noopener,noreferrer');
+      window.open(flight.link, '_blank', 'noopener,noreferrer');
       toast.success('Opening booking page...');
-    } else {
-      // Generate Aviasales link
-      const aviasalesLink = `https://www.aviasales.com/search/${origin}${depart_date.replace(/-/g, '')}${destination}${return_date ? return_date.replace(/-/g, '') : ''}${passengers}`;
-      window.open(aviasalesLink, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -144,15 +138,6 @@ function SearchResultsContent() {
       return format(new Date(dateString), 'MMM dd, yyyy');
     } catch {
       return dateString;
-    }
-  };
-
-  const getCabinClass = (tripClass: number) => {
-    switch (tripClass) {
-      case 0: return 'Economy';
-      case 1: return 'Business';
-      case 2: return 'First Class';
-      default: return 'Economy';
     }
   };
 
@@ -271,7 +256,6 @@ function SearchResultsContent() {
                     { value: 0, label: 'Non-stop' },
                     { value: 1, label: '1 stop max' },
                     { value: 2, label: '2 stops max' },
-                    { value: 3, label: 'Any stops' },
                   ].map((stop) => (
                     <button
                       key={stop.value}
@@ -344,7 +328,7 @@ function SearchResultsContent() {
                 <p className="text-gray-600 mb-4">
                   Try adjusting your filters or search criteria
                 </p>
-                <Button onClick={() => setFilters({ maxPrice: 1000, maxStops: 2, sortBy: 'price' })}>
+                <Button onClick={() => setFilters({ maxPrice: 2000, maxStops: 2, sortBy: 'price' })}>
                   Reset Filters
                 </Button>
               </div>
@@ -352,7 +336,7 @@ function SearchResultsContent() {
               <div className="space-y-4">
                 {filteredFlights.map((flight, index) => (
                   <div
-                    key={`${flight.origin}-${flight.destination}-${flight.depart_date}-${index}`}
+                    key={`${flight.origin}-${flight.destination}-${flight.departure_at}-${index}`}
                     className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
                   >
                     <div className="p-6">
@@ -364,21 +348,21 @@ function SearchResultsContent() {
                               {flight.origin} → {flight.destination}
                             </div>
                             <div className={`ml-4 px-2 py-1 text-xs font-semibold rounded ${
-                              flight.number_of_changes === 0 
+                              flight.transfers === 0 
                                 ? 'bg-green-100 text-green-800' 
                                 : 'bg-yellow-100 text-yellow-800'
                             }`}>
-                              {flight.number_of_changes === 0 ? 'Non-stop' : `${flight.number_of_changes} stop(s)`}
+                              {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
                             </div>
                           </div>
                           <div className="text-gray-600">
-                            {formatDate(flight.depart_date)}
-                            {flight.return_date && ` → ${formatDate(flight.return_date)}`}
+                            {formatDate(flight.departure_at)}
+                            {flight.return_at && ` → ${formatDate(flight.return_at)}`}
                           </div>
                         </div>
                         <div className="mt-4 md:mt-0">
                           <div className="text-3xl font-bold text-blue-600">
-                            ${flight.value}
+                            ${flight.price}
                           </div>
                           <div className="text-sm text-gray-500 text-right">
                             per passenger
@@ -387,7 +371,7 @@ function SearchResultsContent() {
                       </div>
 
                       {/* Flight Details */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                         <div className="flex items-center">
                           <Plane className="w-5 h-5 text-gray-400 mr-3" />
                           <div>
@@ -407,22 +391,13 @@ function SearchResultsContent() {
                           </div>
                         </div>
                         <div className="flex items-center">
-                          <MapPin className="w-5 h-5 text-gray-400 mr-3" />
-                          <div>
-                            <div className="text-sm text-gray-500">Distance</div>
-                            <div className="font-medium">
-                              {Math.round(flight.distance / 1000)}k km
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center">
                           <div className="w-5 h-5 mr-3 flex items-center justify-center">
-                            <div className="w-4 h-4 border border-gray-400 rounded"></div>
+                            <div className="font-mono text-gray-500">#{flight.flight_number}</div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-500">Class</div>
+                            <div className="text-sm text-gray-500">Flight No.</div>
                             <div className="font-medium">
-                              {getCabinClass(flight.trip_class)}
+                              {flight.flight_number}
                             </div>
                           </div>
                         </div>
@@ -442,20 +417,13 @@ function SearchResultsContent() {
                           className="flex-1 py-3"
                           onClick={() => {
                             toast.success('Flight details: ' + (flight.airline || 'Multiple airlines') + 
-                              ' • ' + formatDuration(flight.duration) + ' • $' + flight.value);
+                              ' • ' + formatDuration(flight.duration) + ' • $' + flight.price);
                           }}
                         >
                           View Details
                         </Button>
                       </div>
 
-                      {/* Additional Info */}
-                      {flight.actual && (
-                        <div className="mt-4 text-sm text-green-600 flex items-center">
-                          <Check className="w-4 h-4 mr-1" />
-                          Actual flight data • Updated recently
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -506,3 +474,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    

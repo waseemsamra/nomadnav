@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -13,15 +14,22 @@ import {
 } from 'lucide-react';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
+import type { Flight } from '@/services/travelpayoutsApi';
 
 export default function ApiTestPage() {
   const [testing, setTesting] = useState(false);
-  const [apiStatus, setApiStatus] = useState<any>(null);
-  const [testFlights, setTestFlights] = useState<any[]>([]);
+  const [apiStatus, setApiStatus] = useState<{
+    connected: boolean;
+    message: string;
+    airports: number;
+    tokenValid: boolean;
+  } | null>(null);
+  const [testFlights, setTestFlights] = useState<Flight[]>([]);
   const [flightLoading, setFlightLoading] = useState(false);
 
   const testConnection = async () => {
     setTesting(true);
+    setApiStatus(null);
     try {
       const status = await travelpayoutsApi.testApiConnection();
       setApiStatus(status);
@@ -30,7 +38,8 @@ export default function ApiTestPage() {
       setApiStatus({
         connected: false,
         message: 'Test failed: ' + error.message,
-        hasToken: false,
+        airports: 0,
+        tokenValid: false,
       });
     } finally {
       setTesting(false);
@@ -39,11 +48,12 @@ export default function ApiTestPage() {
 
   const testFlightSearch = async () => {
     setFlightLoading(true);
+    setTestFlights([]);
     try {
       const flights = await travelpayoutsApi.searchFlights({
         origin: 'JFK',
         destination: 'LAX',
-        depart_date: '2024-06-15',
+        depart_date: '2024-08-01',
         currency: 'USD',
         limit: 3,
       });
@@ -169,6 +179,8 @@ export default function ApiTestPage() {
                       </span>
                     </div>
                     <p className="text-sm">{apiStatus.message}</p>
+                    <p className="text-sm mt-1">Airports loaded: {apiStatus.airports}</p>
+                    <p className="text-sm mt-1">Token valid for flights: {apiStatus.tokenValid ? 'Yes' : 'No'}</p>
                   </div>
                 )}
               </div>
@@ -193,14 +205,14 @@ export default function ApiTestPage() {
                 <span className="mx-2">→</span>
                 <span className="text-blue-600 font-bold">LAX</span>
                 <span className="mx-4">|</span>
-                <span className="text-gray-700">June 15, 2024</span>
+                <span className="text-gray-700">August 1, 2024</span>
               </div>
             </div>
           </div>
 
           <Button
             onClick={testFlightSearch}
-            disabled={flightLoading || !apiStatus?.connected}
+            disabled={flightLoading || !apiStatus?.tokenValid}
             className="w-full mb-6"
           >
             {flightLoading ? (
@@ -249,9 +261,9 @@ export default function ApiTestPage() {
             </div>
           )}
 
-          {testFlights.length === 0 && flightLoading === false && apiStatus?.connected && (
+          {testFlights.length === 0 && flightLoading === false && apiStatus?.tokenValid && (
             <div className="text-center py-8 text-gray-500">
-              Click "Test Flight Search" to see real flight data
+              Click "Test Flight Search" to see flight data. If none appears, the API may not have returned results for this route.
             </div>
           )}
         </div>
@@ -266,7 +278,7 @@ export default function ApiTestPage() {
             <li>Register for a free account</li>
             <li>Go to "My Profile" → "API" section</li>
             <li>Copy your API Token</li>
-            <li>Add it to your .env.local file as NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN</li>
+            <li>Add it to your .env file as NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN</li>
             <li>Restart your development server</li>
             <li>Test the connection above</li>
           </ol>
@@ -275,3 +287,5 @@ export default function ApiTestPage() {
     </div>
   );
 }
+
+    
