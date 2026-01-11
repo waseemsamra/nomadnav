@@ -50,6 +50,7 @@ function Header() {
     { href: '/', label: 'Home' },
     { href: '/flights/search', label: 'Flights' },
     { href: '/itinerary-planner', label: 'Itinerary Planner' },
+    { href: '/api-test', label: 'API Test' },
   ];
 
   useEffect(() => {
