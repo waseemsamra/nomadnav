@@ -1,41 +1,16 @@
+
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { 
   Plane, 
   Shield, 
   Clock, 
   Globe,
-  CheckCircle,
-  AlertCircle
 } from 'lucide-react';
 import RealSearchForm from '@/components/search/RealSearchForm';
-import RealApiTest from '@/components/api/RealApiTest';
-import { travelpayoutsApi, type Flight } from '@/services/travelpayoutsApi';
 
 export default function HomePage() {
-  const [apiStatus, setApiStatus] = useState<any>(null);
-  const [cheapFlights, setCheapFlights] = useState<Flight[]>([]);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      // Check API status
-      const status = await travelpayoutsApi.testApiConnection();
-      setApiStatus(status);
-
-      // Load cheap flights if API is working
-      if (status.success) {
-        const flights = await travelpayoutsApi.getCheapFlights('MOW', 'USD');
-        setCheapFlights(flights.slice(0, 4));
-      }
-    } catch (error) {
-      console.error('Failed to load initial data:', error);
-    }
-  };
 
   const features = [
     {
@@ -67,48 +42,18 @@ export default function HomePage() {
   return (
     <main className="min-h-screen">
       {/* Hero Section */}
-      <section id="search" className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white overflow-hidden">
-        {/* Animated background */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent animate-slide"></div>
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
-            <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse animation-delay-2000"></div>
-          </div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 py-20">
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-6">
-              {apiStatus?.success ? (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">API Connected • Real Data</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm">Connecting to API...</span>
-                </>
-              )}
+      <section id="search" className="relative h-[60vh] min-h-[500px] flex items-center justify-center text-white">
+        <div className="hero-bg" data-ai-hint="aurora winter"></div>
+        <div className="relative z-10 w-full max-w-5xl mx-auto px-4">
+            <div className='text-center mb-8'>
+                <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+                    Find Your Next Adventure
+                </h1>
+                <p className="text-lg text-gray-200 drop-shadow-md">
+                    Search flights, hotels, and car rentals from one place.
+                </p>
             </div>
-            
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Find Your Perfect Flight
-              <span className="block text-blue-200 mt-2">With Real API Data</span>
-            </h1>
-            
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-10">
-              Powered by Travelpayouts API. Search real flights, compare prices, and book directly with airlines.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Search Form */}
-      <section className="px-4 -mt-12 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          <RealSearchForm />
+            <RealSearchForm />
         </div>
       </section>
 
@@ -146,46 +91,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* API Status & Test */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                Real API Connection
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Our platform uses the official Travelpayouts API to provide real flight data.
-                Below you can see the live status of our API connection and test endpoints.
-              </p>
-              
-              {cheapFlights.length > 0 && (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Sample Real Flights</h3>
-                  <div className="space-y-3">
-                    {cheapFlights.map((flight, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                        <div>
-                          <div className="font-medium">{flight.origin} → {flight.destination}</div>
-                          <div className="text-sm text-gray-500">{flight.airline}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-blue-600">${flight.price}</div>
-                          <div className="text-xs text-gray-500">One way</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div>
-              <RealApiTest />
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
@@ -208,3 +113,5 @@ export default function HomePage() {
     </main>
   );
 }
+
+    

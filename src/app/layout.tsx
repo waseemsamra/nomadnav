@@ -43,7 +43,6 @@ function Logo() {
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const pathname = usePathname();
 
   const navLinks = [
@@ -88,17 +87,6 @@ function Header() {
           </nav>
 
           <div className="navbar-actions">
-            <button
-              className="navbar-action-icon"
-              onClick={() => setIsSearchOpen(true)}
-              aria-label="Search"
-            >
-              <Search />
-            </button>
-            <button className="navbar-action-icon" aria-label="Notifications">
-              <Bell />
-              <span className="notification-badge">3</span>
-            </button>
             <Link href="/dashboard" className="navbar-action-icon" aria-label="Profile">
               <User />
             </Link>
@@ -115,35 +103,6 @@ function Header() {
             {isMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
-
-        {isSearchOpen && (
-            <div
-              className="search-overlay"
-              onClick={() => setIsSearchOpen(false)}
-            >
-              <div className="search-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="search-header">
-                  <h3 className="search-title">Search Flights & Hotels</h3>
-                  <button
-                    className="search-close"
-                    onClick={() => setIsSearchOpen(false)}
-                    aria-label="Close search"
-                  >
-                    <X />
-                  </button>
-                </div>
-                <div className="search-input-container">
-                  <Search className="search-input-icon" />
-                  <input
-                    type="text"
-                    placeholder="Where do you want to go?"
-                    className="search-input"
-                    autoFocus
-                  />
-                </div>
-              </div>
-            </div>
-        )}
       </header>
 
       {isMenuOpen && (
@@ -331,3 +290,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    

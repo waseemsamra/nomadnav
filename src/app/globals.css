@@ -17,7 +17,7 @@
     --secondary-foreground: 222 47% 11%;
     --muted: 220 9% 45%;
     --muted-foreground: 220 9% 45%;
-    --accent: 27 96% 63%;
+    --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -44,8 +44,8 @@
     --secondary-foreground: 0 0% 98%;
     --muted: 217 39% 17%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 27 96% 63%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 217 39% 17%;
@@ -611,6 +611,28 @@
   to { transform: rotate(360deg); }
 }
     
+.hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('https://images.unsplash.com/photo-1531685250784-7569952593d2?q=80&w=2874&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  animation: zoomInOut 30s infinite alternate;
+}
+
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.2));
+}
+
 @keyframes slide {
   0% {
     transform: translateX(-100%);
@@ -640,5 +662,7 @@
 .animation-delay-2000 {
   animation-delay: 2s;
 }
+
+    
 
     
