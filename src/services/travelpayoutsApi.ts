@@ -207,10 +207,13 @@ class TravelpayoutsApiService {
       const searchParams = new URLSearchParams({
         origin: params.origin,
         destination: params.destination,
-        depart_date: params.depart_date,
         currency: params.currency || 'USD',
         limit: (params.limit || 30).toString(),
       });
+  
+      if (params.depart_date) {
+        searchParams.append('depart_date', params.depart_date);
+      }
   
       if (params.trip_type === 'round' && params.return_date) {
         searchParams.append('return_date', params.return_date);
