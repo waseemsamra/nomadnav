@@ -12,23 +12,17 @@ import {
   Loader2,
   ArrowRightLeft,
   Shield,
-  CheckCircle,
-  AlertCircle
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
+import ApiStatus from '../api/ApiStatus';
 
 const RealSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [airportOptions, setAirportOptions] = useState<{ value: string; label: string }[]>([]);
-  const [apiStatus, setApiStatus] = useState<{
-    connected: boolean;
-    message: string;
-    tokenValid: boolean;
-  } | null>(null);
 
   const [formData, setFormData] = useState({
     origin: '',
@@ -43,7 +37,6 @@ const RealSearchForm: React.FC = () => {
   // Initialize
   useEffect(() => {
     loadAirports();
-    checkApiStatus();
   }, []);
 
   const loadAirports = async () => {
@@ -56,22 +49,6 @@ const RealSearchForm: React.FC = () => {
       setAirportOptions(simplified);
     } catch (error) {
       console.error('Error loading airports:', error);
-    }
-  };
-
-  const checkApiStatus = async () => {
-    try {
-      const status = await travelpayoutsApi.testApiConnection();
-      setApiStatus(status);
-      
-      if (!status.connected) {
-        toast(status.message, {
-          icon: status.tokenValid ? '⚠️' : '❌',
-          duration: 5000,
-        });
-      }
-    } catch (error) {
-      console.error('API status check failed:', error);
     }
   };
 
@@ -138,30 +115,8 @@ const RealSearchForm: React.FC = () => {
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl p-6">
-      {/* API Status */}
-      {apiStatus && (
-        <div className={`mb-6 p-4 rounded-lg border flex items-center gap-3 ${
-          apiStatus.connected 
-            ? 'bg-green-50 border-green-200 text-green-800' 
-            : apiStatus.tokenValid
-            ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
-            : 'bg-red-50 border-red-200 text-red-800'
-        }`}>
-          {apiStatus.connected ? (
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          )}
-          <div className="flex-1">
-            <p className="font-medium">{apiStatus.message}</p>
-            {!apiStatus.connected && apiStatus.tokenValid && (
-              <p className="text-sm mt-1 opacity-80">
-                Showing realistic demo data. Flights will work with valid token.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      
+      <ApiStatus className="mb-6" />
 
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Search Flights</h2>
