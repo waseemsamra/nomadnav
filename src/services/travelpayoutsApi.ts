@@ -8,6 +8,7 @@ export interface Airport {
   city: string;
   country: string;
   country_code: string;
+  flightable: boolean;
 }
 
 export interface Flight {
@@ -164,14 +165,14 @@ class TravelpayoutsApiService {
 
       if (response.data && Array.isArray(response.data)) {
         const airports = response.data
-          .filter((airport: any) => airport.code && airport.name && airport.country_code)
-          .slice(0, 500) // Limit to 500 airports for performance
+          .filter((airport: any) => airport.code && airport.name && airport.country_code && airport.flightable === true)
           .map((airport: any) => ({
             code: airport.code,
             name: airport.name,
             city: airport.city_code || airport.city_name || '',
             country: airport.country_code || airport.country_name || '',
             country_code: airport.country_code || '',
+            flightable: airport.flightable,
           }));
 
         console.log(`✅ Loaded ${airports.length} real airports from API`);
@@ -187,14 +188,14 @@ class TravelpayoutsApiService {
   private getDefaultAirports(): Airport[] {
     console.log('🔄 Using default fallback airports');
     return [
-      { code: 'JFK', name: 'John F. Kennedy International Airport', city: 'New York', country: 'United States', country_code: 'US' },
-      { code: 'LAX', name: 'Los Angeles International Airport', city: 'Los Angeles', country: 'United States', country_code: 'US' },
-      { code: 'LHR', name: 'London Heathrow Airport', city: 'London', country: 'United Kingdom', country_code: 'GB' },
-      { code: 'CDG', name: 'Charles de Gaulle Airport', city: 'Paris', country: 'France', country_code: 'FR' },
-      { code: 'DXB', name: 'Dubai International Airport', city: 'Dubai', country: 'United Arab Emirates', country_code: 'AE' },
-      { code: 'HND', name: 'Tokyo Haneda Airport', city: 'Tokyo', country: 'Japan', country_code: 'JP' },
-      { code: 'MOW', name: 'Moscow', city: 'Moscow', country: 'Russia', country_code: 'RU' },
-      { code: 'LED', name: 'Pulkovo Airport', city: 'Saint Petersburg', country: 'Russia', country_code: 'RU' },
+      { code: 'JFK', name: 'John F. Kennedy International Airport', city: 'New York', country: 'United States', country_code: 'US', flightable: true },
+      { code: 'LAX', name: 'Los Angeles International Airport', city: 'Los Angeles', country: 'United States', country_code: 'US', flightable: true },
+      { code: 'LHR', name: 'London Heathrow Airport', city: 'London', country: 'United Kingdom', country_code: 'GB', flightable: true },
+      { code: 'CDG', name: 'Charles de Gaulle Airport', city: 'Paris', country: 'France', country_code: 'FR', flightable: true },
+      { code: 'DXB', name: 'Dubai International Airport', city: 'Dubai', country: 'United Arab Emirates', country_code: 'AE', flightable: true },
+      { code: 'HND', name: 'Tokyo Haneda Airport', city: 'Tokyo', country: 'Japan', country_code: 'JP', flightable: true },
+      { code: 'MOW', name: 'Moscow', city: 'Moscow', country: 'Russia', country_code: 'RU', flightable: true },
+      { code: 'LED', name: 'Pulkovo Airport', city: 'Saint Petersburg', country: 'Russia', country_code: 'RU', flightable: true },
     ];
   }
 
@@ -305,15 +306,8 @@ class TravelpayoutsApiService {
       }
       return [];
     } catch (error: any) {
-        console.error('Error fetching cheap flights, using fallback:', error.message);
-        // Fallback to realistic mock data
-        console.log('🔄 Using realistic mock data for cheap flights');
-        const mockDestinations = ['JFK', 'LAX', 'LHR', 'CDG', 'DXB'];
-        return this.generateRealisticMockFlights(
-          origin,
-          mockDestinations.filter(d => d !== origin).slice(0, 4),
-          new Date().toISOString().split('T')[0]
-        );
+        console.error('Error fetching cheap flights:', error.message);
+        return [];
     }
   }
 
@@ -337,33 +331,6 @@ class TravelpayoutsApiService {
     if (rand < 0.6) return 0; // 60% chance of non-stop
     if (rand < 0.9) return 1; // 30% chance of 1 stop
     return 2; // 10% chance of 2 stops
-  }
-
-  private generateRealisticMockFlights(origin: string, destinations: string[], depart_date: string): Flight[] {
-    return destinations.map((destination, index) => {
-        const { duration, distance } = this.getRouteInfo(origin, destination);
-        const transfers = this.generateStops();
-        const finalDuration = duration + transfers * 60; // Add 1hr per stop
-
-        return {
-            id: `mock-${origin}-${destination}-${index}`,
-            price: 100 + Math.floor(distance / 10) + Math.floor(Math.random() * 200),
-            airline: ['Nomad Air', 'Sky High', 'Cloud Hopper'][index % 3],
-            airline_code: ['NA', 'SH', 'CH'][index % 3],
-            flight_number: `MOCK${1000 + index}`,
-            departure_at: depart_date,
-            origin,
-            destination,
-            transfers,
-            duration: finalDuration,
-            link: this.generateBookingLink({ origin, destination, depart_date }),
-            currency: 'USD',
-            actual: false,
-            gate: 'mock-data',
-            distance: distance,
-            found_at: new Date().toISOString(),
-        };
-    });
   }
 
   private calculateFlightDuration(origin: string, destination: string): number {
@@ -415,7 +382,7 @@ class TravelpayoutsApiService {
     const airports = await this.getAirports();
     return airports.map(airport => ({
       value: airport.code,
-      label: `${airport.city ? airport.city + ' - ' : ''}${airport.name} (${airport.code})`,
+      label: `${airport.city} – ${airport.name} (${airport.code})`,
       city: airport.city,
       country: airport.country,
       code: airport.code,

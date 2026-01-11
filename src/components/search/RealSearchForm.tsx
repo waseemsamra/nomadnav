@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { travelpayoutsApi, type Airport } from '@/services/travelpayoutsApi';
+import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 
 interface AirportOption {
