@@ -104,6 +104,8 @@ function SearchResultsContent() {
     if (flight.link) {
       window.open(flight.link, '_blank', 'noopener,noreferrer');
       toast.success('Opening booking page...');
+    } else {
+        toast.error('Booking link is not available for this flight.');
     }
   };
 
@@ -143,14 +145,7 @@ function SearchResultsContent() {
   }, [flights]);
 
   const filteredFlights = useMemo(() => {
-    let sorted = [...flights]
-      .filter(f => f.price <= filters.maxPrice)
-      .filter(f => f.transfers <= filters.maxStops)
-      .filter(f => filters.airlines.length === 0 || filters.airlines.includes(f.airline_code))
-      .filter(f => {
-          const departureHour = new Date(f.departure_at).getHours();
-          return departureHour >= filters.departureTime[0] && departureHour <= filters.departureTime[1];
-      });
+    let sorted = [...flights];
 
     switch (filters.sortBy) {
         case 'price':
@@ -203,55 +198,6 @@ function SearchResultsContent() {
                         <SelectItem value="departure">Departure Time</SelectItem>
                     </SelectContent>
                 </Select>
-            </div>
-
-            {/* Price slider */}
-            <div className="space-y-2">
-                <label className="font-semibold text-sm">Max Price: ${filters.maxPrice}</label>
-                <Slider 
-                    value={[filters.maxPrice]} 
-                    onValueChange={(val) => handleFilterChange('maxPrice', val[0])}
-                    min={0}
-                    max={5000}
-                    step={50}
-                />
-            </div>
-
-            {/* Stops */}
-            <div className="space-y-2">
-                <label className="font-semibold text-sm">Max Stops: {filters.maxStops}</label>
-                <Slider 
-                    value={[filters.maxStops]} 
-                    onValueChange={(val) => handleFilterChange('maxStops', val[0])}
-                    min={0}
-                    max={3}
-                    step={1}
-                />
-            </div>
-            
-             {/* Departure Time */}
-            <div className="space-y-2">
-                <label className="font-semibold text-sm">Departure Time: {filters.departureTime[0]}:00 - {filters.departureTime[1]}:00</label>
-                <Slider 
-                    value={filters.departureTime} 
-                    onValueChange={(val) => handleFilterChange('departureTime', val)}
-                    min={0}
-                    max={24}
-                    step={1}
-                />
-            </div>
-
-            {/* Airlines */}
-            <div className="space-y-2">
-                <label className="font-semibold text-sm">Airlines</label>
-                <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
-                    {availableAirlines.map(airline => (
-                        <div key={airline.code} className="flex items-center space-x-2">
-                            <Checkbox id={airline.code} checked={filters.airlines.includes(airline.code)} onCheckedChange={() => handleAirlineToggle(airline.code)} />
-                            <label htmlFor={airline.code} className="text-sm">{airline.name}</label>
-                        </div>
-                    ))}
-                </div>
             </div>
         </CardContent>
     </Card>
@@ -340,13 +286,13 @@ function SearchResultsContent() {
               <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No flights match your filters
+                  No flights match your search
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Try adjusting your filters or reset them.
+                  We couldn't find any flights for the selected route and dates.
                 </p>
-                <Button onClick={handleResetFilters}>
-                  Reset Filters
+                <Button onClick={() => router.push('/')}>
+                  Try a New Search
                 </Button>
               </div>
             ) : (
@@ -362,17 +308,18 @@ function SearchResultsContent() {
                         <div className="flex items-center gap-4">
                            <Image
                             src={`https://pics.aviasales.com/92/92/${flight.airline_code}.png`}
-                            alt={`${flight.airline} logo`}
+                            alt={`${flight.airline || 'Airline'} logo`}
                             width={40}
                             height={40}
                             className="rounded-full bg-gray-100"
+                            unoptimized
                           />
                           <div>
                             <div className="text-2xl font-bold">
                               {flight.origin} → {flight.destination}
                             </div>
                             <div className="text-gray-600">
-                              {flight.airline}
+                              {flight.airline || 'Unknown Airline'}
                             </div>
                           </div>
                         </div>
@@ -421,6 +368,7 @@ function SearchResultsContent() {
                         <Button
                           onClick={() => handleBookFlight(flight)}
                           className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                          disabled={!flight.link}
                         >
                           <ArrowRight className="w-5 h-5 mr-2" />
                           Book Now
@@ -487,4 +435,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
