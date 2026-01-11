@@ -88,10 +88,10 @@ class TravelpayoutsApiService {
   // ==================== FLIGHT SEARCH ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
     if (!API_TOKEN) {
-      console.log('Using mock flight data because API token is missing.');
-      return this.getMockFlights(params);
+        console.log('Using mock flight data because API token is missing.');
+        return this.getMockFlights(params);
     }
-
+    
     try {
       const searchParams = new URLSearchParams({
         currency: params.currency || 'USD',
@@ -152,12 +152,6 @@ class TravelpayoutsApiService {
   // ==================== AIRPORTS DATA (Live Search) ====================
   async searchAirports(query: string): Promise<AirportOption[]> {
     if (!query) return [];
-    if (!API_TOKEN) {
-        // Fallback for development without a token
-        return this.getStaticAirportOptions().filter(opt => 
-            opt.label.toLowerCase().includes(query.toLowerCase())
-        );
-    }
     
     try {
       const response = await axios.get(
@@ -179,7 +173,10 @@ class TravelpayoutsApiService {
       return [];
     } catch (error) {
       console.error('Error searching airports live:', error);
-      return []; // Return empty array on error
+       // Fallback for development without a token
+        return this.getStaticAirportOptions().filter(opt => 
+            opt.label.toLowerCase().includes(query.toLowerCase())
+        );
     }
   }
 
