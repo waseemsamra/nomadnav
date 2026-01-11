@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,23 +11,18 @@ import {
   Loader2,
   ArrowRightLeft,
   Shield,
-  CheckCircle,
-  AlertTriangle,
-  Database
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { travelpayoutsApi } from '@/services/travelpayoutsApi';
+import { travelpayoutsApi, type Airport } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 
 interface AirportOption {
   value: string;
   label: string;
-  city: string;
-  country: string;
 }
 
-const FlightSearchForm: React.FC = () => {
+const RealSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
@@ -43,22 +37,14 @@ const FlightSearchForm: React.FC = () => {
     cabinClass: 'economy',
   });
 
-  // Initialize
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
-      // Load airports
       const airports = await travelpayoutsApi.getAirportOptions();
-      const simplified = airports.map(opt => ({
-        value: opt.value,
-        label: opt.label,
-        city: opt.city,
-        country: opt.country,
-      }));
-      setAirportOptions(simplified);
+      setAirportOptions(airports);
     } catch (error) {
       console.error('Initialization error:', error);
       toast.error('Failed to load airport options');
@@ -78,7 +64,7 @@ const FlightSearchForm: React.FC = () => {
       return;
     }
 
-    if (formData.tripType === 'round' && formData.departDate > formData.returnDate) {
+    if (formData.tripType === 'round' && new Date(formData.departDate) > new Date(formData.returnDate)) {
       toast.error('Return date must be after departure date');
       return;
     }
@@ -383,6 +369,4 @@ const FlightSearchForm: React.FC = () => {
   );
 };
 
-export default FlightSearchForm;
-
-    
+export default RealSearchForm;
