@@ -32,7 +32,7 @@ function SearchResultsContent() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    maxPrice: 2000,
+    maxPrice: 10000, // Increased default max price
     maxStops: 2,
     sortBy: 'price' as 'price' | 'duration',
   });
@@ -98,9 +98,12 @@ function SearchResultsContent() {
         case 'price':
           return a.price - b.price;
         case 'duration':
-          return a.duration - b.duration;
+          if (a.duration && b.duration) {
+            return a.duration - b.duration;
+          }
+          return a.price - b.price; // Fallback to price sort
         default:
-          return 0;
+          return a.price - b.price; // Default to price sort
       }
     });
 
@@ -202,7 +205,7 @@ function SearchResultsContent() {
                 <input
                   type="range"
                   min="0"
-                  max="2000"
+                  max="10000"
                   step="50"
                   value={filters.maxPrice}
                   onChange={(e) => setFilters(prev => ({
@@ -213,8 +216,8 @@ function SearchResultsContent() {
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>$0</span>
-                  <span>$1000</span>
-                  <span>$2000</span>
+                  <span>$5000</span>
+                  <span>$10000</span>
                 </div>
               </div>
 
@@ -300,7 +303,7 @@ function SearchResultsContent() {
                 <p className="text-gray-600 mb-4">
                   Try adjusting your filters or search for a different route.
                 </p>
-                <Button onClick={() => setFilters({ maxPrice: 2000, maxStops: 2, sortBy: 'price' })}>
+                <Button onClick={() => setFilters({ maxPrice: 10000, maxStops: 2, sortBy: 'price' })}>
                   Reset Filters
                 </Button>
               </div>
@@ -356,7 +359,7 @@ function SearchResultsContent() {
                           <div>
                             <div className="text-gray-500">Duration</div>
                             <div className="font-medium">
-                              {formatDuration(flight.duration)}
+                              {flight.duration ? formatDuration(flight.duration) : 'N/A'}
                             </div>
                           </div>
                         </div>
@@ -385,7 +388,7 @@ function SearchResultsContent() {
                           className="flex-1 py-3"
                           onClick={() => {
                             toast.success('Flight details: ' + (flight.airline || 'Multiple airlines') + 
-                              ' • ' + formatDuration(flight.duration) + ' • $' + flight.price);
+                              ' • ' + (flight.duration ? formatDuration(flight.duration) : 'N/A') + ' • $' + flight.price);
                           }}
                         >
                           View Details
