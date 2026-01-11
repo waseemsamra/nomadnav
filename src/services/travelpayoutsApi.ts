@@ -222,7 +222,7 @@ class TravelpayoutsApiService {
       
       console.log('API Response:', response.data);
 
-      if (response.data.data && Array.isArray(response.data.data)) {
+      if (response.data.success && response.data.data && Array.isArray(response.data.data)) {
         return response.data.data.map((flight: any, index: number) => ({
           id: `flight-${flight.origin}-${flight.destination}-${index}`,
           price: flight.price || 0,
@@ -248,11 +248,13 @@ class TravelpayoutsApiService {
         }));
       }
 
+      // If success is false or data is missing, return empty array
       return [];
     } catch (error: any) {
-      console.error('API call failed:', error.response?.data || error.message);
-      // Throw the error so the UI can handle it
-      throw new Error('Failed to fetch flight data from the API. Please check your search or try again later.');
+      console.error('API call failed, returning empty result:', error.response?.data || error.message);
+      // On any error (network, API error, etc.), return an empty array
+      // so the UI can show "No flights found" instead of an error page.
+      return [];
     }
   }
 
