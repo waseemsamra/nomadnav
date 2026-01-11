@@ -610,32 +610,6 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-
-/* React Select Custom Styles */
-.react-select-container .react-select__control {
-  @apply border border-border bg-background rounded-lg shadow-sm text-sm h-[50px] px-2;
-}
-.react-select-container .react-select__control--is-focused {
-  @apply ring-2 ring-primary border-primary;
-}
-.react-select-container .react-select__menu {
-  @apply mt-1 border border-border bg-popover text-popover-foreground shadow-lg rounded-md;
-}
-.react-select-container .react-select__option--is-focused {
-  @apply bg-accent text-accent-foreground;
-}
-.react-select-container .react-select__option--is-selected {
-  @apply bg-primary text-primary-foreground;
-}
-.react-select-container .react-select__indicator-separator {
-  @apply bg-transparent;
-}
-.react-select-container .react-select__placeholder {
-  @apply text-muted-foreground;
-}
-.react-select-container .react-select__single-value {
-  @apply text-foreground;
-}
     
 @keyframes slide {
   0% {
@@ -666,3 +640,5 @@
 .animation-delay-2000 {
   animation-delay: 2s;
 }
+
+    

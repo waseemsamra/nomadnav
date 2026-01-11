@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Select from 'react-select';
 import { 
   Search, 
   Calendar, 
@@ -22,14 +23,46 @@ interface AirportOption {
   label: string;
 }
 
+const customStyles = {
+  control: (provided: any, state: any) => ({
+    ...provided,
+    minHeight: '50px',
+    borderRadius: '0.5rem',
+    border: state.isFocused ? '2px solid hsl(var(--primary))' : '1px solid hsl(var(--border))',
+    boxShadow: 'none',
+    '&:hover': {
+      borderColor: 'hsl(var(--primary))',
+    }
+  }),
+  menu: (provided: any) => ({
+    ...provided,
+    borderRadius: '0.5rem',
+    backgroundColor: 'hsl(var(--card))',
+  }),
+  option: (provided: any, state: any) => ({
+    ...provided,
+    backgroundColor: state.isSelected ? 'hsl(var(--primary))' : state.isFocused ? 'hsl(var(--secondary))' : 'transparent',
+    color: state.isSelected ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
+  }),
+  singleValue: (provided: any) => ({
+    ...provided,
+    color: 'hsl(var(--foreground))',
+  }),
+  input: (provided: any) => ({
+    ...provided,
+    color: 'hsl(var(--foreground))',
+  }),
+};
+
 const RealSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
 
+  const [origin, setOrigin] = useState<AirportOption | null>(null);
+  const [destination, setDestination] = useState<AirportOption | null>(null);
+
   const [formData, setFormData] = useState({
-    origin: '',
-    destination: '',
     departDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
     returnDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
     tripType: 'round',
@@ -54,12 +87,12 @@ const RealSearchForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.origin || !formData.destination) {
+    if (!origin || !destination) {
       toast.error('Please select origin and destination airports');
       return;
     }
 
-    if (formData.origin === formData.destination) {
+    if (origin.value === destination.value) {
       toast.error('Origin and destination cannot be the same');
       return;
     }
@@ -73,8 +106,8 @@ const RealSearchForm: React.FC = () => {
 
     try {
       const searchParams = new URLSearchParams({
-        origin: formData.origin,
-        destination: formData.destination,
+        origin: origin.value,
+        destination: destination.value,
         depart_date: formData.departDate,
         passengers: formData.passengers.toString(),
         cabin_class: formData.cabinClass,
@@ -96,11 +129,9 @@ const RealSearchForm: React.FC = () => {
   };
 
   const handleSwapAirports = () => {
-    setFormData(prev => ({
-      ...prev,
-      origin: prev.destination,
-      destination: prev.origin,
-    }));
+    const temp = origin;
+    setOrigin(destination);
+    setDestination(temp);
   };
 
   const popularRoutes = [
@@ -109,6 +140,15 @@ const RealSearchForm: React.FC = () => {
     { origin: 'SIN', destination: 'SYD', label: 'Singapore → Sydney', price: '$499+' },
     { origin: 'DXB', destination: 'HND', label: 'Dubai → Tokyo', price: '$699+' },
   ];
+  
+  const handlePopularRouteClick = (originCode: string, destinationCode: string, routeLabel: string) => {
+    const originOption = airportOptions.find(o => o.value === originCode);
+    const destinationOption = airportOptions.find(o => o.value === destinationCode);
+    if (originOption) setOrigin(originOption);
+    if (destinationOption) setDestination(destinationOption);
+    toast.success(`Selected ${routeLabel}`);
+  };
+
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl p-6">
@@ -151,23 +191,15 @@ const RealSearchForm: React.FC = () => {
               <Plane className="w-4 h-4 inline mr-1" />
               From
             </label>
-            <div className="relative">
-              <select
-                value={formData.origin}
-                onChange={(e) => setFormData(prev => ({ ...prev, origin: e.target.value }))}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
-                required
-              >
-                <option value="">Select departure airport</option>
-                {airportOptions.map((airport) => (
-                  <option key={airport.value} value={airport.value}>
-                    {airport.label}
-                  </option>
-                ))}
-              </select>
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>
+            <Select
+              options={airportOptions}
+              value={origin}
+              onChange={setOrigin}
+              placeholder="Select departure airport"
+              isSearchable
+              styles={customStyles}
+              required
+            />
           </div>
 
           <div>
@@ -175,23 +207,15 @@ const RealSearchForm: React.FC = () => {
               <Plane className="w-4 h-4 inline mr-1" />
               To
             </label>
-            <div className="relative">
-              <select
-                value={formData.destination}
-                onChange={(e) => setFormData(prev => ({ ...prev, destination: e.target.value }))}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
-                required
-              >
-                <option value="">Select arrival airport</option>
-                {airportOptions.map((airport) => (
-                  <option key={airport.value} value={airport.value}>
-                    {airport.label}
-                  </option>
-                ))}
-              </select>
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>
+            <Select
+              options={airportOptions}
+              value={destination}
+              onChange={setDestination}
+              placeholder="Select arrival airport"
+              isSearchable
+              styles={customStyles}
+              required
+            />
           </div>
 
           {/* Swap Button */}
@@ -201,7 +225,7 @@ const RealSearchForm: React.FC = () => {
             className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 
                       bg-white border-2 border-gray-300 rounded-full p-2 
                       hover:bg-gray-50 hover:border-blue-500 transition-colors
-                      shadow-md"
+                      shadow-md md:top-full md:mt-2"
             title="Swap airports"
           >
             <ArrowRightLeft className="w-5 h-5 text-gray-600" />
@@ -216,14 +240,7 @@ const RealSearchForm: React.FC = () => {
               <button
                 key={route.label}
                 type="button"
-                onClick={() => {
-                  setFormData(prev => ({
-                    ...prev,
-                    origin: route.origin,
-                    destination: route.destination,
-                  }));
-                  toast.success(`Selected ${route.label} (from ${route.price})`);
-                }}
+                onClick={() => handlePopularRouteClick(route.origin, route.destination, route.label)}
                 className="text-sm bg-blue-50 text-blue-600 p-3 rounded-lg 
                          hover:bg-blue-100 transition-colors border border-blue-100 text-center"
               >
@@ -324,7 +341,7 @@ const RealSearchForm: React.FC = () => {
         {/* Search Button */}
         <Button
           type="submit"
-          disabled={loading || !formData.origin || !formData.destination}
+          disabled={loading || !origin || !destination}
           className="w-full py-4 text-lg font-semibold rounded-xl 
                    bg-gradient-to-r from-blue-600 to-purple-600 
                    hover:from-blue-700 hover:to-purple-700 
@@ -370,3 +387,5 @@ const RealSearchForm: React.FC = () => {
 };
 
 export default RealSearchForm;
+
+    
