@@ -151,54 +151,6 @@ class TravelpayoutsApiService {
     }
   }
 
-  // ==================== GET AIRPORTS (REAL DATA) ====================
-  async getAirports(): Promise<Airport[]> {
-    try {
-      console.log('Fetching airports from:', ENDPOINTS.airports);
-      const response = await axios.get(ENDPOINTS.airports, {
-        timeout: 10000,
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (response.data && Array.isArray(response.data)) {
-        const flightableAirports = response.data
-          .filter((airport: any) => airport.flightable === true && airport.code && airport.name)
-          .map((airport: any) => ({
-            code: airport.code,
-            name: airport.name,
-            city: airport.city_code || airport.city_name || '',
-            country: airport.country_code || airport.country_name || '',
-            country_code: airport.country_code || '',
-            flightable: airport.flightable,
-          }));
-
-        console.log(`✅ Loaded ${flightableAirports.length} real flightable airports from API`);
-        return flightableAirports;
-      }
-      return this.getDefaultAirports();
-    } catch (error: any) {
-      console.error('Error fetching airports, using fallback:', error.message);
-      return this.getDefaultAirports();
-    }
-  }
-  
-  private getDefaultAirports(): Airport[] {
-    console.log('🔄 Using default fallback airports');
-    return [
-      { code: 'JFK', name: 'John F. Kennedy International Airport', city: 'New York', country: 'United States', country_code: 'US', flightable: true },
-      { code: 'LAX', name: 'Los Angeles International Airport', city: 'Los Angeles', country: 'United States', country_code: 'US', flightable: true },
-      { code: 'LHR', name: 'London Heathrow Airport', city: 'London', country: 'United Kingdom', country_code: 'GB', flightable: true },
-      { code: 'CDG', name: 'Charles de Gaulle Airport', city: 'Paris', country: 'France', country_code: 'FR', flightable: true },
-      { code: 'DXB', name: 'Dubai International Airport', city: 'Dubai', country: 'United Arab Emirates', country_code: 'AE', flightable: true },
-      { code: 'KHI', name: 'Jinnah International Airport', city: 'Karachi', country: 'Pakistan', country_code: 'PK', flightable: true },
-      { code: 'HND', name: 'Tokyo Haneda Airport', city: 'Tokyo', country: 'Japan', country_code: 'JP', flightable: true },
-      { code: 'MOW', name: 'Moscow', city: 'Moscow', country: 'Russia', country_code: 'RU', flightable: true },
-      { code: 'LED', name: 'Pulkovo Airport', city: 'Saint Petersburg', country: 'Russia', country_code: 'RU', flightable: true },
-    ];
-  }
-
 
   // ==================== SEARCH FLIGHTS (PROXIED API) ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
@@ -304,15 +256,44 @@ class TravelpayoutsApiService {
 
   // ==================== PUBLIC METHODS ====================
   async getAirportOptions() {
-    const airports = await this.getAirports();
-    return airports.map(airport => ({
-      value: airport.code,
-      label: `${airport.city} – ${airport.name} (${airport.code})`,
-    }));
+    try {
+      console.log('Fetching airports from:', ENDPOINTS.airports);
+      const response = await axios.get(ENDPOINTS.airports, {
+        timeout: 10000,
+        headers: { 'Accept': 'application/json' },
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        const flightableAirports = response.data
+          .filter((airport: any) => airport.flightable === true && airport.code && airport.name)
+          .map((airport: any) => ({
+            value: airport.code,
+            label: `${airport.city || airport.name} – ${airport.name} (${airport.code})`,
+          }));
+        
+        console.log(`✅ Loaded ${flightableAirports.length} real flightable airports from API`);
+        return flightableAirports;
+      }
+      throw new Error("Invalid data format from airports API");
+    } catch (error: any) {
+      console.error('Error fetching airports, using fallback:', error.message);
+      // Fallback in case the API fails
+      return [
+        { value: 'JFK', label: 'New York – John F. Kennedy International Airport (JFK)' },
+        { value: 'LAX', label: 'Los Angeles – Los Angeles International Airport (LAX)' },
+        { value: 'LHR', label: 'London – London Heathrow Airport (LHR)' },
+        { value: 'CDG', label: 'Paris – Charles de Gaulle Airport (CDG)' },
+        { value: 'DXB', label: 'Dubai – Dubai International Airport (DXB)' },
+        { value: 'KHI', label: 'Karachi – Jinnah International Airport (KHI)' },
+        { value: 'HND', label: 'Tokyo – Tokyo Haneda Airport (HND)' },
+        { value: 'MOW', label: 'Moscow – All Airports (MOW)' },
+        { value: 'LED', label: 'Saint Petersburg – Pulkovo Airport (LED)' },
+      ];
+    }
   }
 
   async searchAirports(query: string) {
-    const airports = await this.getAirports();
+    const airports = await this.getAirportOptions(); // Use the new single source of truth
     if (!query.trim()) {
       return airports.slice(0, 50);
     }
@@ -320,10 +301,7 @@ class TravelpayoutsApiService {
     const searchTerm = query.toLowerCase().trim();
     return airports
       .filter(airport =>
-        airport.code.toLowerCase().includes(searchTerm) ||
-        airport.city.toLowerCase().includes(searchTerm) ||
-        airport.name.toLowerCase().includes(searchTerm) ||
-        airport.country.toLowerCase().includes(searchTerm)
+        airport.label.toLowerCase().includes(searchTerm)
       )
       .slice(0, 50);
   }
