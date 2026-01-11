@@ -1,11 +1,12 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { mockUser } from "@/lib/placeholder-data";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import placeholderImages from "@/lib/placeholder-images.json";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 
-const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
+const userAvatar = placeholderImages.placeholderImages.find((img) => img.id === 'user-avatar');
 
 export function UserProfile() {
   const initials = mockUser.name.split(' ').map(n => n[0]).join('');

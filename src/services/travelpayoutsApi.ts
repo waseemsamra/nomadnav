@@ -138,6 +138,39 @@ class TravelpayoutsApiService {
     return Date.now() - this.cache.lastUpdated < maxAge;
   }
 
+  async testApiConnection(): Promise<{ connected: boolean; message: string; hasToken: boolean }> {
+    const hasToken = !!API_TOKEN;
+    if (!hasToken) {
+      return {
+        connected: false,
+        hasToken: false,
+        message: "Add your Travelpayouts API token to the .env file.",
+      };
+    }
+
+    try {
+      const response = await this.api.get('/v1/prices/cheap', {
+        params: { origin: 'JFK', destination: 'LAX', limit: 1 },
+        timeout: 5000,
+      });
+
+      if (response.status === 200 && response.data.success) {
+        return { connected: true, hasToken: true, message: "API connection successful." };
+      }
+      return { connected: false, hasToken: true, message: `API returned success: ${response.data.success}.` };
+    } catch (error: any) {
+      let message = "API connection failed. The API may be down or your token may be invalid.";
+      if (error.response) {
+        if (error.response.status === 401) {
+          message = "Authentication failed. Your API token is likely invalid or expired.";
+        } else {
+          message = `API Error: ${error.response.status} - ${error.response.data?.message || error.message}`;
+        }
+      }
+      return { connected: false, hasToken: true, message };
+    }
+  }
+
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
     if (!API_TOKEN) {
         console.log('Using mock flight data because API token is missing.');
@@ -207,7 +240,7 @@ class TravelpayoutsApiService {
 
     try {
       const response: AxiosResponse<Airport[]> = await axios.get(
-        `${API_BASE}/data/en/airports.json`,
+        `https://api.travelpayouts.com/data/en/airports.json`,
         { timeout: 10000 }
       );
 
