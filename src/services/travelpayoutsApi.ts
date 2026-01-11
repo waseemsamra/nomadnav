@@ -118,11 +118,10 @@ class TravelpayoutsApiService {
             origin: 'MOW',
             destination: 'LED',
             currency: 'USD',
-            token: API_TOKEN,
             limit: '1',
           });
           
-          const flightRes = await axios.get(`${ENDPOINTS.latestPrices}?${flightParams.toString()}`, {
+          const flightRes = await axios.get(`/api/flights/search?${flightParams.toString()}`, {
             timeout: 5000,
           });
           results.flights = flightRes.data.success === true;
@@ -201,65 +200,35 @@ class TravelpayoutsApiService {
   }
 
 
-  // ==================== SEARCH FLIGHTS (REAL API) ====================
+  // ==================== SEARCH FLIGHTS (PROXIED API) ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
-    console.log('🔍 Searching REAL flights with params:', params);
+    console.log('🔍 Searching flights via internal API proxy with params:', params);
     try {
-        const searchParams = new URLSearchParams({
-            origin: params.origin,
-            destination: params.destination,
-            currency: params.currency || 'USD',
-            limit: (params.limit || 30).toString(),
-            token: API_TOKEN,
-        });
-
-        // Add return_date only if it's a round trip
-        if (params.trip_type === 'round' && params.return_date) {
-            searchParams.append('return_date', params.return_date);
-        }
-        
-        // The `depart_date` is a path segment for this endpoint
-        const url = `${ENDPOINTS.latestPrices}/${params.depart_date}?${searchParams.toString()}`;
-
-        console.log('📡 Calling latestPrices:', url.replace(API_TOKEN, '***'));
-
-        const response = await axios.get(url, {
-            timeout: 15000,
-            headers: { 'Accept': 'application/json' },
-        });
-
-        if (response.data.success && response.data.data && Array.isArray(response.data.data)) {
-            return response.data.data.map((flight: any, index: number) => ({
-                id: `flight-${flight.origin}-${flight.destination}-${index}`,
-                price: flight.price || 0,
-                airline: flight.airline || 'Multiple',
-                airline_code: flight.airline || 'XX',
-                flight_number: flight.flight_number || `FL${1000 + index}`,
-                departure_at: flight.depart_date || params.depart_date,
-                return_at: flight.return_date || params.return_date,
-                origin: flight.origin || params.origin,
-                destination: flight.destination || params.destination,
-                transfers: flight.transfers || 0,
-                duration: flight.duration || 0,
-                link: this.generateBookingLink({
-                    ...params,
-                    depart_date: flight.depart_date || params.depart_date,
-                    return_date: flight.return_date || params.return_date,
-                }),
-                currency: params.currency || 'USD',
-                actual: true,
-                gate: flight.gate || 'aviasales',
-                distance: flight.distance || 0,
-                found_at: flight.found_at || new Date().toISOString(),
-            }));
-        }
+      const searchParams = new URLSearchParams({
+        origin: params.origin,
+        destination: params.destination,
+        depart_date: params.depart_date,
+        currency: params.currency || 'USD',
+        limit: (params.limit || 30).toString(),
+      });
+  
+      if (params.trip_type === 'round' && params.return_date) {
+        searchParams.append('return_date', params.return_date);
+      }
+  
+      const response = await axios.get(`/api/flights/search?${searchParams.toString()}`);
+  
+      if (response.data && response.data.success) {
+        return response.data.data;
+      } else {
+        console.warn('API proxy returned success=false or no data');
         return [];
+      }
     } catch (error: any) {
-        console.error('API call failed, returning empty result:', error.response?.data || error.message);
-        return [];
+      console.error('API call failed, returning empty result:', error.response?.data || error.message);
+      return [];
     }
   }
-
   
   // ==================== GET CHEAP FLIGHTS ====================
   async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
