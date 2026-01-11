@@ -32,7 +32,7 @@ function SearchResultsContent() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    maxPrice: 10000, // Increased default max price
+    maxPrice: 10000,
     maxStops: 2,
     sortBy: 'price' as 'price' | 'duration',
   });
@@ -311,7 +311,7 @@ function SearchResultsContent() {
               <div className="space-y-4">
                 {filteredFlights.map((flight) => (
                   <div
-                    key={flight.id}
+                    key={flight.id || `${flight.origin}-${flight.destination}-${flight.price}-${flight.departure_at}`}
                     className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
                   >
                     <div className="p-6">
