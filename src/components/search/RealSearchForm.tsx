@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -30,7 +29,7 @@ interface SearchFormData {
   cabinClass: 'economy' | 'business' | 'first';
 }
 
-const WorkingSearchForm: React.FC = () => {
+const RealSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [testingApi, setTestingApi] = useState(false);
@@ -460,4 +459,4 @@ const WorkingSearchForm: React.FC = () => {
   );
 };
 
-export default WorkingSearchForm;
+export default RealSearchForm;
