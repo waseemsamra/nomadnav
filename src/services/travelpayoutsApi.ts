@@ -164,7 +164,7 @@ class TravelpayoutsApiService {
 
       if (response.data && Array.isArray(response.data)) {
         const airports = response.data
-          .filter((airport: any) => airport.code && airport.name && airport.country_code && airport.flightable === true)
+          .filter((airport: any) => airport.flightable === true && airport.code && airport.name && airport.country_code)
           .map((airport: any) => ({
             code: airport.code,
             name: airport.name,
@@ -230,62 +230,29 @@ class TravelpayoutsApiService {
     }
   }
   
-  // ==================== GET CHEAP FLIGHTS ====================
-  async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
-    try {
-      const searchParams = new URLSearchParams({
-        origin,
-        currency,
-        token: API_TOKEN,
-      });
-
-      const url = `${ENDPOINTS.cheap}?${searchParams.toString()}`;
-      console.log('📡 Calling cheap flights:', url.replace(API_TOKEN, '***'));
-
-      const response = await axios.get(url, {
-        timeout: 10000,
-        headers: {
-          'Accept': 'application/json',
-          'X-Access-Token': API_TOKEN,
-        },
-      });
-
-      if (response.data.data) {
-        const flightEntries = Object.entries(response.data.data);
-        if (flightEntries.length > 0) {
-          return flightEntries
-            .slice(0, 4)
-            .map(([destination, flightData]: [string, any], index: number) => ({
-              id: `cheap-${origin}-${destination}-${index}`,
-              price: flightData.price || 0,
-              airline: flightData.airline || 'Multiple',
-              airline_code: flightData.airline || 'XX',
-              flight_number: `CH${1000 + index}`,
-              departure_at: flightData.departure_at || new Date().toISOString().split('T')[0],
-              origin,
-              destination,
-              transfers: flightData.transfers || 0,
-              duration: this.calculateFlightDuration(origin, destination),
-              link: this.generateBookingLink({
+  // ==================== GET CHEAP FLIGHTS (PROXIED API) ====================
+    async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
+        try {
+            const searchParams = new URLSearchParams({
                 origin,
-                destination,
-                depart_date: flightData.departure_at || new Date().toISOString().split('T')[0],
                 currency,
-              }),
-              currency,
-              actual: true,
-              gate: 'aviasales',
-              distance: this.calculateDistance(origin, destination),
-              found_at: new Date().toISOString(),
-            }));
+            });
+
+            const url = `/api/flights/cheap?${searchParams.toString()}`;
+            console.log('📡 Calling cheap flights proxy:', url);
+
+            const response = await axios.get(url);
+
+            if (response.data.success && response.data.data) {
+                return response.data.data;
+            }
+            return [];
+        } catch (error: any) {
+            console.error('Error fetching cheap flights via proxy:', error.message);
+            return [];
         }
-      }
-      return [];
-    } catch (error: any) {
-        console.error('Error fetching cheap flights:', error.message);
-        return [];
     }
-  }
+
 
   // ==================== HELPER METHODS ====================
   private calculateFlightDuration(origin: string, destination: string): number {
@@ -338,9 +305,6 @@ class TravelpayoutsApiService {
     return airports.map(airport => ({
       value: airport.code,
       label: `${airport.city} – ${airport.name} (${airport.code})`,
-      city: airport.city,
-      country: airport.country,
-      code: airport.code,
     }));
   }
 

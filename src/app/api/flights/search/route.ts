@@ -1,4 +1,3 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
 import axios from 'axios';
 
@@ -48,7 +47,11 @@ export async function GET(request: NextRequest) {
     });
     
     if (apiResponse.data && apiResponse.data.success) {
-      return NextResponse.json({ success: true, data: apiResponse.data.data });
+       const flightsWithNumbers = apiResponse.data.data.map((flight: any) => ({
+        ...flight,
+        transfers: parseInt(flight.transfers, 10) || 0,
+      }));
+      return NextResponse.json({ success: true, data: flightsWithNumbers });
     } else {
       return NextResponse.json({ success: false, data: [] });
     }
