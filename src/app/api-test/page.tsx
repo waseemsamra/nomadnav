@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -93,9 +94,9 @@ export default function ApiTestPage() {
               <h3 className="font-medium text-gray-900">
                 Found {testFlights.length} flights:
               </h3>
-              {testFlights.map((flight, index) => (
+              {testFlights.map((flight) => (
                 <div
-                  key={index}
+                  key={flight.id}
                   className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
                 >
                   <div className="flex justify-between items-start mb-2">

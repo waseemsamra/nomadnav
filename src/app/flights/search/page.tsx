@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { Suspense, useEffect, useState } from 'react';
@@ -13,12 +14,16 @@ import {
   ArrowRight,
   Shield,
   Check,
-  X
+  X,
+  Luggage,
+  Wind,
+  Armchair
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 
 function SearchResultsContent() {
   const searchParams = useSearchParams();
@@ -57,7 +62,7 @@ function SearchResultsContent() {
           origin,
           destination,
           depart_date,
-          return_date,
+          return_date: return_date || undefined,
           passengers: parseInt(passengers),
         });
 
@@ -334,71 +339,74 @@ function SearchResultsContent() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredFlights.map((flight, index) => (
+                {filteredFlights.map((flight) => (
                   <div
-                    key={`${flight.origin}-${flight.destination}-${flight.departure_at}-${index}`}
+                    key={flight.id}
                     className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
                   >
                     <div className="p-6">
                       {/* Flight Header */}
                       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-                        <div>
-                          <div className="flex items-center mb-2">
+                        <div className="flex items-center gap-4">
+                           <Image
+                            src={`https://pics.aviasales.com/92/92/${flight.airline_code}.png`}
+                            alt={`${flight.airline} logo`}
+                            width={40}
+                            height={40}
+                            className="rounded-full bg-gray-100"
+                          />
+                          <div>
                             <div className="text-2xl font-bold">
                               {flight.origin} → {flight.destination}
                             </div>
-                            <div className={`ml-4 px-2 py-1 text-xs font-semibold rounded ${
-                              flight.transfers === 0 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
+                            <div className="text-gray-600">
+                              {flight.airline}
                             </div>
                           </div>
-                          <div className="text-gray-600">
-                            {formatDate(flight.departure_at)}
-                            {flight.return_at && ` → ${formatDate(flight.return_at)}`}
-                          </div>
                         </div>
-                        <div className="mt-4 md:mt-0">
+
+                        <div className="mt-4 md:mt-0 text-right">
                           <div className="text-3xl font-bold text-blue-600">
                             ${flight.price}
                           </div>
-                          <div className="text-sm text-gray-500 text-right">
+                          <div className="text-sm text-gray-500">
                             per passenger
                           </div>
                         </div>
                       </div>
 
                       {/* Flight Details */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                        <div className="flex items-center">
-                          <Plane className="w-5 h-5 text-gray-400 mr-3" />
+                      <div className="border-y py-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-gray-400"/>
                           <div>
-                            <div className="text-sm text-gray-500">Airline</div>
-                            <div className="font-medium">
-                              {flight.airline || 'Multiple airlines'}
-                            </div>
+                            <div className="text-gray-500">Depart</div>
+                            <div className="font-medium">{formatDate(flight.departure_at)}</div>
                           </div>
                         </div>
-                        <div className="flex items-center">
-                          <Clock className="w-5 h-5 text-gray-400 mr-3" />
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-gray-400" />
                           <div>
-                            <div className="text-sm text-gray-500">Duration</div>
+                            <div className="text-gray-500">Duration</div>
                             <div className="font-medium">
                               {formatDuration(flight.duration)}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center">
-                          <div className="w-5 h-5 mr-3 flex items-center justify-center">
-                            <div className="font-mono text-gray-500">#{flight.flight_number}</div>
-                          </div>
+                        <div className="flex items-center gap-2">
+                           <Wind className="w-4 h-4 text-gray-400" />
                           <div>
-                            <div className="text-sm text-gray-500">Flight No.</div>
-                            <div className="font-medium">
-                              {flight.flight_number}
+                            <div className="text-gray-500">Stops</div>
+                            <div className={`font-medium ${flight.transfers > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
                             </div>
+                          </div>
+                        </div>
+                         <div className="flex items-center gap-2">
+                          <Armchair className="w-4 h-4 text-gray-400"/>
+                          <div>
+                            <div className="text-gray-500">Seats left</div>
+                            <div className="font-medium">{flight.seats_available}</div>
                           </div>
                         </div>
                       </div>
@@ -474,5 +482,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
