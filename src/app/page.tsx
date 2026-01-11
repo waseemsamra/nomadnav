@@ -2,9 +2,39 @@
 'use client';
 
 import React from 'react';
-import { Plane, Hotel, Shield, TrendingUp } from 'lucide-react';
-import WorkingSearchForm from '@/components/search/WorkingSearchForm';
+import { Plane, Hotel, Shield, TrendingUp, Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/components/ui/skeleton';
 import Testimonials from '@/components/home/Testimonials';
+
+const WorkingSearchForm = dynamic(
+  () => import('@/components/search/WorkingSearchForm'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-2xl shadow-2xl p-6">
+        <div className="text-center mb-6">
+            <Skeleton className="h-8 w-48 mx-auto" />
+            <Skeleton className="h-4 w-64 mx-auto mt-3" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <Skeleton className="h-[50px] w-full" />
+            <Skeleton className="h-[50px] w-full" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+           <Skeleton className="h-10 w-full" />
+           <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+        </div>
+        <Skeleton className="h-14 w-full" />
+    </div>
+    )
+  }
+);
+
 
 export default function HomePage() {
   const features = [
