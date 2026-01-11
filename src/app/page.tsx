@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plane, 
   Shield, 
@@ -9,8 +9,15 @@ import {
   Globe,
 } from 'lucide-react';
 import RealSearchForm from '@/components/search/RealSearchForm';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function HomePage() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   const features = [
     {
@@ -53,7 +60,11 @@ export default function HomePage() {
                     Search flights, hotels, and car rentals from one place.
                 </p>
             </div>
-            <RealSearchForm />
+            {isClient ? (
+              <RealSearchForm />
+            ) : (
+              <Skeleton className="h-[158px] w-full bg-white/20" />
+            )}
         </div>
       </section>
 
@@ -113,5 +124,3 @@ export default function HomePage() {
     </main>
   );
 }
-
-    
