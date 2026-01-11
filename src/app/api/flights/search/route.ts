@@ -1,3 +1,4 @@
+
 import { NextResponse, type NextRequest } from 'next/server';
 import axios from 'axios';
 
@@ -25,19 +26,11 @@ export async function GET(request: NextRequest) {
     const apiParams = new URLSearchParams({
       currency,
       limit,
+      origin,
+      destination,
       token: API_TOKEN,
     });
     
-    // The /v2/prices/latest endpoint is flexible.
-    // If we have a depart_date, we can add it to the path for more specific results.
-    let url = `${LATEST_PRICES_URL}?${apiParams.toString()}`;
-
-    // A more specific endpoint structure can be used if depart_date is available.
-    // Example: .../latest?origin=JFK&destination=LAX
-    // This is what we will use as the base.
-    apiParams.append('origin', origin);
-    apiParams.append('destination', destination);
-
     if (depart_date) {
       apiParams.append('depart_date', depart_date);
     }
@@ -45,7 +38,7 @@ export async function GET(request: NextRequest) {
       apiParams.append('return_date', return_date);
     }
     
-    url = `${LATEST_PRICES_URL}?${apiParams.toString()}`;
+    const url = `${LATEST_PRICES_URL}?${apiParams.toString()}`;
 
     console.log(`📡 Calling TravelPayouts API: ${url.replace(API_TOKEN, '***')}`);
 
