@@ -466,7 +466,7 @@
   border-radius: 12px;
   padding: 1.5rem;
   width: 100%;
-  max-width: 600px;
+  max-w: 600px;
   animation: slideDown 0.3s ease-out;
 }
 
@@ -611,12 +611,7 @@
   to { transform: rotate(360deg); }
 }
 
-.hero-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+section.hero-bg {
   background-color: #333;
   background-image: url('https://images.unsplash.com/photo-1524103416202-DE22119f2feb?q=80&w=2940&auto=format&fit=crop');
   background-size: cover;
@@ -624,7 +619,7 @@
   animation: zoomInOut 30s infinite alternate;
 }
 
-.hero-bg::after {
+section.hero-bg::after {
   content: '';
   position: absolute;
   top: 0;
