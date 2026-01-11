@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Key
 } from 'lucide-react';
-import { travelpayoutsApi, type Flight } from '@/services/travelpayoutsApi';
+import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 
 export default function RealApiTest() {
@@ -28,8 +28,6 @@ export default function RealApiTest() {
     };
     tokenValid: boolean;
   } | null>(null);
-  const [testFlights, setTestFlights] = useState<Flight[]>([]);
-  const [flightLoading, setFlightLoading] = useState(false);
   const [envToken, setEnvToken] = useState('');
 
   useEffect(() => {
@@ -54,26 +52,6 @@ export default function RealApiTest() {
       });
     } finally {
       setTesting(false);
-    }
-  };
-
-  const testFlightSearch = async () => {
-    setFlightLoading(true);
-    setTestFlights([]);
-    try {
-      const flights = await travelpayoutsApi.searchFlights({
-        origin: 'JFK',
-        destination: 'LAX',
-        depart_date: '2025-07-01', // Use a future date
-        currency: 'USD',
-        limit: 3,
-      });
-      setTestFlights(flights);
-    } catch (error: any) {
-      console.error('Flight search failed:', error.message);
-      setTestFlights([]);
-    } finally {
-      setFlightLoading(false);
     }
   };
 
