@@ -5,19 +5,12 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
-  Filter, 
   Plane, 
   Clock, 
-  MapPin,
   Calendar,
   Users,
   ArrowRight,
-  Shield,
-  Check,
-  X,
-  Luggage,
-  Wind,
-  Armchair
+  Wind
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -31,11 +24,6 @@ function SearchResultsContent() {
   
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    maxPrice: 10000,
-    maxStops: 2,
-    sortBy: 'price' as 'price' | 'duration',
-  });
 
   // Extract search parameters
   const origin = searchParams.get('origin') || '';
@@ -86,26 +74,6 @@ function SearchResultsContent() {
     fetchFlights();
   }, [origin, destination, depart_date, return_date, passengers, router]);
 
-  // Filter and sort flights
-  const filteredFlights = flights
-    .filter(flight => {
-      const priceFilter = flight.price <= filters.maxPrice;
-      const stopsFilter = flight.transfers <= filters.maxStops;
-      return priceFilter && stopsFilter;
-    })
-    .sort((a, b) => {
-      switch (filters.sortBy) {
-        case 'price':
-          return a.price - b.price;
-        case 'duration':
-          if (a.duration && b.duration) {
-            return a.duration - b.duration;
-          }
-          return a.price - b.price; // Fallback to price sort
-        default:
-          return a.price - b.price; // Default to price sort
-      }
-    });
 
   const handleBookFlight = (flight: Flight) => {
     if (flight.link) {
@@ -183,108 +151,9 @@ function SearchResultsContent() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filters */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-lg p-6 sticky top-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold flex items-center">
-                  <Filter className="w-5 h-5 mr-2" />
-                  Filters
-                </h2>
-                <span className="text-sm text-gray-500">
-                  {filteredFlights.length} flights
-                </span>
-              </div>
-
-              {/* Price Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Max Price: ${filters.maxPrice}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="10000"
-                  step="50"
-                  value={filters.maxPrice}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    maxPrice: parseInt(e.target.value),
-                  }))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>$0</span>
-                  <span>$5000</span>
-                  <span>$10000</span>
-                </div>
-              </div>
-
-              {/* Stops Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Max Stops
-                </label>
-                <div className="space-y-2">
-                  {[
-                    { value: 0, label: 'Non-stop' },
-                    { value: 1, label: '1 stop max' },
-                    { value: 2, label: '2 stops max' },
-                  ].map((stop) => (
-                    <button
-                      key={stop.value}
-                      onClick={() => setFilters(prev => ({
-                        ...prev,
-                        maxStops: stop.value,
-                      }))}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        filters.maxStops === stop.value
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'hover:bg-gray-100'
-                      }`}
-                    >
-                      {stop.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sort Options */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sort By
-                </label>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, sortBy: 'price' }))}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                      filters.sortBy === 'price'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    <span>Price (Lowest)</span>
-                    {filters.sortBy === 'price' && <Check className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, sortBy: 'duration' }))}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                      filters.sortBy === 'duration'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    <span>Duration (Shortest)</span>
-                    {filters.sortBy === 'duration' && <Check className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 gap-8">
           {/* Flights List */}
-          <div className="lg:col-span-3">
+          <div>
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
                 Available Flights
@@ -294,22 +163,22 @@ function SearchResultsContent() {
               </p>
             </div>
 
-            {filteredFlights.length === 0 ? (
+            {flights.length === 0 ? (
               <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   No flights match your search
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Try adjusting your filters or search for a different route.
+                  Try searching for a different route or date.
                 </p>
-                <Button onClick={() => setFilters({ maxPrice: 10000, maxStops: 2, sortBy: 'price' })}>
-                  Reset Filters
+                <Button onClick={() => router.push('/')}>
+                  New Search
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredFlights.map((flight) => (
+                {flights.map((flight) => (
                   <div
                     key={flight.id || `${flight.origin}-${flight.destination}-${flight.price}-${flight.departure_at}`}
                     className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
@@ -402,11 +271,11 @@ function SearchResultsContent() {
             )}
 
             {/* Footer */}
-            {filteredFlights.length > 0 && (
+            {flights.length > 0 && (
               <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
                 <div className="text-center">
                   <p className="text-gray-600 mb-4">
-                    Showing {Math.min(filteredFlights.length, 20)} of {flights.length} flights
+                    Showing {Math.min(flights.length, 20)} of {flights.length} flights
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
@@ -445,3 +314,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
