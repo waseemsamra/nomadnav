@@ -6,13 +6,9 @@ import { useRouter } from 'next/navigation';
 import Select from 'react-select';
 import { 
   Search, 
-  Calendar, 
-  Users, 
   ArrowRightLeft,
   Briefcase,
-  Check,
-  Plus,
-  Minus
+  Users,
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-hot-toast';
@@ -76,11 +72,16 @@ const RealSearchForm: React.FC = () => {
 
   const [origin, setOrigin] = useState<AirportOption | null>(null);
   const [destination, setDestination] = useState<AirportOption | null>(null);
+  
+  const [multiCitySegments, setMultiCitySegments] = useState([
+    { from: null as AirportOption | null, to: null as AirportOption | null, date: format(addDays(new Date(), 7), 'yyyy-MM-dd') },
+    { from: null as AirportOption | null, to: null as AirportOption | null, date: format(addDays(new Date(), 14), 'yyyy-MM-dd') },
+  ]);
 
   const [formData, setFormData] = useState({
     departDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
     returnDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
-    tripType: 'oneway',
+    tripType: 'oneway' as 'oneway' | 'round' | 'multi',
     passengers: 1,
     cabinClass: 'economy',
     directOnly: false,
@@ -103,27 +104,44 @@ const RealSearchForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!origin || !destination) {
-      toast.error('Please select origin and destination airports');
-      return;
+    if (formData.tripType !== 'multi') {
+      if (!origin || !destination) {
+        toast.error('Please select origin and destination airports');
+        return;
+      }
+      if (origin.value === destination.value) {
+        toast.error('Origin and destination cannot be the same');
+        return;
+      }
+      if (formData.tripType === 'round' && new Date(formData.departDate) > new Date(formData.returnDate)) {
+        toast.error('Return date must be after departure date');
+        return;
+      }
+    } else {
+      // Basic validation for multi-city
+      for (const segment of multiCitySegments) {
+        if (!segment.from || !segment.to) {
+          toast.error('Please fill all multi-city segments');
+          return;
+        }
+      }
     }
 
-    if (origin.value === destination.value) {
-      toast.error('Origin and destination cannot be the same');
-      return;
-    }
-
-    if (formData.tripType === 'round' && new Date(formData.departDate) > new Date(formData.returnDate)) {
-      toast.error('Return date must be after departure date');
-      return;
-    }
 
     setLoading(true);
 
     try {
+      // Note: Multi-city search submission logic would be more complex and might involve
+      // multiple API calls or a different API endpoint. This is a simplified example.
+      if (formData.tripType === 'multi') {
+        toast.error('Multi-city search is not yet implemented.');
+        setLoading(false);
+        return;
+      }
+      
       const searchParams = new URLSearchParams({
-        origin: origin.value,
-        destination: destination.value,
+        origin: origin!.value,
+        destination: destination!.value,
         depart_date: formData.departDate,
         passengers: formData.passengers.toString(),
         cabin_class: formData.cabinClass,
@@ -148,6 +166,12 @@ const RealSearchForm: React.FC = () => {
     const temp = origin;
     setOrigin(destination);
     setDestination(temp);
+  };
+  
+  const handleMultiCityChange = (index: number, field: 'from' | 'to' | 'date', value: any) => {
+    const newSegments = [...multiCitySegments];
+    (newSegments[index] as any)[field] = value;
+    setMultiCitySegments(newSegments);
   };
 
   const renderSelectWithLabel = (label: string, value: AirportOption | null, onChange: (option: AirportOption | null) => void) => (
@@ -186,35 +210,53 @@ const RealSearchForm: React.FC = () => {
         <div className="flex items-center gap-2 mb-4">
           <Button variant={formData.tripType === 'oneway' ? 'secondary': 'ghost'} onClick={() => setFormData(p => ({...p, tripType: 'oneway'}))} className="rounded-full">One-way</Button>
           <Button variant={formData.tripType === 'round' ? 'secondary': 'ghost'} onClick={() => setFormData(p => ({...p, tripType: 'round'}))} className="rounded-full">Round-trip</Button>
+          <Button variant={formData.tripType === 'multi' ? 'secondary': 'ghost'} onClick={() => setFormData(p => ({...p, tripType: 'multi'}))} className="rounded-full">Multi-city</Button>
         </div>
 
         <form onSubmit={handleSubmit}>
-            {/* Main inputs row */}
-            <div className="flex flex-col lg:flex-row items-center bg-gray-100 rounded-lg">
-                {renderSelectWithLabel('From', origin, setOrigin)}
-                <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
-
-                <button
-                    type="button"
-                    onClick={handleSwapAirports}
-                    className="my-2 lg:my-0 mx-2 p-2 rounded-full hover:bg-gray-200 transition-colors"
-                    title="Swap airports"
-                >
-                    <ArrowRightLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                
-                {renderSelectWithLabel('To', destination, setDestination)}
-                <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
-                
-                {renderDateWithLabel('Depart', formData.departDate, e => setFormData(p => ({...p, departDate: e.target.value})))}
-                
-                {formData.tripType === 'round' && (
-                  <>
+            {formData.tripType !== 'multi' ? (
+              <>
+                {/* Main inputs row */}
+                <div className="flex flex-col lg:flex-row items-center border border-gray-300 rounded-lg">
+                    {renderSelectWithLabel('From', origin, setOrigin)}
                     <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
-                    {renderDateWithLabel('Return', formData.returnDate, e => setFormData(p => ({...p, returnDate: e.target.value})), formData.departDate)}
-                  </>
-                )}
-            </div>
+
+                    <button
+                        type="button"
+                        onClick={handleSwapAirports}
+                        className="my-2 lg:my-0 mx-2 p-2 rounded-full hover:bg-gray-200 transition-colors"
+                        title="Swap airports"
+                    >
+                        <ArrowRightLeft className="w-5 h-5 text-gray-600" />
+                    </button>
+                    
+                    {renderSelectWithLabel('To', destination, setDestination)}
+                    <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
+                    
+                    {renderDateWithLabel('Depart', formData.departDate, e => setFormData(p => ({...p, departDate: e.target.value})))}
+                    
+                    {formData.tripType === 'round' && (
+                      <>
+                        <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
+                        {renderDateWithLabel('Return', formData.returnDate, e => setFormData(p => ({...p, returnDate: e.target.value})), formData.departDate)}
+                      </>
+                    )}
+                </div>
+              </>
+            ) : (
+                <div className="space-y-2">
+                    {multiCitySegments.map((segment, index) => (
+                      <div key={index} className="flex flex-col lg:flex-row items-center border border-gray-300 rounded-lg">
+                        {renderSelectWithLabel('From', segment.from, (option) => handleMultiCityChange(index, 'from', option))}
+                        <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
+                        {renderSelectWithLabel('To', segment.to, (option) => handleMultiCityChange(index, 'to', option))}
+                        <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
+                        {renderDateWithLabel('Date', segment.date, (e) => handleMultiCityChange(index, 'date', e.target.value))}
+                      </div>
+                    ))}
+                </div>
+            )}
+
 
             {/* Secondary options row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
@@ -253,7 +295,7 @@ const RealSearchForm: React.FC = () => {
                 
                 <Button
                   type="submit"
-                  disabled={loading || !origin || !destination}
+                  disabled={loading}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg py-3"
                   size="lg"
                 >
