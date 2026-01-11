@@ -161,6 +161,7 @@ class TravelpayoutsApiService {
         destination: params.destination,
         currency: params.currency || 'USD',
         limit: (params.limit || 30).toString(),
+        passengers: (params.passengers || 1).toString(),
       });
   
       if (params.depart_date) {
