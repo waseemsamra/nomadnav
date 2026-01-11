@@ -42,6 +42,7 @@ const WorkingSearchForm: React.FC = () => {
   });
 
   useEffect(() => {
+    // Set default dates only on the client-side to avoid hydration errors
     setFormData(prev => ({
         ...prev,
         departDate: new Date(),

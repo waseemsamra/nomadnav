@@ -613,10 +613,10 @@
 
 /* React Select Custom Styles */
 .react-select-container .react-select__control {
-  @apply border border-gray-300 bg-background rounded-lg shadow-sm text-sm h-[50px] px-2;
+  @apply border border-border bg-background rounded-lg shadow-sm text-sm h-[50px] px-2;
 }
 .react-select-container .react-select__control--is-focused {
-  @apply ring-2 ring-blue-500 border-blue-500;
+  @apply ring-2 ring-primary border-primary;
 }
 .react-select-container .react-select__menu {
   @apply mt-1 border border-border bg-popover text-popover-foreground shadow-lg rounded-md;
@@ -631,7 +631,7 @@
   @apply bg-transparent;
 }
 .react-select-container .react-select__placeholder {
-  @apply text-gray-500;
+  @apply text-muted-foreground;
 }
 .react-select-container .react-select__single-value {
   @apply text-foreground;

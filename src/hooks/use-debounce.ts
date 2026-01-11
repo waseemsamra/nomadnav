@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function useDebounce<T extends (...args: any[]) => void>(
+export function useDebounce<T extends (...args: any[]) => any>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void {

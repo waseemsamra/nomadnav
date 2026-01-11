@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { Suspense, useEffect, useState } from 'react';
@@ -15,7 +16,7 @@ import {
   X
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 
