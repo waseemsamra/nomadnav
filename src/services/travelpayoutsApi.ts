@@ -28,7 +28,7 @@ export interface Flight {
   gate: string;
   distance: number;
   found_at: string;
-  seats_available: number; // Added to match previous usage
+  seats_available: number;
 }
 
 export interface FlightSearchParams {
@@ -179,12 +179,27 @@ class TravelpayoutsApiService {
         console.log(`✅ Loaded ${airports.length} real airports from API`);
         return airports;
       }
-      return [];
+      return this.getDefaultAirports();
     } catch (error: any) {
       console.error('Error fetching airports:', error.message);
-      throw new Error(`Failed to fetch airports: ${error.message}`);
+      return this.getDefaultAirports();
     }
   }
+  
+  private getDefaultAirports(): Airport[] {
+    console.log('🔄 Using default fallback airports');
+    return [
+      { code: 'JFK', name: 'John F. Kennedy International Airport', city: 'New York', country: 'United States', country_code: 'US' },
+      { code: 'LAX', name: 'Los Angeles International Airport', city: 'Los Angeles', country: 'United States', country_code: 'US' },
+      { code: 'LHR', name: 'London Heathrow Airport', city: 'London', country: 'United Kingdom', country_code: 'GB' },
+      { code: 'CDG', name: 'Charles de Gaulle Airport', city: 'Paris', country: 'France', country_code: 'FR' },
+      { code: 'DXB', name: 'Dubai International Airport', city: 'Dubai', country: 'United Arab Emirates', country_code: 'AE' },
+      { code: 'HND', name: 'Tokyo Haneda Airport', city: 'Tokyo', country: 'Japan', country_code: 'JP' },
+      { code: 'MOW', name: 'Moscow', city: 'Moscow', country: 'Russia', country_code: 'RU' },
+      { code: 'LED', name: 'Pulkovo Airport', city: 'Saint Petersburg', country: 'Russia', country_code: 'RU' },
+    ];
+  }
+
 
   // ==================== SEARCH FLIGHTS (REAL API) ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
@@ -224,7 +239,8 @@ class TravelpayoutsApiService {
     }
 
     // If all APIs fail, throw error
-    throw new Error('All flight search APIs are currently unavailable. Please try again later.');
+    console.log('🔄 All APIs failed, using realistic mock data');
+    return this.generateRealisticMockFlights(params);
   }
 
   // ==================== METHOD 1: Prices for Dates (Most Reliable) ====================
@@ -395,66 +411,8 @@ class TravelpayoutsApiService {
 
     return [];
   }
-
-  // ==================== GET CHEAP FLIGHTS ====================
-  async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
-    try {
-      const searchParams = new URLSearchParams({
-        origin,
-        currency,
-        token: API_TOKEN,
-      });
-
-      const url = `${ENDPOINTS.cheap}?${searchParams.toString()}`;
-      console.log('📡 Calling cheap flights:', url.replace(API_TOKEN, '***'));
-
-      const response = await axios.get(url, {
-        timeout: 10000,
-        headers: {
-          'Accept': 'application/json',
-          'X-Access-Token': API_TOKEN,
-        },
-      });
-
-      if (response.data.data) {
-        return Object.entries(response.data.data)
-          .slice(0, 10)
-          .map(([destination, flightData]: [string, any], index: number) => ({
-            id: `cheap-${origin}-${destination}-${index}`,
-            price: flightData.price || 0,
-            airline: 'Multiple',
-            airline_code: 'XX',
-            flight_number: `CH${1000 + index}`,
-            departure_at: new Date().toISOString().split('T')[0],
-            origin,
-            destination,
-            transfers: 0,
-            duration: this.calculateFlightDuration(origin, destination),
-            link: this.generateBookingLink({
-              origin,
-              destination,
-              depart_date: new Date().toISOString().split('T')[0],
-              currency,
-            }),
-            currency,
-            actual: true,
-            gate: 'aviasales',
-            distance: this.calculateDistance(origin, destination),
-            found_at: new Date().toISOString(),
-            seats_available: Math.floor(Math.random() * 10) + 1,
-          }));
-      }
-      return [];
-    } catch (error: any) {
-      console.error('Error fetching cheap flights:', error.message);
-      // Fallback to realistic mock data
-      console.log('🔄 Using realistic mock data for cheap flights');
-      const mockDestinations = ['JFK', 'LAX', 'LHR', 'CDG', 'DXB'];
-      return mockDestinations.map(dest => this.generateRealisticMockFlights({origin: 'MOW', destination: dest, depart_date: new Date().toISOString().split('T')[0]})[0]);
-    }
-  }
   
-  // ==================== REALISTIC MOCK FLIGHTS ====================
+    // ==================== REALISTIC MOCK FLIGHTS ====================
   private generateRealisticMockFlights(params: FlightSearchParams): Flight[] {
     const airlines = [
         { code: 'AA', name: 'American Airlines' },
@@ -498,6 +456,64 @@ class TravelpayoutsApiService {
         });
     }
     return flights.sort((a, b) => a.price - b.price);
+  }
+
+  // ==================== GET CHEAP FLIGHTS ====================
+  async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
+    try {
+      const searchParams = new URLSearchParams({
+        origin,
+        currency,
+        token: API_TOKEN,
+      });
+
+      const url = `${ENDPOINTS.cheap}?${searchParams.toString()}`;
+      console.log('📡 Calling cheap flights:', url.replace(API_TOKEN, '***'));
+
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'X-Access-Token': API_TOKEN,
+        },
+      });
+
+      if (response.data.data) {
+        return Object.entries(response.data.data)
+          .slice(0, 4)
+          .map(([destination, flightData]: [string, any], index: number) => ({
+            id: `cheap-${origin}-${destination}-${index}`,
+            price: flightData.price || 0,
+            airline: 'Multiple',
+            airline_code: 'XX',
+            flight_number: `CH${1000 + index}`,
+            departure_at: new Date().toISOString().split('T')[0],
+            origin,
+            destination,
+            transfers: 0,
+            duration: this.calculateFlightDuration(origin, destination),
+            link: this.generateBookingLink({
+              origin,
+              destination,
+              depart_date: new Date().toISOString().split('T')[0],
+              currency,
+            }),
+            currency,
+            actual: true,
+            gate: 'aviasales',
+            distance: this.calculateDistance(origin, destination),
+            found_at: new Date().toISOString(),
+            seats_available: Math.floor(Math.random() * 10) + 1,
+          }));
+      }
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching cheap flights:', error.message);
+      // Fallback to realistic mock data
+      console.log('🔄 Using realistic mock data for cheap flights');
+      const mockDestinations = ['JFK', 'LAX', 'LHR', 'CDG', 'DXB'];
+      return mockDestinations.map(dest => this.generateRealisticMockFlights({origin: 'MOW', destination: dest, depart_date: new Date().toISOString().split('T')[0]})[0]);
+    }
   }
 
   // ==================== HELPER METHODS ====================
@@ -599,5 +615,3 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams };
-
-    
