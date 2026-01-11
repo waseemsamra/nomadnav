@@ -42,7 +42,7 @@ export interface FlightSearchParams {
 }
 
 // Configuration
-const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '';
+const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
 const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '123456';
 
 // REAL WORKING ENDPOINTS
@@ -204,76 +204,58 @@ class TravelpayoutsApiService {
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
     console.log('🔍 Searching REAL flights with params:', params);
     try {
-      const flights = await this.searchPricesForDates(params);
-      console.log(`✅ Found ${flights.length} real flights from prices_for_dates API`);
-      return flights;
+      const searchParams = new URLSearchParams({
+        origin: params.origin,
+        destination: params.destination,
+        currency: params.currency || 'USD',
+        limit: (params.limit || 20).toString(),
+        token: API_TOKEN,
+      });
+
+      const url = `${ENDPOINTS.latestPrices}?${searchParams.toString()}`;
+      console.log('📡 Calling latestPrices:', url.replace(API_TOKEN, '***'));
+      
+      const response = await axios.get(url, {
+        timeout: 15000,
+        headers: { 'Accept': 'application/json' },
+      });
+      
+      console.log('API Response:', response.data);
+
+      if (response.data.data && Array.isArray(response.data.data)) {
+        return response.data.data.map((flight: any, index: number) => ({
+          id: `flight-${flight.origin}-${flight.destination}-${index}`,
+          price: flight.price || 0,
+          airline: flight.airline || 'Multiple',
+          airline_code: flight.airline || 'XX',
+          flight_number: flight.flight_number || `FL${1000 + index}`,
+          departure_at: flight.depart_date || params.depart_date,
+          return_at: flight.return_date || params.return_date,
+          origin: flight.origin || params.origin,
+          destination: flight.destination || params.destination,
+          transfers: flight.transfers || 0,
+          duration: flight.duration || 0,
+          link: this.generateBookingLink({
+            ...params,
+            depart_date: flight.depart_date || params.depart_date,
+            return_date: flight.return_date || params.return_date,
+          }),
+          currency: params.currency || 'USD',
+          actual: true,
+          gate: flight.gate || 'aviasales',
+          distance: flight.distance || 0,
+          found_at: flight.found_at || new Date().toISOString(),
+        }));
+      }
+
+      return [];
     } catch (error: any) {
       console.error('API call failed:', error.response?.data || error.message);
       // Throw the error so the UI can handle it
-      throw new Error('Failed to fetch flight data from the API. Please try again later.');
+      throw new Error('Failed to fetch flight data from the API. Please check your search or try again later.');
     }
   }
 
-  // ==================== METHOD 1: Prices for Dates (Most Reliable) ====================
-  private async searchPricesForDates(params: FlightSearchParams): Promise<Flight[]> {
-    const searchParams = new URLSearchParams({
-      origin: params.origin,
-      destination: params.destination,
-      departure_at: params.depart_date,
-      currency: params.currency || 'USD',
-      limit: (params.limit || 20).toString(),
-      unique: 'false',
-      sorting: 'price',
-      direct: 'false',
-    });
-
-    // Add return date for round trips
-    if (params.return_date && params.trip_type === 'round') {
-      searchParams.append('return_at', params.return_date);
-    }
-
-    // Add token if available
-    if (API_TOKEN) {
-      searchParams.append('token', API_TOKEN);
-    }
-
-    const url = `${ENDPOINTS.pricesForDates}?${searchParams.toString()}`;
-    console.log('📡 Calling prices_for_dates:', url.replace(API_TOKEN, '***'));
-
-    const response = await axios.get(url, {
-      timeout: 15000,
-      headers: {
-        'Accept': 'application/json',
-        ...(API_TOKEN ? { 'X-Access-Token': API_TOKEN } : {}),
-      },
-    });
-
-    console.log('API Response:', response.data);
-
-    if (response.data.data && Array.isArray(response.data.data)) {
-      return response.data.data.map((flight: any, index: number) => ({
-        id: `flight-${flight.origin}-${flight.destination}-${index}`,
-        price: flight.price || 0,
-        airline: flight.airline || 'Multiple',
-        airline_code: flight.airline || 'XX',
-        flight_number: flight.flight_number || `FL${1000 + index}`,
-        departure_at: flight.departure_at || params.depart_date,
-        return_at: flight.return_at || params.return_date,
-        origin: flight.origin || params.origin,
-        destination: flight.destination || params.destination,
-        transfers: flight.transfers || 0,
-        duration: flight.duration || this.calculateFlightDuration(params.origin, params.destination),
-        link: this.generateBookingLink(params),
-        currency: params.currency || 'USD',
-        actual: flight.actual || true,
-        gate: flight.gate || 'aviasales',
-        distance: flight.distance || this.calculateDistance(params.origin, params.destination),
-        found_at: flight.found_at || new Date().toISOString(),
-      }));
-    }
-
-    return [];
-  }
   
   // ==================== GET CHEAP FLIGHTS ====================
   async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
@@ -324,8 +306,8 @@ class TravelpayoutsApiService {
       }
       return [];
     } catch (error: any) {
-      console.error('Error fetching cheap flights:', error.message);
-      return [];
+        console.error('Error fetching cheap flights:', error.message);
+        return [];
     }
   }
 
@@ -367,8 +349,9 @@ class TravelpayoutsApiService {
   private generateBookingLink(params: FlightSearchParams): string {
     const baseUrl = 'https://www.aviasales.com';
     const passengers = params.passengers || 1;
-    const departDate = params.depart_date.replace(/-/g, '');
-    const returnDate = params.return_date ? params.return_date.replace(/-/g, '') : '';
+    // Format date as DDMM
+    const departDate = params.depart_date.slice(5).replace(/-/g, '');
+    const returnDate = params.return_date ? params.return_date.slice(5).replace(/-/g, '') : '';
     
     return `${baseUrl}/search/${params.origin}${departDate}${params.destination}${returnDate}${passengers}?marker=${MARKER}`;
   }
