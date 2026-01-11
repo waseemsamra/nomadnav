@@ -12,17 +12,32 @@ import {
   Loader2,
   ArrowRightLeft,
   Shield,
+  CheckCircle,
+  AlertTriangle,
+  Database
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
-import ApiStatus from '../api/ApiStatus';
 
-const RealSearchForm: React.FC = () => {
+interface AirportOption {
+  value: string;
+  label: string;
+  city: string;
+  country: string;
+}
+
+const FlightSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [airportOptions, setAirportOptions] = useState<{ value: string; label: string }[]>([]);
+  const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
+  const [apiStatus, setApiStatus] = useState<{
+    connected: boolean;
+    message: string;
+    airports: number;
+    flightApi: boolean;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     origin: '',
@@ -36,19 +51,37 @@ const RealSearchForm: React.FC = () => {
 
   // Initialize
   useEffect(() => {
-    loadAirports();
+    loadData();
   }, []);
 
-  const loadAirports = async () => {
+  const loadData = async () => {
     try {
-      const options = await travelpayoutsApi.getAirportOptions();
-      const simplified = options.map(opt => ({
+      // Load airports
+      const airports = await travelpayoutsApi.getAirportOptions();
+      const simplified = airports.map(opt => ({
         value: opt.value,
         label: opt.label,
+        city: opt.city,
+        country: opt.country,
       }));
       setAirportOptions(simplified);
+
+      // Check API status
+      const status = await travelpayoutsApi.testApiConnection();
+      setApiStatus(status);
+
+      if (!status.flightApi) {
+        toast(
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            <span>Flight API temporarily unavailable. Showing realistic demo data.</span>
+          </div>,
+          { duration: 6000 }
+        );
+      }
     } catch (error) {
-      console.error('Error loading airports:', error);
+      console.error('Initialization error:', error);
+      toast.error('Failed to initialize search');
     }
   };
 
@@ -87,7 +120,17 @@ const RealSearchForm: React.FC = () => {
         searchParams.append('return_date', formData.returnDate);
       }
 
-      console.log('🔍 Search params:', Object.fromEntries(searchParams));
+      // Show info about data source
+      if (!apiStatus?.flightApi) {
+        toast(
+          <div className="flex items-center gap-2">
+            <Database className="w-5 h-5 text-blue-600" />
+            <span>Showing realistic flight data. Real API will be used when available.</span>
+          </div>,
+          { duration: 4000 }
+        );
+      }
+
       router.push(`/flights/search?${searchParams.toString()}`);
       
     } catch (error) {
@@ -107,20 +150,53 @@ const RealSearchForm: React.FC = () => {
   };
 
   const popularRoutes = [
-    { origin: 'JFK', destination: 'LAX', label: 'NYC → LA' },
-    { origin: 'LHR', destination: 'CDG', label: 'London → Paris' },
-    { origin: 'SIN', destination: 'SYD', label: 'Singapore → Sydney' },
-    { origin: 'DXB', destination: 'HND', label: 'Dubai → Tokyo' },
+    { origin: 'JFK', destination: 'LAX', label: 'NYC → LA', price: '$299+' },
+    { origin: 'LHR', destination: 'CDG', label: 'London → Paris', price: '$199+' },
+    { origin: 'SIN', destination: 'SYD', label: 'Singapore → Sydney', price: '$499+' },
+    { origin: 'DXB', destination: 'HND', label: 'Dubai → Tokyo', price: '$699+' },
   ];
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl p-6">
-      
-      <ApiStatus className="mb-6" />
+      {/* API Status Bar */}
+      {apiStatus && (
+        <div className={`mb-6 p-4 rounded-lg border flex items-start gap-3 ${
+          apiStatus.connected 
+            ? apiStatus.flightApi
+              ? 'bg-green-50 border-green-200'
+              : 'bg-blue-50 border-blue-200'
+            : 'bg-yellow-50 border-yellow-200'
+        }`}>
+          <div className="mt-0.5">
+            {apiStatus.connected ? (
+              apiStatus.flightApi ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <Database className="w-5 h-5 text-blue-600" />
+              )
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            )}
+          </div>
+          <div className="flex-1">
+            <div className="font-medium">
+              {apiStatus.flightApi ? 'Real-time Flight Data' : 'Realistic Demo Data'}
+            </div>
+            <div className="text-sm opacity-80 mt-1">
+              {apiStatus.message}
+            </div>
+            <div className="text-xs opacity-60 mt-2 flex items-center gap-4">
+              <span>✈️ {apiStatus.airports} airports</span>
+              <span>•</span>
+              <span>{apiStatus.flightApi ? 'Live API' : 'Enhanced Mock Data'}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Search Flights</h2>
-        <p className="text-gray-600 mt-2">Find the best deals worldwide</p>
+        <h2 className="text-2xl font-bold text-gray-900">Find Your Flight</h2>
+        <p className="text-gray-600 mt-2">Search thousands of flight options worldwide</p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -217,7 +293,7 @@ const RealSearchForm: React.FC = () => {
         {/* Popular Routes */}
         <div className="mb-6">
           <p className="text-sm text-gray-600 mb-2">Popular routes:</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {popularRoutes.map((route) => (
               <button
                 key={route.label}
@@ -228,12 +304,13 @@ const RealSearchForm: React.FC = () => {
                     origin: route.origin,
                     destination: route.destination,
                   }));
-                  toast.success(`Selected ${route.label}`);
+                  toast.success(`Selected ${route.label} (from ${route.price})`);
                 }}
-                className="text-sm bg-blue-50 text-blue-600 px-3 py-2 rounded-lg 
-                         hover:bg-blue-100 transition-colors border border-blue-100"
+                className="text-sm bg-blue-50 text-blue-600 p-3 rounded-lg 
+                         hover:bg-blue-100 transition-colors border border-blue-100 text-center"
               >
-                {route.label}
+                <div className="font-medium">{route.label}</div>
+                <div className="text-xs opacity-70">{route.price}</div>
               </button>
             ))}
           </div>
@@ -333,32 +410,43 @@ const RealSearchForm: React.FC = () => {
           className="w-full py-4 text-lg font-semibold rounded-xl 
                    bg-gradient-to-r from-blue-600 to-purple-600 
                    hover:from-blue-700 hover:to-purple-700 
-                   transition-all duration-300 shadow-lg hover:shadow-xl"
+                   transition-all duration-300 shadow-lg hover:shadow-xl
+                   group relative overflow-hidden"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Searching...
-            </>
-          ) : (
-            <>
-              <Search className="w-5 h-5 mr-2" />
-              Search Flights
-            </>
-          )}
+          <div className="relative z-10 flex items-center justify-center">
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              <>
+                <Search className="w-5 h-5 mr-2" />
+                {apiStatus?.flightApi ? 'Search Real Flights' : 'Search Flight Options'}
+              </>
+            )}
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </Button>
 
-        {/* Info */}
-        <div className="mt-4 text-center">
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
-            <div className="flex items-center">
-              <Shield className="w-4 h-4 mr-1" />
-              Secure Booking
+        {/* Info Footer */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center">
+                <Shield className="w-4 h-4 mr-1" />
+                <span>Secure Booking</span>
+              </div>
+              <div className="hidden md:block">•</div>
+              <div>Best Price Guarantee</div>
             </div>
-            <div>•</div>
-            <div>Best Price Guarantee</div>
-            <div>•</div>
-            <div>No Booking Fees</div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                {apiStatus?.flightApi ? 'Live Data' : 'Demo Mode'}
+              </span>
+              <span className="text-xs">Powered by Travelpayouts</span>
+            </div>
           </div>
         </div>
       </form>
@@ -366,4 +454,4 @@ const RealSearchForm: React.FC = () => {
   );
 };
 
-export default RealSearchForm;
+export default FlightSearchForm;

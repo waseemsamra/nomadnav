@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Plane, Hotel, Shield, TrendingUp } from 'lucide-react';
-import RealSearchForm from '@/components/search/RealSearchForm';
+import FlightSearchForm from '@/components/search/FlightSearchForm';
 import Testimonials from '@/components/home/Testimonials';
 
 export default function HomePage() {
@@ -55,7 +55,7 @@ export default function HomePage() {
       {/* Search Form */}
       <section className="px-4 -mt-16 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <RealSearchForm />
+          <FlightSearchForm />
         </div>
       </section>
 
