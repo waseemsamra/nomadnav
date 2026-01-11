@@ -11,82 +11,67 @@ import {
   MapPin,
   Loader2,
   ArrowRightLeft,
-  Wifi,
   Shield,
-  Check
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { travelpayoutsApi, type Airport } from '@/services/travelpayoutsApi';
+import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
-
-interface SearchFormData {
-  origin: string;
-  destination: string;
-  departDate: Date;
-  returnDate: Date;
-  tripType: 'round' | 'oneway';
-  passengers: number;
-  cabinClass: 'economy' | 'business' | 'first';
-}
 
 const RealSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [testingApi, setTestingApi] = useState(true);
-  const [airportOptions, setAirportOptions] = useState<Airport[]>([]);
+  const [airportOptions, setAirportOptions] = useState<{ value: string; label: string }[]>([]);
   const [apiStatus, setApiStatus] = useState<{
     connected: boolean;
     message: string;
     tokenValid: boolean;
   } | null>(null);
 
-  const [formData, setFormData] = useState<SearchFormData>({
+  const [formData, setFormData] = useState({
     origin: '',
     destination: '',
-    departDate: addDays(new Date(), 7),
-    returnDate: addDays(new Date(), 14),
+    departDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
+    returnDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
     tripType: 'round',
     passengers: 1,
     cabinClass: 'economy',
   });
 
-  // Test API connection and load airports on mount
+  // Initialize
   useEffect(() => {
-    const initialize = async () => {
-      await testApiConnection();
-      await loadAirports();
-      setTestingApi(false);
-    };
-    initialize();
+    loadAirports();
+    checkApiStatus();
   }, []);
 
-  const testApiConnection = async () => {
-    setTestingApi(true);
+  const loadAirports = async () => {
+    try {
+      const options = await travelpayoutsApi.getAirportOptions();
+      const simplified = options.map(opt => ({
+        value: opt.value,
+        label: opt.label,
+      }));
+      setAirportOptions(simplified);
+    } catch (error) {
+      console.error('Error loading airports:', error);
+    }
+  };
+
+  const checkApiStatus = async () => {
     try {
       const status = await travelpayoutsApi.testApiConnection();
       setApiStatus(status);
       
-      if (!status.tokenValid) {
+      if (!status.connected) {
         toast(status.message, {
-          icon: '⚠️',
+          icon: status.tokenValid ? '⚠️' : '❌',
           duration: 5000,
         });
       }
     } catch (error) {
-      console.error('API test failed:', error);
-    } finally {
-      setTestingApi(false);
-    }
-  };
-
-  const loadAirports = async () => {
-    try {
-      const options = await travelpayoutsApi.getAirports();
-      setAirportOptions(options);
-    } catch (error) {
-      console.error('Error loading airports:', error);
-      toast.error('Failed to load airport data');
+      console.error('API status check failed:', error);
     }
   };
 
@@ -114,7 +99,7 @@ const RealSearchForm: React.FC = () => {
       const searchParams = new URLSearchParams({
         origin: formData.origin,
         destination: formData.destination,
-        depart_date: format(formData.departDate, 'yyyy-MM-dd'),
+        depart_date: formData.departDate,
         passengers: formData.passengers.toString(),
         cabin_class: formData.cabinClass,
         trip_type: formData.tripType,
@@ -122,15 +107,10 @@ const RealSearchForm: React.FC = () => {
       });
 
       if (formData.tripType === 'round') {
-        searchParams.append('return_date', format(formData.returnDate, 'yyyy-MM-dd'));
+        searchParams.append('return_date', formData.returnDate);
       }
 
-      console.log('🔍 Real API Search:', Object.fromEntries(searchParams));
-      
-      if (!apiStatus?.tokenValid) {
-        toast.error('API not connected. Using demo mode.');
-      }
-
+      console.log('🔍 Search params:', Object.fromEntries(searchParams));
       router.push(`/flights/search?${searchParams.toString()}`);
       
     } catch (error) {
@@ -157,36 +137,35 @@ const RealSearchForm: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-2xl p-6 relative">
-      {/* API Status Indicator */}
-      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-        <div className={`px-4 py-1 rounded-full text-sm font-medium flex items-center gap-2 ${
-          apiStatus?.connected 
-            ? 'bg-green-100 text-green-800 border border-green-200' 
-            : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+    <div className="bg-white rounded-2xl shadow-2xl p-6">
+      {/* API Status */}
+      {apiStatus && (
+        <div className={`mb-6 p-4 rounded-lg border flex items-center gap-3 ${
+          apiStatus.connected 
+            ? 'bg-green-50 border-green-200 text-green-800' 
+            : apiStatus.tokenValid
+            ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+            : 'bg-red-50 border-red-200 text-red-800'
         }`}>
-          {testingApi ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Testing API...
-            </>
-          ) : apiStatus?.connected ? (
-            <>
-              <Check className="w-3 h-3" />
-              API Connected
-            </>
+          {apiStatus.connected ? (
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
           ) : (
-            <>
-              <Wifi className="w-3 h-3" />
-              {apiStatus?.tokenValid === false ? 'Invalid Token' : 'API Offline'}
-            </>
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
           )}
+          <div className="flex-1">
+            <p className="font-medium">{apiStatus.message}</p>
+            {!apiStatus.connected && apiStatus.tokenValid && (
+              <p className="text-sm mt-1 opacity-80">
+                Showing realistic demo data. Flights will work with valid token.
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Search Real Flights</h2>
-        <p className="text-gray-600 mt-2">Powered by Travelpayouts API</p>
+        <h2 className="text-2xl font-bold text-gray-900">Search Flights</h2>
+        <p className="text-gray-600 mt-2">Find the best deals worldwide</p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -233,8 +212,8 @@ const RealSearchForm: React.FC = () => {
               >
                 <option value="">Select departure airport</option>
                 {airportOptions.map((airport) => (
-                  <option key={airport.code} value={airport.code}>
-                    {airport.city} ({airport.code})
+                  <option key={airport.value} value={airport.value}>
+                    {airport.label}
                   </option>
                 ))}
               </select>
@@ -257,8 +236,8 @@ const RealSearchForm: React.FC = () => {
               >
                 <option value="">Select arrival airport</option>
                 {airportOptions.map((airport) => (
-                  <option key={airport.code} value={airport.code}>
-                     {airport.city} ({airport.code})
+                  <option key={airport.value} value={airport.value}>
+                    {airport.label}
                   </option>
                 ))}
               </select>
@@ -314,10 +293,10 @@ const RealSearchForm: React.FC = () => {
             </label>
             <input
               type="date"
-              value={format(formData.departDate, 'yyyy-MM-dd')}
+              value={formData.departDate}
               onChange={(e) => setFormData(prev => ({ 
                 ...prev, 
-                departDate: new Date(e.target.value) 
+                departDate: e.target.value 
               }))}
               min={format(new Date(), 'yyyy-MM-dd')}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg 
@@ -334,12 +313,12 @@ const RealSearchForm: React.FC = () => {
               </label>
               <input
                 type="date"
-                value={format(formData.returnDate, 'yyyy-MM-dd')}
+                value={formData.returnDate}
                 onChange={(e) => setFormData(prev => ({ 
                   ...prev, 
-                  returnDate: new Date(e.target.value) 
+                  returnDate: e.target.value 
                 }))}
-                min={format(formData.departDate, 'yyyy-MM-dd')}
+                min={formData.departDate}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg 
                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
@@ -392,70 +371,40 @@ const RealSearchForm: React.FC = () => {
           </div>
         </div>
 
-        {/* API Status Info */}
-        {apiStatus && !apiStatus.connected && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-start">
-              <Shield className="w-5 h-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
-              <div>
-                <p className="text-yellow-700 font-medium">
-                  {apiStatus.tokenValid ? 'API Connection Issue' : 'API Token Required'}
-                </p>
-                <p className="text-yellow-600 text-sm mt-1">
-                  {apiStatus.message}
-                </p>
-                <p className="text-yellow-600 text-sm mt-2">
-                  Get your free API token from:{' '}
-                  <a 
-                    href="https://www.travelpayouts.com/developers/api" 
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-yellow-700"
-                  >
-                    travelpayouts.com/developers/api
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Search Button */}
         <Button
           type="submit"
-          disabled={loading || testingApi}
+          disabled={loading || !formData.origin || !formData.destination}
           className="w-full py-4 text-lg font-semibold rounded-xl 
                    bg-gradient-to-r from-blue-600 to-purple-600 
                    hover:from-blue-700 hover:to-purple-700 
-                   transition-all duration-300 shadow-lg hover:shadow-xl
-                   relative overflow-hidden group"
+                   transition-all duration-300 shadow-lg hover:shadow-xl"
         >
-          <div className="relative z-10 flex items-center justify-center">
-            {loading || testingApi ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                {testingApi ? 'Initializing...' : 'Searching...'}
-              </>
-            ) : (
-              <>
-                <Search className="w-5 h-5 mr-2" />
-                Search Flights
-              </>
-            )}
-          </div>
-          
-          {/* Animated background effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 
-                        opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {loading ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Searching...
+            </>
+          ) : (
+            <>
+              <Search className="w-5 h-5 mr-2" />
+              Search Flights
+            </>
+          )}
         </Button>
 
-        {/* API Info */}
+        {/* Info */}
         <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500">
-            {apiStatus?.connected 
-              ? '✅ Connected to Travelpayouts API - Real flight data'
-              : '⚠️ Using demo data - Check token or API status'}
-          </p>
+          <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center">
+              <Shield className="w-4 h-4 mr-1" />
+              Secure Booking
+            </div>
+            <div>•</div>
+            <div>Best Price Guarantee</div>
+            <div>•</div>
+            <div>No Booking Fees</div>
+          </div>
         </div>
       </form>
     </div>
@@ -463,5 +412,3 @@ const RealSearchForm: React.FC = () => {
 };
 
 export default RealSearchForm;
-
-    
