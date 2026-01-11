@@ -511,12 +511,51 @@ class TravelpayoutsApiService {
       console.error('Error fetching cheap flights:', error.message);
       // Fallback to realistic mock data
       console.log('🔄 Using realistic mock data for cheap flights');
-      const mockDestinations = ['JFK', 'LAX', 'LHR', 'CDG', 'DXB'];
+      const mockDestinations = ['JFK', 'LAX', 'LHR', 'CDG'];
       return mockDestinations.map(dest => this.generateRealisticMockFlights({origin: 'MOW', destination: dest, depart_date: new Date().toISOString().split('T')[0]})[0]);
     }
   }
 
   // ==================== HELPER METHODS ====================
+  private getRouteInfo(origin: string, destination: string) {
+    const routeMatrix: Record<string, { basePrice: number; duration: number }> = {
+      'JFK-LAX': { basePrice: 299, duration: 360 },
+      'JFK-LHR': { basePrice: 599, duration: 420 },
+      'LAX-CDG': { basePrice: 699, duration: 660 },
+      'LAX-HND': { basePrice: 899, duration: 600 },
+      'LHR-DXB': { basePrice: 499, duration: 420 },
+      'CDG-SIN': { basePrice: 799, duration: 780 },
+      'SIN-SYD': { basePrice: 499, duration: 480 },
+      'DXB-HND': { basePrice: 699, duration: 540 },
+      'FRA-JFK': { basePrice: 549, duration: 480 },
+      'AMS-LAX': { basePrice: 649, duration: 600 },
+      'SFO-HKG': { basePrice: 799, duration: 720 },
+      'SYD-LAX': { basePrice: 899, duration: 840 },
+    };
+    
+    const routeKey = `${origin}-${destination}`;
+    return routeMatrix[routeKey] || { basePrice: 399, duration: 300 };
+  }
+
+  private calculateDuration(origin: string, destination: string): number {
+    const routeInfo = this.getRouteInfo(origin, destination);
+    return routeInfo.duration;
+  }
+  
+  private generateStops(transfers: number): string[] {
+    if (transfers === 0) return [];
+    
+    const commonHubs = ['ATL', 'DFW', 'ORD', 'LAX', 'JFK', 'LHR', 'CDG', 'FRA', 'DXB', 'SIN', 'HKG'];
+    const stops: string[] = [];
+    
+    for (let i = 0; i < transfers; i++) {
+      const randomHub = commonHubs[Math.floor(Math.random() * commonHubs.length)];
+      stops.push(randomHub);
+    }
+    
+    return stops;
+  }
+
   private calculateFlightDuration(origin: string, destination: string): number {
     // Approximate flight times between major cities (in minutes)
     const durations: Record<string, number> = {
