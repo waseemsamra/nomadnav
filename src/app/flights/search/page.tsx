@@ -19,25 +19,15 @@ import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 
 type FilterState = {
-  maxPrice: number;
-  maxStops: number;
-  airlines: string[];
   sortBy: 'price' | 'duration' | 'departure';
-  departureTime: [number, number];
 };
 
 const initialFilterState: FilterState = {
-  maxPrice: 5000,
-  maxStops: 3,
-  airlines: [],
   sortBy: 'price',
-  departureTime: [0, 24],
 };
 
 
@@ -82,9 +72,7 @@ function SearchResultsContent() {
         console.log('Fetched flights:', flightData.length);
         setFlights(flightData);
         
-        if (flightData.length === 0) {
-          toast('No flights found for this route.');
-        } else {
+        if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
         }
       } catch (error: any) {
@@ -112,13 +100,6 @@ function SearchResultsContent() {
   const handleFilterChange = (key: keyof FilterState, value: any) => {
     setFilters(prev => ({...prev, [key]: value}));
   };
-
-  const handleAirlineToggle = (airlineCode: string) => {
-    const newAirlines = filters.airlines.includes(airlineCode)
-      ? filters.airlines.filter(a => a !== airlineCode)
-      : [...filters.airlines, airlineCode];
-    handleFilterChange('airlines', newAirlines);
-  };
   
   const handleResetFilters = () => {
     setFilters(initialFilterState);
@@ -138,13 +119,7 @@ function SearchResultsContent() {
     }
   };
   
-  const availableAirlines = useMemo(() => {
-    const airlineSet = new Set<string>();
-    flights.forEach(flight => airlineSet.add(flight.airline_code));
-    return [...airlineSet].map(code => ({ code, name: flights.find(f => f.airline_code === code)?.airline || code }));
-  }, [flights]);
-
-  const filteredFlights = useMemo(() => {
+  const sortedFlights = useMemo(() => {
     let sorted = [...flights];
 
     switch (filters.sortBy) {
@@ -181,7 +156,7 @@ function SearchResultsContent() {
     <Card className="lg:sticky lg:top-24">
         <CardContent className="p-4 space-y-6">
             <div className="flex justify-between items-center">
-                <h3 className="font-bold text-lg">Filters</h3>
+                <h3 className="font-bold text-lg">Sort & Filter</h3>
                 <Button variant="ghost" size="sm" onClick={handleResetFilters}>Reset</Button>
             </div>
 
@@ -275,14 +250,14 @@ function SearchResultsContent() {
           <div className="lg:col-span-3">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                Available Flights ({filteredFlights.length})
+                Available Flights ({sortedFlights.length})
               </h2>
               <p className="text-gray-600">
                 Best prices from multiple airlines
               </p>
             </div>
 
-            {filteredFlights.length === 0 ? (
+            {sortedFlights.length === 0 ? (
               <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -297,7 +272,7 @@ function SearchResultsContent() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredFlights.map((flight) => (
+                {sortedFlights.map((flight) => (
                   <div
                     key={flight.id || `${flight.origin}-${flight.destination}-${flight.price}-${flight.departure_at}`}
                     className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
@@ -392,11 +367,11 @@ function SearchResultsContent() {
             )}
 
             {/* Footer */}
-            {filteredFlights.length > 0 && (
+            {sortedFlights.length > 0 && (
               <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
                 <div className="text-center">
                   <p className="text-gray-600 mb-4">
-                    Showing {Math.min(filteredFlights.length, 30)} of {filteredFlights.length} flights
+                    Showing {Math.min(sortedFlights.length, 30)} of {sortedFlights.length} flights
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
