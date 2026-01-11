@@ -163,8 +163,8 @@ class TravelpayoutsApiService {
       });
 
       if (response.data && Array.isArray(response.data)) {
-        const airports = response.data
-          .filter((airport: any) => airport.flightable === true && airport.code && airport.name && airport.country_code)
+        const flightableAirports = response.data
+          .filter((airport: any) => airport.flightable === true && airport.code && airport.name)
           .map((airport: any) => ({
             code: airport.code,
             name: airport.name,
@@ -174,8 +174,8 @@ class TravelpayoutsApiService {
             flightable: airport.flightable,
           }));
 
-        console.log(`✅ Loaded ${airports.length} real airports from API`);
-        return airports;
+        console.log(`✅ Loaded ${flightableAirports.length} real flightable airports from API`);
+        return flightableAirports;
       }
       return this.getDefaultAirports();
     } catch (error: any) {

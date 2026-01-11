@@ -72,7 +72,7 @@ const RealSearchForm: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [formData.tripType]);
 
   const loadData = async () => {
     try {
@@ -387,5 +387,3 @@ const RealSearchForm: React.FC = () => {
 };
 
 export default RealSearchForm;
-
-    
