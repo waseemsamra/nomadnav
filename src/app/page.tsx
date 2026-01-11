@@ -50,7 +50,7 @@ export default function HomePage() {
     <main className="min-h-screen">
       {/* Hero Section */}
       <section id="search" className="relative h-[60vh] min-h-[500px] flex items-center justify-center text-white">
-        <div className="hero-bg" data-ai-hint="lake mountains"></div>
+        <div className="hero-bg" data-ai-hint="airplane wing"></div>
         <div className="relative z-10 w-full max-w-5xl mx-auto px-4">
             <div className='text-center mb-8'>
                 <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
@@ -63,7 +63,7 @@ export default function HomePage() {
             {isClient ? (
               <RealSearchForm />
             ) : (
-              <Skeleton className="h-[158px] w-full bg-white/20" />
+              <Skeleton className="h-[218px] w-full bg-white/20" />
             )}
         </div>
       </section>
