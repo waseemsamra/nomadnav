@@ -206,17 +206,12 @@ class TravelpayoutsApiService {
     console.log('🔍 Searching REAL flights with params:', params);
     try {
       const flights = await this.searchPricesForDates(params);
-      if (flights.length > 0) {
-        console.log(`✅ Found ${flights.length} real flights from prices_for_dates API`);
-        return flights;
-      }
-      // If API returns no flights, use mock data
-      console.log('🔄 API returned 0 flights, using realistic mock data');
-      return this.generateRealisticMockFlights(params);
+      console.log(`✅ Found ${flights.length} real flights from prices_for_dates API`);
+      return flights;
     } catch (error: any) {
       console.error('API call failed:', error.response?.data || error.message);
-      console.log('🔄 API call failed, using realistic mock data');
-      return this.generateRealisticMockFlights(params);
+      // Throw the error so the UI can handle it
+      throw new Error('Failed to fetch flight data from the API. Please try again later.');
     }
   }
 
@@ -282,52 +277,6 @@ class TravelpayoutsApiService {
     return [];
   }
   
-    // ==================== REALISTIC MOCK FLIGHTS ====================
-  private generateRealisticMockFlights(params: FlightSearchParams): Flight[] {
-    const airlines = [
-        { code: 'AA', name: 'American Airlines' },
-        { code: 'DL', name: 'Delta Air Lines' },
-        { code: 'UA', name: 'United Airlines' },
-        { code: 'BA', name: 'British Airways' },
-        { code: 'LH', name: 'Lufthansa' },
-    ];
-    
-    const flights: Flight[] = [];
-    const flightCount = 6 + Math.floor(Math.random() * 3);
-    
-    for (let i = 0; i < flightCount; i++) {
-        const airline = airlines[i % airlines.length];
-        const price = Math.round((200 + Math.random() * 800) / 10) * 10;
-        const transfers = Math.random() > 0.7 ? 1 : 0;
-        const duration = this.calculateFlightDuration(params.origin, params.destination) + (transfers * 120);
-        
-        const departureDate = new Date(params.depart_date);
-        departureDate.setHours(6 + Math.floor(Math.random() * 16), Math.floor(Math.random() * 12) * 5);
-        
-        flights.push({
-            id: `mock-${params.origin}-${params.destination}-${i}`,
-            price,
-            airline: airline.name,
-            airline_code: airline.code,
-            flight_number: `${airline.code}${100 + i}`,
-            departure_at: departureDate.toISOString(),
-            return_at: params.return_date ? new Date(params.return_date).toISOString() : undefined,
-            origin: params.origin,
-            destination: params.destination,
-            transfers,
-            duration,
-            link: this.generateBookingLink(params),
-            currency: params.currency || 'USD',
-            actual: false,
-            gate: 'mock-data',
-            distance: this.calculateDistance(params.origin, params.destination),
-            found_at: new Date().toISOString(),
-            seats_available: Math.floor(Math.random() * 15) + 2,
-        });
-    }
-    return flights.sort((a, b) => a.price - b.price);
-  }
-
   // ==================== GET CHEAP FLIGHTS ====================
   async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
     try {
@@ -379,34 +328,11 @@ class TravelpayoutsApiService {
       return [];
     } catch (error: any) {
       console.error('Error fetching cheap flights:', error.message);
-      // Fallback to realistic mock data
-      console.log('🔄 Using realistic mock data for cheap flights');
-      const mockDestinations = ['JFK', 'LAX', 'LHR', 'CDG'];
-      return mockDestinations.map(dest => this.generateRealisticMockFlights({origin: 'MOW', destination: dest, depart_date: new Date().toISOString().split('T')[0]})[0]);
+      return [];
     }
   }
 
   // ==================== HELPER METHODS ====================
-  private getRouteInfo(origin: string, destination: string) {
-    const routeMatrix: Record<string, { basePrice: number; duration: number }> = {
-      'JFK-LAX': { basePrice: 299, duration: 360 },
-      'JFK-LHR': { basePrice: 599, duration: 420 },
-      'LAX-CDG': { basePrice: 699, duration: 660 },
-      'LAX-HND': { basePrice: 899, duration: 600 },
-      'LHR-DXB': { basePrice: 499, duration: 420 },
-      'CDG-SIN': { basePrice: 799, duration: 780 },
-      'SIN-SYD': { basePrice: 499, duration: 480 },
-      'DXB-HND': { basePrice: 699, duration: 540 },
-      'FRA-JFK': { basePrice: 549, duration: 480 },
-      'AMS-LAX': { basePrice: 649, duration: 600 },
-      'SFO-HKG': { basePrice: 799, duration: 720 },
-      'SYD-LAX': { basePrice: 899, duration: 840 },
-    };
-    
-    const routeKey = `${origin}-${destination}`;
-    return routeMatrix[routeKey] || { basePrice: 399, duration: 300 };
-  }
-
   private calculateFlightDuration(origin: string, destination: string): number {
     // Approximate flight times between major cities (in minutes)
     const durations: Record<string, number> = {
@@ -424,20 +350,6 @@ class TravelpayoutsApiService {
     return durations[key] || 180 + Math.floor(Math.random() * 240);
   }
   
-  private generateStops(transfers: number): string[] {
-    if (transfers === 0) return [];
-    
-    const commonHubs = ['ATL', 'DFW', 'ORD', 'LAX', 'JFK', 'LHR', 'CDG', 'FRA', 'DXB', 'SIN', 'HKG'];
-    const stops: string[] = [];
-    
-    for (let i = 0; i < transfers; i++) {
-      const randomHub = commonHubs[Math.floor(Math.random() * commonHubs.length)];
-      stops.push(randomHub);
-    }
-    
-    return stops;
-  }
-
   private calculateDistance(origin: string, destination: string): number {
     // Approximate distances in km
     const distances: Record<string, number> = {
