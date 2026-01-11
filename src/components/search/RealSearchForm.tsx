@@ -254,7 +254,7 @@ const RealSearchForm: React.FC = () => {
                 <Button
                   type="submit"
                   disabled={loading || !origin || !destination}
-                  className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold rounded-lg py-3"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg py-3"
                   size="lg"
                 >
                   <Search className="w-5 h-5 mr-2" />
