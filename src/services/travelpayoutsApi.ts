@@ -537,25 +537,6 @@ class TravelpayoutsApiService {
     return routeMatrix[routeKey] || { basePrice: 399, duration: 300 };
   }
 
-  private calculateDuration(origin: string, destination: string): number {
-    const routeInfo = this.getRouteInfo(origin, destination);
-    return routeInfo.duration;
-  }
-  
-  private generateStops(transfers: number): string[] {
-    if (transfers === 0) return [];
-    
-    const commonHubs = ['ATL', 'DFW', 'ORD', 'LAX', 'JFK', 'LHR', 'CDG', 'FRA', 'DXB', 'SIN', 'HKG'];
-    const stops: string[] = [];
-    
-    for (let i = 0; i < transfers; i++) {
-      const randomHub = commonHubs[Math.floor(Math.random() * commonHubs.length)];
-      stops.push(randomHub);
-    }
-    
-    return stops;
-  }
-
   private calculateFlightDuration(origin: string, destination: string): number {
     // Approximate flight times between major cities (in minutes)
     const durations: Record<string, number> = {
@@ -571,6 +552,20 @@ class TravelpayoutsApiService {
     
     const key = `${origin}-${destination}`;
     return durations[key] || 180 + Math.floor(Math.random() * 240);
+  }
+  
+  private generateStops(transfers: number): string[] {
+    if (transfers === 0) return [];
+    
+    const commonHubs = ['ATL', 'DFW', 'ORD', 'LAX', 'JFK', 'LHR', 'CDG', 'FRA', 'DXB', 'SIN', 'HKG'];
+    const stops: string[] = [];
+    
+    for (let i = 0; i < transfers; i++) {
+      const randomHub = commonHubs[Math.floor(Math.random() * commonHubs.length)];
+      stops.push(randomHub);
+    }
+    
+    return stops;
   }
 
   private calculateDistance(origin: string, destination: string): number {
@@ -654,5 +649,3 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams };
-
-    
