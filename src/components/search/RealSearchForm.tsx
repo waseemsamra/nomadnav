@@ -175,7 +175,7 @@ const RealSearchForm: React.FC = () => {
   };
 
   const renderSelectWithLabel = (label: string, value: AirportOption | null, onChange: (option: AirportOption | null) => void) => (
-    <div className="relative flex-1">
+    <div className="relative flex-1 border border-gray-300 rounded-lg lg:border-none">
       <label className="absolute top-2 left-4 text-xs text-gray-500">{label}</label>
       <Select
         options={airportOptions}
@@ -190,7 +190,7 @@ const RealSearchForm: React.FC = () => {
   );
   
   const renderDateWithLabel = (label: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, min?: string) => (
-    <div className="relative flex-1">
+    <div className="relative flex-1 border border-gray-300 rounded-lg lg:border-none">
       <label className="absolute top-2 left-4 text-xs text-gray-500">{label}</label>
       <input
         type="date"
@@ -215,34 +215,33 @@ const RealSearchForm: React.FC = () => {
 
         <form onSubmit={handleSubmit}>
             {formData.tripType !== 'multi' ? (
-              <>
-                {/* Main inputs row */}
-                <div className="flex flex-col lg:flex-row items-center border border-gray-300 rounded-lg">
-                    {renderSelectWithLabel('From', origin, setOrigin)}
-                    <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
+              <div className="space-y-2 lg:space-y-0 lg:flex lg:items-center lg:border lg:border-gray-300 lg:rounded-lg">
+                  {renderSelectWithLabel('From', origin, setOrigin)}
+                  
+                  <div className="hidden h-10 w-px bg-gray-300 lg:block"></div>
 
-                    <button
-                        type="button"
-                        onClick={handleSwapAirports}
-                        className="my-2 lg:my-0 mx-2 p-2 rounded-full hover:bg-gray-200 transition-colors"
-                        title="Swap airports"
-                    >
-                        <ArrowRightLeft className="w-5 h-5 text-gray-600" />
-                    </button>
-                    
-                    {renderSelectWithLabel('To', destination, setDestination)}
-                    <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
-                    
-                    {renderDateWithLabel('Depart', formData.departDate, e => setFormData(p => ({...p, departDate: e.target.value})))}
-                    
-                    {formData.tripType === 'round' && (
-                      <>
-                        <div className="h-10 w-px bg-gray-300 hidden lg:block"></div>
-                        {renderDateWithLabel('Return', formData.returnDate, e => setFormData(p => ({...p, returnDate: e.target.value})), formData.departDate)}
-                      </>
-                    )}
-                </div>
-              </>
+                  <button
+                      type="button"
+                      onClick={handleSwapAirports}
+                      className="my-2 mx-auto lg:mx-2 p-2 rounded-full hover:bg-gray-200 transition-colors"
+                      title="Swap airports"
+                  >
+                      <ArrowRightLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  
+                  {renderSelectWithLabel('To', destination, setDestination)}
+                  
+                  <div className="hidden h-10 w-px bg-gray-300 lg:block"></div>
+                  
+                  {renderDateWithLabel('Depart', formData.departDate, e => setFormData(p => ({...p, departDate: e.target.value})))}
+                  
+                  {formData.tripType === 'round' && (
+                    <>
+                      <div className="hidden h-10 w-px bg-gray-300 lg:block"></div>
+                      {renderDateWithLabel('Return', formData.returnDate, e => setFormData(p => ({...p, returnDate: e.target.value})), formData.departDate)}
+                    </>
+                  )}
+              </div>
             ) : (
                 <div className="space-y-2">
                     {multiCitySegments.map((segment, index) => (
@@ -309,5 +308,3 @@ const RealSearchForm: React.FC = () => {
 };
 
 export default RealSearchForm;
-
-    
