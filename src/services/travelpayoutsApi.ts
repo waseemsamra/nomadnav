@@ -115,9 +115,9 @@ class TravelpayoutsApiService {
       if (API_TOKEN) {
         try {
           const flightParams = new URLSearchParams({
-            origin: 'JFK',
-            destination: 'LAX',
-            departure_at: '2025-07-01', // Use a future date
+            origin: 'MOW',
+            destination: 'LED',
+            departure_at: '2024-12-01',
             currency: 'USD',
             token: API_TOKEN,
             limit: '1',
@@ -615,3 +615,5 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams };
+
+    
