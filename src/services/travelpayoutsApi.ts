@@ -28,7 +28,6 @@ export interface Flight {
   gate: string;
   distance: number;
   found_at: string;
-  seats_available: number;
 }
 
 export interface FlightSearchParams {
@@ -270,7 +269,6 @@ class TravelpayoutsApiService {
         gate: flight.gate || 'aviasales',
         distance: flight.distance || this.calculateDistance(params.origin, params.destination),
         found_at: flight.found_at || new Date().toISOString(),
-        seats_available: Math.floor(Math.random() * 10) + 1,
       }));
     }
 
@@ -322,7 +320,6 @@ class TravelpayoutsApiService {
             gate: 'aviasales',
             distance: this.calculateDistance(origin, destination),
             found_at: new Date().toISOString(),
-            seats_available: Math.floor(Math.random() * 10) + 1,
           }));
       }
       return [];

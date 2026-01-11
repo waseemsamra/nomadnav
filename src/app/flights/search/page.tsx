@@ -343,7 +343,7 @@ function SearchResultsContent() {
                       </div>
 
                       {/* Flight Details */}
-                      <div className="border-y py-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="border-y py-4 mb-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400"/>
                           <div>
@@ -367,13 +367,6 @@ function SearchResultsContent() {
                             <div className={`font-medium ${flight.transfers > 0 ? 'text-orange-600' : 'text-green-600'}`}>
                                 {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
                             </div>
-                          </div>
-                        </div>
-                         <div className="flex items-center gap-2">
-                          <Armchair className="w-4 h-4 text-gray-400"/>
-                          <div>
-                            <div className="text-gray-500">Seats left</div>
-                            <div className="font-medium">{flight.seats_available}</div>
                           </div>
                         </div>
                       </div>
