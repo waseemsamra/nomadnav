@@ -2,18 +2,64 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Plane,
+  CheckCircle, 
+  XCircle, 
   RefreshCw,
+  Key,
+  Plane,
+  Server,
+  Cloud,
+  Database,
+  ExternalLink,
 } from 'lucide-react';
 import { travelpayoutsApi, type Flight } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
-import ApiStatus from '@/components/api/ApiStatus';
+
+type ApiStatus = {
+  success: boolean;
+  message: string;
+  endpoints: {
+    airports: boolean;
+    airlines: boolean;
+    cities: boolean;
+    flights: boolean;
+  };
+  tokenValid: boolean;
+} | null;
 
 export default function ApiTestPage() {
+  const [testing, setTesting] = useState(false);
+  const [apiStatus, setApiStatus] = useState<ApiStatus>(null);
   const [testFlights, setTestFlights] = useState<Flight[]>([]);
   const [flightLoading, setFlightLoading] = useState(false);
+  const [envToken, setEnvToken] = useState('');
+
+  useEffect(() => {
+    // Client-side access to env var
+    setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
+    testConnection(); // Auto-test on page load
+  }, []);
+
+  const testConnection = async () => {
+    setTesting(true);
+    setApiStatus(null);
+    try {
+      const status = await travelpayoutsApi.testApiConnection();
+      setApiStatus(status);
+    } catch (error: any) {
+      console.error('Test failed:', error);
+      setApiStatus({
+        success: false,
+        message: 'Test failed: ' + error.message,
+        endpoints: { airports: false, airlines: false, cities: false, flights: false },
+        tokenValid: false,
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const testFlightSearch = async () => {
     setFlightLoading(true);
@@ -22,17 +68,21 @@ export default function ApiTestPage() {
       const flights = await travelpayoutsApi.searchFlights({
         origin: 'JFK',
         destination: 'LAX',
-        depart_date: '2024-08-01',
+        depart_date: '2025-07-01', // Use a future date
         currency: 'USD',
         limit: 3,
       });
       setTestFlights(flights);
-    } catch (error) {
-      console.error('Flight search failed:', error);
+    } catch (error: any) {
+      console.error('Flight search failed:', error.message);
+      setTestFlights([]);
     } finally {
       setFlightLoading(false);
     }
   };
+
+  const StatusIcon = ({ status }: { status: boolean }) => 
+    status ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -46,92 +96,200 @@ export default function ApiTestPage() {
           </p>
         </div>
 
-        {/* API Status */}
-        <div className="mb-8">
-            <ApiStatus />
-        </div>
-
-
-        {/* Flight Search Test */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <Plane className="w-5 h-5 mr-2" />
-            Flight Search Test
-          </h2>
-
-          <div className="mb-6">
-            <p className="text-gray-600 mb-4">
-              Test flight search functionality with sample route:
-            </p>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="font-mono text-center">
-                <span className="text-blue-600 font-bold">JFK</span>
-                <span className="mx-2">→</span>
-                <span className="text-blue-600 font-bold">LAX</span>
-                <span className="mx-4">|</span>
-                <span className="text-gray-700">August 1, 2024</span>
-              </div>
-            </div>
+        {/* Current Status */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+              <Server className="w-6 h-6 mr-3 text-primary" />
+              API Status
+            </h2>
+            <Button
+              onClick={testConnection}
+              disabled={testing}
+              variant="outline"
+            >
+              {testing ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+            </Button>
           </div>
 
-          <Button
-            onClick={testFlightSearch}
-            disabled={flightLoading}
-            className="w-full mb-6"
-          >
-            {flightLoading ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Searching Flights...
-              </>
-            ) : (
-              'Test Flight Search'
-            )}
-          </Button>
-
-          {testFlights.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900">
-                Found {testFlights.length} flights:
-              </h3>
-              {testFlights.map((flight) => (
-                <div
-                  key={flight.id}
-                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="font-bold text-lg">
-                        ${flight.price}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {flight.airline} • {flight.flight_number}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {flight.origin} → {flight.destination}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Duration: {Math.floor(flight.duration / 60)}h {flight.duration % 60}m
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column: Config & Endpoints */}
+            <div className="space-y-6">
+              {/* API Token */}
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <Key className="w-5 h-5 mr-2 text-gray-400" />
+                  API Token
+                </h3>
+                <div className={`p-3 rounded-lg flex items-center gap-3 ${
+                  apiStatus?.tokenValid
+                    ? 'bg-green-50 text-green-800'
+                    : 'bg-red-50 text-red-800'
+                }`}>
+                  <StatusIcon status={apiStatus?.tokenValid || false} />
+                  <span>{apiStatus?.tokenValid ? 'Token format is valid' : 'Token missing or invalid'}</span>
                 </div>
-              ))}
-            </div>
-          )}
+                 <div className="mt-2 text-xs text-gray-500 p-2 bg-gray-50 rounded font-mono truncate">
+                    .env: {envToken ? `${envToken.substring(0, 8)}...` : 'Not set'}
+                  </div>
+              </div>
 
-          {testFlights.length === 0 && flightLoading === false && (
-            <div className="text-center py-8 text-gray-500">
-              Click "Test Flight Search" to see flight data. If none appears, the API may not have returned results for this route.
+              {/* Endpoints */}
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <Cloud className="w-5 h-5 mr-2 text-gray-400" />
+                  Service Endpoints
+                </h3>
+                {testing ? (
+                  <div className="space-y-2">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="bg-gray-100 rounded-lg p-3 animate-pulse h-10" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Airports</span>
+                      <StatusIcon status={apiStatus?.endpoints.airports || false} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Airlines</span>
+                      <StatusIcon status={apiStatus?.endpoints.airlines || false} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Cities</span>
+                      <StatusIcon status={apiStatus?.endpoints.cities || false} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="flex items-center gap-2"><Plane className="w-4 h-4 text-gray-500"/>Flights</span>
+                      <StatusIcon status={apiStatus?.endpoints.flights || false} />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Right Column: Overall Status & Flight Test */}
+            <div className="space-y-6">
+               {/* Overall Status */}
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-2">Overall Status</h3>
+                <div className={`p-4 rounded-lg border ${
+                  apiStatus?.success
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : 'bg-red-50 border-red-200 text-red-800'
+                }`}>
+                  <div className="flex items-center mb-2">
+                    <StatusIcon status={apiStatus?.success || false} />
+                    <span className="ml-2 font-medium">
+                      {testing ? 'Testing...' : apiStatus?.success ? 'API Connected' : 'Connection Failed'}
+                    </span>
+                  </div>
+                  <p className="text-sm">
+                    {testing ? 'Checking endpoints...' : apiStatus?.message || 'Run a test to see status.'}
+                  </p>
+                </div>
+                 {!apiStatus?.tokenValid && (
+                    <a
+                      href="https://www.travelpayouts.com/developers/api"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-blue-600 hover:text-blue-700 text-sm mt-3"
+                    >
+                      Get your free API token
+                      <ExternalLink className="w-4 h-4 ml-1" />
+                    </a>
+                  )}
+              </div>
+
+              {/* Flight Search */}
+              <div>
+                 <h3 className="font-semibold text-gray-800 mb-2">Flight Search Test</h3>
+                 <div className="bg-blue-50 p-3 rounded-lg text-center font-mono text-sm mb-4">
+                    <span className="text-blue-600 font-bold">JFK</span>
+                    <span className="mx-2">→</span>
+                    <span className="text-blue-600 font-bold">LAX</span>
+                  </div>
+
+                 <Button
+                    onClick={testFlightSearch}
+                    disabled={flightLoading || !apiStatus?.endpoints.flights}
+                    className="w-full"
+                  >
+                    {flightLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plane className="w-4 h-4 mr-2" />
+                    )}
+                    Test Flight Search
+                  </Button>
+              </div>
+
+            </div>
+          </div>
         </div>
+
+        {/* Flight Search Results */}
+        {(flightLoading || testFlights.length > 0) && (
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <Plane className="w-5 h-5 mr-2" />
+              Flight Search Results
+            </h2>
+            
+            {flightLoading ? (
+               <div className="text-center py-8 text-gray-500">
+                  <RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2" />
+                  Searching for flights...
+               </div>
+            ) : testFlights.length > 0 ? (
+              <div className="space-y-4">
+                <h3 className="font-medium text-gray-900">
+                  Found {testFlights.length} flights:
+                </h3>
+                {testFlights.map((flight) => (
+                  <div
+                    key={flight.id}
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-bold text-lg">
+                          ${flight.price}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {flight.airline_code} • {flight.flight_number}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">
+                          {flight.origin} → {flight.destination}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Duration: {Math.floor(flight.duration / 60)}h {flight.duration % 60}m
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                The API did not return any flights for this test route.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+    

@@ -7,9 +7,7 @@ export interface Airport {
   name: string;
   city: string;
   country: string;
-  timezone?: string;
-  lat?: number;
-  lng?: number;
+  country_code: string;
 }
 
 export interface Flight {
@@ -26,10 +24,11 @@ export interface Flight {
   duration: number;
   link: string;
   currency: string;
-  stops: string[];
-  aircraft?: string;
-  baggage?: string;
-  seats_available: number;
+  actual: boolean;
+  gate: string;
+  distance: number;
+  found_at: string;
+  seats_available: number; // Added to match previous usage
 }
 
 export interface FlightSearchParams {
@@ -43,31 +42,35 @@ export interface FlightSearchParams {
   limit?: number;
 }
 
-// Configuration - Use these FREE tokens
-const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '321d9a0a5c7c5c7c5c7c5c7c5c7c5c7c';
+// Configuration
+const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '';
 const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || '123456';
 
-// API Endpoints
+// REAL WORKING ENDPOINTS
 const ENDPOINTS = {
+  // Static data (always works without token)
+  cities: 'https://api.travelpayouts.com/data/en/cities.json',
   airports: 'https://api.travelpayouts.com/data/en/airports.json',
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
-  // Flight endpoints that sometimes work
-  flightPrices: 'https://api.travelpayouts.com/v2/prices/latest',
-  flightMonth: 'https://api.travelpayouts.com/v2/prices/month-matrix',
-  flightCheap: 'https://api.travelpayouts.com/v1/prices/cheap',
+  countries: 'https://api.travelpayouts.com/data/en/countries.json',
+  
+  // Flight prices (REAL endpoints that work)
+  pricesForDates: 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates',
+  latestPrices: 'https://api.travelpayouts.com/v2/prices/latest',
+  monthMatrix: 'https://api.travelpayouts.com/v2/prices/month-matrix',
+  weekMatrix: 'https://api.travelpayouts.com/v2/prices/week-matrix',
+  
+  // Cheap flights
+  cheap: 'https://api.travelpayouts.com/v1/prices/cheap',
+  
+  // Calendar prices
+  calendar: 'https://api.travelpayouts.com/v2/prices/calendar',
 };
 
 class TravelpayoutsApiService {
   private static instance: TravelpayoutsApiService;
-  private airportsCache: Airport[] = [];
-  private airlinesCache: any[] = [];
-  private lastAirportsFetch: number = 0;
-  private lastAirlinesFetch: number = 0;
-  private readonly CACHE_TIME = 6 * 60 * 60 * 1000; // 6 hours
-
-  private constructor() {
-    this.initializeDefaultData();
-  }
+  
+  private constructor() {}
 
   public static getInstance(): TravelpayoutsApiService {
     if (!TravelpayoutsApiService.instance) {
@@ -76,23 +79,84 @@ class TravelpayoutsApiService {
     return TravelpayoutsApiService.instance;
   }
 
-  private initializeDefaultData() {
-    // Default airports if API fails
-    this.airportsCache = this.getDefaultAirports();
-    this.airlinesCache = this.getDefaultAirlines();
-  }
-
-  // ==================== AIRPORTS API ====================
-  async getAirports(): Promise<Airport[]> {
-    const now = Date.now();
-    
-    // Return cache if fresh
-    if (this.airportsCache.length > 20 && now - this.lastAirportsFetch < this.CACHE_TIME) {
-      return this.airportsCache;
-    }
+  // ==================== TEST API CONNECTION ====================
+  async testApiConnection(): Promise<{
+    success: boolean;
+    message: string;
+    endpoints: {
+      airports: boolean;
+      airlines: boolean;
+      cities: boolean;
+      flights: boolean;
+    };
+    tokenValid: boolean;
+  }> {
+    const results = {
+      airports: false,
+      airlines: false,
+      cities: false,
+      flights: false,
+    };
 
     try {
-      console.log('🌍 Fetching airports from API...');
+      // Test airports endpoint
+      const airportsRes = await axios.get(ENDPOINTS.airports, { timeout: 5000 });
+      results.airports = Array.isArray(airportsRes.data) && airportsRes.data.length > 0;
+
+      // Test airlines endpoint
+      const airlinesRes = await axios.get(ENDPOINTS.airlines, { timeout: 5000 });
+      results.airlines = Array.isArray(airlinesRes.data) && airlinesRes.data.length > 0;
+
+      // Test cities endpoint
+      const citiesRes = await axios.get(ENDPOINTS.cities, { timeout: 5000 });
+      results.cities = Array.isArray(citiesRes.data) && citiesRes.data.length > 0;
+
+      // Test flight endpoint (if token is available)
+      if (API_TOKEN) {
+        try {
+          const flightParams = new URLSearchParams({
+            origin: 'JFK',
+            destination: 'LAX',
+            departure_at: '2025-07-01', // Use a future date
+            currency: 'USD',
+            token: API_TOKEN,
+            limit: '1',
+          });
+          
+          const flightRes = await axios.get(`${ENDPOINTS.pricesForDates}?${flightParams.toString()}`, {
+            timeout: 5000,
+          });
+          results.flights = flightRes.data.success === true;
+        } catch (flightError: any) {
+          console.log('Flight API test warning:', flightError.message);
+          results.flights = false;
+        }
+      }
+
+      const workingEndpoints = Object.values(results).filter(v => v).length;
+      const totalEndpoints = Object.values(results).length;
+
+      return {
+        success: workingEndpoints > 0,
+        message: `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
+        endpoints: results,
+        tokenValid: !!API_TOKEN && API_TOKEN.length === 32,
+      };
+
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Connection failed: ${error.message}`,
+        endpoints: results,
+        tokenValid: !!API_TOKEN && API_TOKEN.length === 32,
+      };
+    }
+  }
+
+  // ==================== GET AIRPORTS (REAL DATA) ====================
+  async getAirports(): Promise<Airport[]> {
+    try {
+      console.log('Fetching airports from:', ENDPOINTS.airports);
       const response = await axios.get(ENDPOINTS.airports, {
         timeout: 10000,
         headers: {
@@ -101,328 +165,325 @@ class TravelpayoutsApiService {
       });
 
       if (response.data && Array.isArray(response.data)) {
-        this.airportsCache = response.data.slice(0, 200).map((airport: any) => ({
-          code: airport.code || airport.iata || '',
-          name: airport.name || '',
-          city: airport.city || airport.city_name || '',
-          country: airport.country || airport.country_name || '',
-          timezone: airport.timezone || '',
-          lat: airport.lat || airport.coordinates?.lat || 0,
-          lng: airport.lng || airport.coordinates?.lon || 0,
-        })).filter((a: Airport) => a.code && a.name);
-        
-        this.lastAirportsFetch = now;
-        console.log(`✅ Loaded ${this.airportsCache.length} airports from API`);
-        return this.airportsCache;
+        const airports = response.data
+          .filter((airport: any) => airport.code && airport.name && airport.country_code)
+          .slice(0, 500) // Limit to 500 airports for performance
+          .map((airport: any) => ({
+            code: airport.code,
+            name: airport.name,
+            city: airport.city_code || airport.city_name || '',
+            country: airport.country_code || airport.country_name || '',
+            country_code: airport.country_code || '',
+          }));
+
+        console.log(`✅ Loaded ${airports.length} real airports from API`);
+        return airports;
       }
-    } catch (error) {
-      console.log('⚠️ Airport API failed, using cached/default data:', error.message);
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching airports:', error.message);
+      throw new Error(`Failed to fetch airports: ${error.message}`);
     }
-
-    return this.airportsCache;
   }
 
-  async getAirportOptions() {
-    const airports = await this.getAirports();
-    return airports.map(airport => ({
-      value: airport.code,
-      label: `${airport.city} (${airport.code})`,
-      city: airport.city,
-      country: airport.country,
-      fullLabel: `${airport.city}, ${airport.country} (${airport.code})`,
-    }));
-  }
-
-  // ==================== AIRLINES API ====================
-  async getAirlines(): Promise<any[]> {
-    const now = Date.now();
-    
-    if (this.airlinesCache.length > 0 && now - this.lastAirlinesFetch < this.CACHE_TIME) {
-      return this.airlinesCache;
-    }
-
-    try {
-      const response = await axios.get(ENDPOINTS.airlines, {
-        timeout: 10000,
-      });
-
-      if (response.data && Array.isArray(response.data)) {
-        this.airlinesCache = response.data;
-        this.lastAirlinesFetch = now;
-        return this.airlinesCache;
-      }
-    } catch (error) {
-      console.log('Airline API failed, using default data');
-    }
-
-    return this.airlinesCache;
-  }
-
-  // ==================== FLIGHT SEARCH ====================
+  // ==================== SEARCH FLIGHTS (REAL API) ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
-    console.log('✈️ Attempting flight search:', params);
+    console.log('🔍 Searching REAL flights with params:', params);
 
-    // Try real API first with multiple endpoints
+    // Method 1: Try prices_for_dates endpoint (most reliable)
     try {
-      const realFlights = await this.tryMultipleApiEndpoints(params);
-      if (realFlights.length > 0) {
-        console.log(`✅ Found ${realFlights.length} real flights from API`);
-        return realFlights;
+      const flights = await this.searchPricesForDates(params);
+      if (flights.length > 0) {
+        console.log(`✅ Found ${flights.length} real flights from prices_for_dates API`);
+        return flights;
       }
-    } catch (error) {
-      console.log('❌ All API endpoints failed:', error.message);
+    } catch (error: any) {
+      console.log('Method 1 failed:', error.response?.data || error.message);
     }
 
-    // Fallback to enhanced mock data
-    console.log('🔄 Using enhanced realistic mock data');
-    return this.generateRealisticMockFlights(params);
-  }
-
-  private async tryMultipleApiEndpoints(params: FlightSearchParams): Promise<Flight[]> {
-    const endpoints = [
-      this.tryLatestPricesEndpoint.bind(this),
-      this.tryMonthMatrixEndpoint.bind(this),
-      this.tryCheapPricesEndpoint.bind(this),
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        const flights = await endpoint(params);
-        if (flights.length > 0) {
-          return flights;
-        }
-      } catch (error) {
-        // Continue to next endpoint
-        continue;
-      }
-    }
-
-    return [];
-  }
-
-  private async tryLatestPricesEndpoint(params: FlightSearchParams): Promise<Flight[]> {
+    // Method 2: Try latest prices endpoint
     try {
-      const searchParams = new URLSearchParams({
-        origin: params.origin,
-        destination: params.destination,
-        token: API_TOKEN,
-        currency: params.currency || 'USD',
-        limit: (params.limit || 10).toString(),
-      });
-
-      if (params.depart_date) {
-        searchParams.append('depart_date', params.depart_date);
+      const flights = await this.searchLatestPrices(params);
+      if (flights.length > 0) {
+        console.log(`✅ Found ${flights.length} real flights from latest prices API`);
+        return flights;
       }
-      if (params.return_date) {
-        searchParams.append('return_date', params.return_date);
-      }
-
-      const response = await axios.get(`${ENDPOINTS.flightPrices}?${searchParams.toString()}`, {
-        headers: {
-          'X-Access-Token': API_TOKEN,
-          'Accept': 'application/json',
-        },
-        timeout: 8000,
-      });
-
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        return this.transformApiFlights(response.data.data, params);
-      }
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+       console.log('Method 2 failed:', error.response?.data || error.message);
     }
 
-    return [];
-  }
-
-  private async tryMonthMatrixEndpoint(params: FlightSearchParams): Promise<Flight[]> {
+    // Method 3: Try calendar endpoint
     try {
-      const month = params.depart_date.substring(0, 7); // YYYY-MM
-      const searchParams = new URLSearchParams({
-        origin: params.origin,
-        destination: params.destination,
-        month: month,
-        currency: params.currency || 'USD',
-        token: API_TOKEN,
-      });
-
-      const response = await axios.get(`${ENDPOINTS.flightMonth}?${searchParams.toString()}`, {
-        headers: {
-          'X-Access-Token': API_TOKEN,
-        },
-        timeout: 8000,
-      });
-
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        return this.transformApiFlights(response.data.data, params);
+      const flights = await this.searchCalendarPrices(params);
+      if (flights.length > 0) {
+        console.log(`✅ Found ${flights.length} real flights from calendar API`);
+        return flights;
       }
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+       console.log('Method 3 failed:', error.response?.data || error.message);
     }
 
-    return [];
+    // If all APIs fail, throw error
+    throw new Error('All flight search APIs are currently unavailable. Please try again later.');
   }
 
-  private async tryCheapPricesEndpoint(params: FlightSearchParams): Promise<Flight[]> {
-    try {
-      const searchParams = new URLSearchParams({
-        origin: params.origin,
-        token: API_TOKEN,
-        currency: params.currency || 'USD',
-      });
-
-      const response = await axios.get(`${ENDPOINTS.flightCheap}?${searchParams.toString()}`, {
-        headers: {
-          'X-Access-Token': API_TOKEN,
-        },
-        timeout: 8000,
-      });
-
-      if (response.data?.data && response.data.data[params.destination]) {
-        const flight = response.data.data[params.destination];
-        return [this.transformApiFlight(flight, params)];
-      }
-    } catch (error) {
-      throw error;
-    }
-
-    return [];
-  }
-
-  private transformApiFlights(apiData: any[], params: FlightSearchParams): Flight[] {
-    return apiData.map((flight, index) => this.transformApiFlight(flight, params, index));
-  }
-
-  private transformApiFlight(flight: any, params: FlightSearchParams, index: number = 0): Flight {
-    const airlines = this.airlinesCache;
-    const airline = airlines.find(a => a.code === flight.airline) || airlines[0];
-    
-    return {
-      id: `flight-${params.origin}-${params.destination}-${index}`,
-      price: flight.value || flight.price || 0,
-      airline: airline?.name || 'Airline',
-      airline_code: flight.airline || airline?.code || 'AA',
-      flight_number: flight.flight_number || `${flight.airline || 'AA'}${100 + index}`,
-      departure_at: flight.depart_date || params.depart_date,
-      return_at: flight.return_date || params.return_date,
-      origin: flight.origin || params.origin,
-      destination: flight.destination || params.destination,
-      transfers: flight.number_of_changes || flight.transfers || 0,
-      duration: flight.duration || this.calculateDuration(params.origin, params.destination),
-      stops: this.generateStops(flight.number_of_changes || 0),
-      link: this.generateBookingLink(params),
+  // ==================== METHOD 1: Prices for Dates (Most Reliable) ====================
+  private async searchPricesForDates(params: FlightSearchParams): Promise<Flight[]> {
+    const searchParams = new URLSearchParams({
+      origin: params.origin,
+      destination: params.destination,
+      departure_at: params.depart_date,
       currency: params.currency || 'USD',
-      seats_available: Math.floor(Math.random() * 10) + 1,
-      aircraft: ['Boeing 737', 'Airbus A320', 'Boeing 787', 'Airbus A350'][index % 4],
-      baggage: '1 × 23kg',
-    };
-  }
+      limit: (params.limit || 20).toString(),
+      unique: 'false',
+      sorting: 'price',
+      direct: 'false',
+    });
 
-  // ==================== REALISTIC MOCK FLIGHTS ====================
-  private generateRealisticMockFlights(params: FlightSearchParams): Flight[] {
-    const airlines = this.getDefaultAirlines();
-    const routeInfo = this.getRouteInfo(params.origin, params.destination);
-    
-    const flights: Flight[] = [];
-    const today = new Date();
-    
-    // Generate 6-8 different flight options
-    const flightCount = 6 + Math.floor(Math.random() * 3);
-    
-    for (let i = 0; i < flightCount; i++) {
-      const airline = airlines[i % airlines.length];
-      const basePrice = routeInfo.basePrice;
-      
-      // Price variation: -20% to +30%
-      const priceVariation = 0.8 + (Math.random() * 0.5);
-      const price = Math.round(basePrice * priceVariation / 10) * 10; // Round to nearest 10
-      
-      // Random transfers: 70% non-stop, 25% 1 stop, 5% 2 stops
-      let transfers = 0;
-      const transferRand = Math.random();
-      if (transferRand > 0.95) transfers = 2;
-      else if (transferRand > 0.7) transfers = 1;
-      
-      const duration = routeInfo.duration + (transfers * 120); // Add 2 hours per stop
-      
-      // Departure time: 6 AM to 10 PM
-      const departureHour = 6 + Math.floor(Math.random() * 16);
-      const departureMinute = Math.floor(Math.random() * 12) * 5; // 0, 5, 10, ... 55
-      
-      const departureDate = new Date(params.depart_date);
-      departureDate.setHours(departureHour, departureMinute, 0, 0);
-      
-      // Return date if round trip
-      let returnDate: Date | undefined;
-      if (params.return_date) {
-        returnDate = new Date(params.return_date);
-        const returnHour = 6 + Math.floor(Math.random() * 16);
-        const returnMinute = Math.floor(Math.random() * 12) * 5;
-        returnDate.setHours(returnHour, returnMinute, 0, 0);
-      }
-      
-      flights.push({
-        id: `mock-${params.origin}-${params.destination}-${i}`,
-        price,
-        airline: airline.name,
-        airline_code: airline.code,
-        flight_number: `${airline.code}${100 + i}`,
-        departure_at: departureDate.toISOString(),
-        return_at: returnDate?.toISOString(),
-        origin: params.origin,
-        destination: params.destination,
-        transfers,
-        duration,
-        stops: this.generateStops(transfers),
+    // Add return date for round trips
+    if (params.return_date && params.trip_type === 'round') {
+      searchParams.append('return_at', params.return_date);
+    }
+
+    // Add token if available
+    if (API_TOKEN) {
+      searchParams.append('token', API_TOKEN);
+    }
+
+    const url = `${ENDPOINTS.pricesForDates}?${searchParams.toString()}`;
+    console.log('📡 Calling prices_for_dates:', url.replace(API_TOKEN, '***'));
+
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        'Accept': 'application/json',
+        ...(API_TOKEN ? { 'X-Access-Token': API_TOKEN } : {}),
+      },
+    });
+
+    console.log('API Response:', response.data);
+
+    if (response.data.data && Array.isArray(response.data.data)) {
+      return response.data.data.map((flight: any, index: number) => ({
+        id: `flight-${flight.origin}-${flight.destination}-${index}`,
+        price: flight.price || 0,
+        airline: flight.airline || 'Multiple',
+        airline_code: flight.airline || 'XX',
+        flight_number: flight.flight_number || `FL${1000 + index}`,
+        departure_at: flight.departure_at || params.depart_date,
+        return_at: flight.return_at || params.return_date,
+        origin: flight.origin || params.origin,
+        destination: flight.destination || params.destination,
+        transfers: flight.transfers || 0,
+        duration: flight.duration || this.calculateFlightDuration(params.origin, params.destination),
         link: this.generateBookingLink(params),
         currency: params.currency || 'USD',
-        seats_available: Math.floor(Math.random() * 5) + 3,
-        aircraft: ['Boeing 737-800', 'Airbus A320', 'Boeing 787-9', 'Airbus A350-900', 'Boeing 777'][i % 5],
-        baggage: ['1 × 23kg', '2 × 23kg', '1 × 23kg + 1 × 8kg'][Math.floor(Math.random() * 3)],
-      });
+        actual: flight.actual || true,
+        gate: flight.gate || 'aviasales',
+        distance: flight.distance || this.calculateDistance(params.origin, params.destination),
+        found_at: flight.found_at || new Date().toISOString(),
+        seats_available: Math.floor(Math.random() * 10) + 1,
+      }));
     }
-    
-    // Sort by price
-    return flights.sort((a, b) => a.price - b.price);
+
+    return [];
   }
 
-  private getRouteInfo(origin: string, destination: string) {
-    const routeMatrix: Record<string, { basePrice: number; duration: number }> = {
-      'JFK-LAX': { basePrice: 299, duration: 360 },
-      'JFK-LHR': { basePrice: 599, duration: 420 },
-      'LAX-CDG': { basePrice: 699, duration: 660 },
-      'LAX-HND': { basePrice: 899, duration: 600 },
-      'LHR-DXB': { basePrice: 499, duration: 420 },
-      'CDG-SIN': { basePrice: 799, duration: 780 },
-      'SIN-SYD': { basePrice: 499, duration: 480 },
-      'DXB-HND': { basePrice: 699, duration: 540 },
-      'FRA-JFK': { basePrice: 549, duration: 480 },
-      'AMS-LAX': { basePrice: 649, duration: 600 },
-      'SFO-HKG': { basePrice: 799, duration: 720 },
-      'SYD-LAX': { basePrice: 899, duration: 840 },
+  // ==================== METHOD 2: Latest Prices ====================
+  private async searchLatestPrices(params: FlightSearchParams): Promise<Flight[]> {
+    const searchParams = new URLSearchParams({
+      origin: params.origin,
+      destination: params.destination,
+      depart_date: params.depart_date,
+      currency: params.currency || 'USD',
+      limit: (params.limit || 20).toString(),
+    });
+
+    if (params.return_date && params.trip_type === 'round') {
+      searchParams.append('return_date', params.return_date);
+    }
+
+    if (API_TOKEN) {
+      searchParams.append('token', API_TOKEN);
+    }
+
+    const url = `${ENDPOINTS.latestPrices}?${searchParams.toString()}`;
+    console.log('📡 Calling latest_prices:', url.replace(API_TOKEN, '***'));
+
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        'Accept': 'application/json',
+        ...(API_TOKEN ? { 'X-Access-Token': API_TOKEN } : {}),
+      },
+    });
+
+    if (response.data.data && Array.isArray(response.data.data)) {
+      return response.data.data.map((flight: any, index: number) => ({
+        id: `flight-${flight.origin}-${flight.destination}-${index}`,
+        price: flight.value || flight.price || 0,
+        airline: flight.airline || 'Multiple',
+        airline_code: flight.airline || 'XX',
+        flight_number: flight.flight_number || `FL${2000 + index}`,
+        departure_at: flight.depart_date || params.depart_date,
+        return_at: flight.return_date || params.return_date,
+        origin: flight.origin || params.origin,
+        destination: flight.destination || params.destination,
+        transfers: flight.number_of_changes || 0,
+        duration: flight.duration || this.calculateFlightDuration(params.origin, params.destination),
+        link: this.generateBookingLink(params),
+        currency: params.currency || 'USD',
+        actual: flight.actual || true,
+        gate: flight.gate || 'aviasales',
+        distance: flight.distance || this.calculateDistance(params.origin, params.destination),
+        found_at: flight.found_at || new Date().toISOString(),
+        seats_available: Math.floor(Math.random() * 10) + 1,
+      }));
+    }
+
+    return [];
+  }
+
+  // ==================== METHOD 3: Calendar Prices ====================
+  private async searchCalendarPrices(params: FlightSearchParams): Promise<Flight[]> {
+    const searchParams = new URLSearchParams({
+      origin: params.origin,
+      destination: params.destination,
+      depart_date: params.depart_date,
+      currency: params.currency || 'USD',
+      length: '1', // Stay length in days
+    });
+
+    if (API_TOKEN) {
+      searchParams.append('token', API_TOKEN);
+    }
+
+    const url = `${ENDPOINTS.calendar}?${searchParams.toString()}`;
+    console.log('📡 Calling calendar:', url.replace(API_TOKEN, '***'));
+
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        'Accept': 'application/json',
+        ...(API_TOKEN ? { 'X-Access-Token': API_TOKEN } : {}),
+      },
+    });
+
+    if (response.data.data && response.data.data[params.depart_date]) {
+      const flightData = response.data.data[params.depart_date];
+      return [{
+        id: `flight-${params.origin}-${params.destination}-calendar`,
+        price: flightData.price || 0,
+        airline: 'Multiple',
+        airline_code: 'XX',
+        flight_number: 'FL3000',
+        departure_at: params.depart_date,
+        return_at: params.return_date,
+        origin: params.origin,
+        destination: params.destination,
+        transfers: 0,
+        duration: this.calculateFlightDuration(params.origin, params.destination),
+        link: this.generateBookingLink(params),
+        currency: params.currency || 'USD',
+        actual: true,
+        gate: 'aviasales',
+        distance: this.calculateDistance(params.origin, params.destination),
+        found_at: new Date().toISOString(),
+        seats_available: Math.floor(Math.random() * 10) + 1,
+      }];
+    }
+
+    return [];
+  }
+
+  // ==================== GET CHEAP FLIGHTS ====================
+  async getCheapFlights(origin: string = 'MOW', currency: string = 'USD'): Promise<Flight[]> {
+    try {
+      const searchParams = new URLSearchParams({
+        origin,
+        currency,
+        token: API_TOKEN,
+      });
+
+      const url = `${ENDPOINTS.cheap}?${searchParams.toString()}`;
+      console.log('📡 Calling cheap flights:', url.replace(API_TOKEN, '***'));
+
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'X-Access-Token': API_TOKEN,
+        },
+      });
+
+      if (response.data.data) {
+        return Object.entries(response.data.data)
+          .slice(0, 10)
+          .map(([destination, flightData]: [string, any], index: number) => ({
+            id: `cheap-${origin}-${destination}-${index}`,
+            price: flightData.price || 0,
+            airline: 'Multiple',
+            airline_code: 'XX',
+            flight_number: `CH${1000 + index}`,
+            departure_at: new Date().toISOString().split('T')[0],
+            origin,
+            destination,
+            transfers: 0,
+            duration: this.calculateFlightDuration(origin, destination),
+            link: this.generateBookingLink({
+              origin,
+              destination,
+              depart_date: new Date().toISOString().split('T')[0],
+              currency,
+            }),
+            currency,
+            actual: true,
+            gate: 'aviasales',
+            distance: this.calculateDistance(origin, destination),
+            found_at: new Date().toISOString(),
+            seats_available: Math.floor(Math.random() * 10) + 1,
+          }));
+      }
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching cheap flights:', error.message);
+      return [];
+    }
+  }
+
+  // ==================== HELPER METHODS ====================
+  private calculateFlightDuration(origin: string, destination: string): number {
+    // Approximate flight times between major cities (in minutes)
+    const durations: Record<string, number> = {
+      'MOW-LED': 90,
+      'MOW-AER': 150,
+      'MOW-SIP': 180,
+      'LED-AER': 180,
+      'JFK-LAX': 360,
+      'JFK-LHR': 420,
+      'LAX-CDG': 660,
+      'LHR-DXB': 420,
     };
     
-    const routeKey = `${origin}-${destination}`;
-    return routeMatrix[routeKey] || { basePrice: 399, duration: 300 };
+    const key = `${origin}-${destination}`;
+    return durations[key] || 180 + Math.floor(Math.random() * 240);
   }
 
-  private calculateDuration(origin: string, destination: string): number {
-    const routeInfo = this.getRouteInfo(origin, destination);
-    return routeInfo.duration;
-  }
-
-  private generateStops(transfers: number): string[] {
-    if (transfers === 0) return [];
+  private calculateDistance(origin: string, destination: string): number {
+    // Approximate distances in km
+    const distances: Record<string, number> = {
+      'MOW-LED': 634,
+      'MOW-AER': 1368,
+      'MOW-SIP': 1108,
+      'LED-AER': 2284,
+      'JFK-LAX': 3980,
+      'JFK-LHR': 5560,
+      'LAX-CDG': 9090,
+      'LHR-DXB': 5490,
+    };
     
-    const commonHubs = ['ATL', 'DFW', 'ORD', 'LAX', 'JFK', 'LHR', 'CDG', 'FRA', 'DXB', 'SIN', 'HKG'];
-    const stops: string[] = [];
-    
-    for (let i = 0; i < transfers; i++) {
-      const randomHub = commonHubs[Math.floor(Math.random() * commonHubs.length)];
-      stops.push(randomHub);
-    }
-    
-    return stops;
+    const key = `${origin}-${destination}`;
+    return distances[key] || 1000 + Math.floor(Math.random() * 8000);
   }
 
   private generateBookingLink(params: FlightSearchParams): string {
@@ -434,119 +495,52 @@ class TravelpayoutsApiService {
     return `${baseUrl}/search/${params.origin}${departDate}${params.destination}${returnDate}${passengers}?marker=${MARKER}`;
   }
 
-  // ==================== DEFAULT DATA ====================
-  private getDefaultAirports(): Airport[] {
-    return [
-      { code: 'JFK', name: 'John F Kennedy International', city: 'New York', country: 'USA', lat: 40.6413, lng: -73.7781 },
-      { code: 'LAX', name: 'Los Angeles International', city: 'Los Angeles', country: 'USA', lat: 33.9416, lng: -118.4085 },
-      { code: 'LHR', name: 'Heathrow Airport', city: 'London', country: 'UK', lat: 51.4700, lng: -0.4543 },
-      { code: 'CDG', name: 'Charles de Gaulle', city: 'Paris', country: 'France', lat: 49.0097, lng: 2.5479 },
-      { code: 'DXB', name: 'Dubai International', city: 'Dubai', country: 'UAE', lat: 25.2532, lng: 55.3657 },
-      { code: 'HND', name: 'Haneda Airport', city: 'Tokyo', country: 'Japan', lat: 35.5494, lng: 139.7798 },
-      { code: 'SIN', name: 'Changi Airport', city: 'Singapore', country: 'Singapore', lat: 1.3644, lng: 103.9915 },
-      { code: 'SYD', name: 'Sydney Airport', city: 'Sydney', country: 'Australia', lat: -33.9399, lng: 151.1753 },
-      { code: 'FRA', name: 'Frankfurt Airport', city: 'Frankfurt', country: 'Germany', lat: 50.0379, lng: 8.5622 },
-      { code: 'AMS', name: 'Schiphol Airport', city: 'Amsterdam', country: 'Netherlands', lat: 52.3105, lng: 4.7683 },
-      { code: 'IST', name: 'Istanbul Airport', city: 'Istanbul', country: 'Turkey', lat: 41.2622, lng: 28.7278 },
-      { code: 'PEK', name: 'Beijing Capital', city: 'Beijing', country: 'China', lat: 40.0799, lng: 116.6031 },
-      { code: 'HKG', name: 'Hong Kong International', city: 'Hong Kong', country: 'China', lat: 22.3080, lng: 113.9185 },
-      { code: 'BKK', name: 'Suvarnabhumi Airport', city: 'Bangkok', country: 'Thailand', lat: 13.6811, lng: 100.7475 },
-      { code: 'DEL', name: 'Indira Gandhi International', city: 'Delhi', country: 'India', lat: 28.5562, lng: 77.1000 },
-      { code: 'SFO', name: 'San Francisco International', city: 'San Francisco', country: 'USA', lat: 37.6213, lng: -122.3790 },
-      { code: 'ORD', name: "O'Hare International", city: 'Chicago', country: 'USA', lat: 41.9742, lng: -87.9073 },
-      { code: 'ATL', name: 'Hartsfield-Jackson Atlanta', city: 'Atlanta', country: 'USA', lat: 33.6407, lng: -84.4277 },
-      { code: 'DFW', name: 'Dallas/Fort Worth International', city: 'Dallas', country: 'USA', lat: 32.8998, lng: -97.0403 },
-      { code: 'MIA', name: 'Miami International', city: 'Miami', country: 'USA', lat: 25.7959, lng: -80.2870 },
-    ];
+  // ==================== PUBLIC METHODS ====================
+  async getAirportOptions() {
+    const airports = await this.getAirports();
+    return airports.map(airport => ({
+      value: airport.code,
+      label: `${airport.city ? airport.city + ' - ' : ''}${airport.name} (${airport.code})`,
+      city: airport.city,
+      country: airport.country,
+      code: airport.code,
+    }));
   }
 
-  private getDefaultAirlines() {
-    return [
-      { code: 'AA', name: 'American Airlines', logo: 'AA' },
-      { code: 'DL', name: 'Delta Air Lines', logo: 'DL' },
-      { code: 'UA', name: 'United Airlines', logo: 'UA' },
-      { code: 'BA', name: 'British Airways', logo: 'BA' },
-      { code: 'LH', name: 'Lufthansa', logo: 'LH' },
-      { code: 'AF', name: 'Air France', logo: 'AF' },
-      { code: 'EK', name: 'Emirates', logo: 'EK' },
-      { code: 'SQ', name: 'Singapore Airlines', logo: 'SQ' },
-      { code: 'QF', name: 'Qantas', logo: 'QF' },
-      { code: 'JL', name: 'Japan Airlines', logo: 'JL' },
-      { code: 'CX', name: 'Cathay Pacific', logo: 'CX' },
-      { code: 'TK', name: 'Turkish Airlines', logo: 'TK' },
-      { code: 'KL', name: 'KLM', logo: 'KL' },
-      { code: 'EY', name: 'Etihad Airways', logo: 'EY' },
-      { code: 'QR', name: 'Qatar Airways', logo: 'QR' },
-    ];
+  async searchAirports(query: string) {
+    const airports = await this.getAirports();
+    if (!query.trim()) {
+      return airports.slice(0, 50);
+    }
+    
+    const searchTerm = query.toLowerCase().trim();
+    return airports
+      .filter(airport =>
+        airport.code.toLowerCase().includes(searchTerm) ||
+        airport.city.toLowerCase().includes(searchTerm) ||
+        airport.name.toLowerCase().includes(searchTerm) ||
+        airport.country.toLowerCase().includes(searchTerm)
+      )
+      .slice(0, 50);
   }
 
-  // ==================== API TEST ====================
-  async testApiConnection(): Promise<{
-    connected: boolean;
-    message: string;
-    airports: number;
-    airlines: number;
-    flightApi: boolean;
-  }> {
+  async getAirlines() {
     try {
-      // Test airports endpoint (should always work)
-      const airportsResponse = await axios.get(ENDPOINTS.airports, {
-        timeout: 5000,
-      });
-      const airportsCount = Array.isArray(airportsResponse.data) ? airportsResponse.data.length : 0;
-
-      // Test airlines endpoint
-      let airlinesCount = 0;
-      try {
-        const airlinesResponse = await axios.get(ENDPOINTS.airlines, {
-          timeout: 5000,
-        });
-        airlinesCount = Array.isArray(airlinesResponse.data) ? airlinesResponse.data.length : 0;
-      } catch (airlinesError) {
-        console.log('Airlines API test failed, using cache');
-      }
-
-      // Test flight API endpoint
-      let flightApiWorks = false;
-      try {
-        const testParams = new URLSearchParams({
-          origin: 'JFK',
-          destination: 'LAX',
-          token: API_TOKEN,
-          currency: 'USD',
-          limit: '1',
-        });
-
-        await axios.get(`${ENDPOINTS.flightPrices}?${testParams.toString()}`, {
-          headers: {
-            'X-Access-Token': API_TOKEN,
-          },
-          timeout: 5000,
-        });
-        flightApiWorks = true;
-      } catch (flightError: any) {
-        flightApiWorks = false;
-      }
-
-      return {
-        connected: airportsCount > 0,
-        message: flightApiWorks 
-          ? '✅ All APIs connected successfully!'
-          : airportsCount > 0
-          ? '⚠️ Airport data available, flight search may use mock data'
-          : '❌ Connection issues detected',
-        airports: airportsCount,
-        airlines: airlinesCount,
-        flightApi: flightApiWorks,
-      };
+      const response = await axios.get(ENDPOINTS.airlines, { timeout: 5000 });
+      return response.data || [];
     } catch (error: any) {
-      return {
-        connected: false,
-        message: `❌ Connection failed: ${error.message}`,
-        airports: 0,
-        airlines: 0,
-        flightApi: false,
-      };
+      console.error('Error fetching airlines:', error.message);
+      return [];
+    }
+  }
+
+  async getCities() {
+    try {
+      const response = await axios.get(ENDPOINTS.cities, { timeout: 5000 });
+      return response.data || [];
+    } catch (error: any) {
+      console.error('Error fetching cities:', error.message);
+      return [];
     }
   }
 }
@@ -556,3 +550,5 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams };
+
+    

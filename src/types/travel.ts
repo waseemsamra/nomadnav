@@ -1,4 +1,5 @@
 
+
 export interface Airline {
   code: string;
   name: string;
@@ -50,3 +51,5 @@ export interface FilterState {
   departureTime: [number, number];
   arrivalTime: [number, number];
 }
+
+    

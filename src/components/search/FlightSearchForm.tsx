@@ -32,12 +32,6 @@ const FlightSearchForm: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [airportOptions, setAirportOptions] = useState<AirportOption[]>([]);
-  const [apiStatus, setApiStatus] = useState<{
-    connected: boolean;
-    message: string;
-    airports: number;
-    flightApi: boolean;
-  } | null>(null);
 
   const [formData, setFormData] = useState({
     origin: '',
@@ -65,23 +59,9 @@ const FlightSearchForm: React.FC = () => {
         country: opt.country,
       }));
       setAirportOptions(simplified);
-
-      // Check API status
-      const status = await travelpayoutsApi.testApiConnection();
-      setApiStatus(status);
-
-      if (!status.flightApi) {
-        toast(
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-600" />
-            <span>Flight API temporarily unavailable. Showing realistic demo data.</span>
-          </div>,
-          { duration: 6000 }
-        );
-      }
     } catch (error) {
       console.error('Initialization error:', error);
-      toast.error('Failed to initialize search');
+      toast.error('Failed to load airport options');
     }
   };
 
@@ -120,23 +100,11 @@ const FlightSearchForm: React.FC = () => {
         searchParams.append('return_date', formData.returnDate);
       }
 
-      // Show info about data source
-      if (!apiStatus?.flightApi) {
-        toast(
-          <div className="flex items-center gap-2">
-            <Database className="w-5 h-5 text-blue-600" />
-            <span>Showing realistic flight data. Real API will be used when available.</span>
-          </div>,
-          { duration: 4000 }
-        );
-      }
-
       router.push(`/flights/search?${searchParams.toString()}`);
       
     } catch (error) {
       console.error('Search error:', error);
       toast.error('Failed to process search');
-    } finally {
       setLoading(false);
     }
   };
@@ -158,42 +126,6 @@ const FlightSearchForm: React.FC = () => {
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl p-6">
-      {/* API Status Bar */}
-      {apiStatus && (
-        <div className={`mb-6 p-4 rounded-lg border flex items-start gap-3 ${
-          apiStatus.connected 
-            ? apiStatus.flightApi
-              ? 'bg-green-50 border-green-200'
-              : 'bg-blue-50 border-blue-200'
-            : 'bg-yellow-50 border-yellow-200'
-        }`}>
-          <div className="mt-0.5">
-            {apiStatus.connected ? (
-              apiStatus.flightApi ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <Database className="w-5 h-5 text-blue-600" />
-              )
-            ) : (
-              <AlertTriangle className="w-5 h-5 text-yellow-600" />
-            )}
-          </div>
-          <div className="flex-1">
-            <div className="font-medium">
-              {apiStatus.flightApi ? 'Real-time Flight Data' : 'Realistic Demo Data'}
-            </div>
-            <div className="text-sm opacity-80 mt-1">
-              {apiStatus.message}
-            </div>
-            <div className="text-xs opacity-60 mt-2 flex items-center gap-4">
-              <span>✈️ {apiStatus.airports} airports</span>
-              <span>•</span>
-              <span>{apiStatus.flightApi ? 'Live API' : 'Enhanced Mock Data'}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Find Your Flight</h2>
         <p className="text-gray-600 mt-2">Search thousands of flight options worldwide</p>
@@ -422,7 +354,7 @@ const FlightSearchForm: React.FC = () => {
             ) : (
               <>
                 <Search className="w-5 h-5 mr-2" />
-                {apiStatus?.flightApi ? 'Search Real Flights' : 'Search Flight Options'}
+                Search Flights
               </>
             )}
           </div>
@@ -442,9 +374,6 @@ const FlightSearchForm: React.FC = () => {
               <div>Best Price Guarantee</div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                {apiStatus?.flightApi ? 'Live Data' : 'Demo Mode'}
-              </span>
               <span className="text-xs">Powered by Travelpayouts</span>
             </div>
           </div>
@@ -455,3 +384,5 @@ const FlightSearchForm: React.FC = () => {
 };
 
 export default FlightSearchForm;
+
+    

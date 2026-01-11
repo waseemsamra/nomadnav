@@ -58,14 +58,6 @@ function SearchResultsContent() {
       setError(null);
 
       try {
-        console.log('Fetching flights with:', {
-          origin,
-          destination,
-          depart_date,
-          return_date: return_date || undefined,
-          passengers: parseInt(passengers),
-        });
-
         const flightData = await travelpayoutsApi.searchFlights({
           origin,
           destination,
@@ -80,25 +72,15 @@ function SearchResultsContent() {
         setFlights(flightData);
         
         if (flightData.length === 0) {
-          toast('No flights found. Try different dates or airports.');
+          toast('No flights found for this route.');
         } else {
           toast.success(`Found ${flightData.length} flights`);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
-        setError(error.message || 'Failed to load flights');
-        toast.error('Failed to load flights. Showing mock data.');
-        
-        const mockFlights = await travelpayoutsApi.searchFlights({
-          origin,
-          destination,
-          depart_date,
-          return_date: return_date || undefined,
-          passengers: parseInt(passengers),
-          currency: 'USD',
-          limit: 20,
-        });
-        setFlights(mockFlights);
+        setError(error.message || 'Failed to load flights. The API might be down or your token may be invalid.');
+        toast.error(error.message || 'Failed to load flights.');
+        setFlights([]);
       } finally {
         setLoading(false);
       }
@@ -202,12 +184,12 @@ function SearchResultsContent() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {error && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center">
-              <Shield className="w-5 h-5 text-yellow-500 mr-2" />
+              <Shield className="w-5 h-5 text-red-500 mr-2" />
               <div>
-                <p className="text-yellow-700 font-medium">Showing demo data</p>
-                <p className="text-yellow-600 text-sm">API Error: {error}</p>
+                <p className="text-red-700 font-medium">Flight Search Failed</p>
+                <p className="text-red-600 text-sm">{error}</p>
               </div>
             </div>
           </div>
@@ -324,14 +306,14 @@ function SearchResultsContent() {
               </p>
             </div>
 
-            {filteredFlights.length === 0 ? (
+            {filteredFlights.length === 0 && !error ? (
               <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No flights match your filters
+                  No flights match your search
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Try adjusting your filters or search criteria
+                  Try adjusting your filters or search for a different route.
                 </p>
                 <Button onClick={() => setFilters({ maxPrice: 2000, maxStops: 2, sortBy: 'price' })}>
                   Reset Filters
@@ -482,3 +464,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
