@@ -51,6 +51,35 @@ export default function ApiTestPage() {
     testConnection(); // Auto-test on page load
   }, []);
 
+  // Client-side test for OTAs
+  useEffect(() => {
+    async function testOtaEndpoint() {
+        try {
+            const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
+            if (response.ok) {
+                setApiStatus(prevStatus => {
+                    if (!prevStatus) return null;
+                    const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
+                    const workingEndpoints = Object.values(updatedEndpoints).filter(v => v).length;
+                    const totalEndpoints = Object.values(updatedEndpoints).length;
+                    return {
+                        ...prevStatus,
+                        endpoints: updatedEndpoints,
+                        message: `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
+                    };
+                });
+            }
+        } catch (error) {
+            console.error('OTA endpoint test failed:', error);
+        }
+    }
+    
+    if (apiStatus) {
+        testOtaEndpoint();
+    }
+  }, [apiStatus?.success]);
+
+
   const testConnection = async () => {
     setTesting(true);
     setApiStatus(null);

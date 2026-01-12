@@ -67,8 +67,7 @@ const ENDPOINTS = {
   airports: 'https://api.travelpayouts.com/data/en/airports.json',
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
   countries: 'https://api.travelpayouts.com/data/en/countries.json',
-  // Use internal proxy for gates
-  gates: '/api/gates',
+  gates: 'https://api.travelpayouts.com/data/en/gates.json',
   planes: 'https://api.travelpayouts.com/data/en/planes.json',
   routes: 'https://api.travelpayouts.com/data/en/routes.json',
   alliances: 'https://api.travelpayouts.com/data/en/alliances.json',
@@ -101,7 +100,7 @@ class TravelpayoutsApiService {
       airlines: boolean;
       cities: boolean;
       flights: boolean;
-      otas: boolean;
+      otas: boolean; // This will be handled client-side
       countries: boolean;
       planes: boolean;
       routes: boolean;
@@ -114,7 +113,7 @@ class TravelpayoutsApiService {
       airlines: false,
       cities: false,
       flights: false,
-      otas: false,
+      otas: false, // Default to false, will be tested on client
       countries: false,
       planes: false,
       routes: false,
@@ -124,7 +123,6 @@ class TravelpayoutsApiService {
     const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
       try {
         const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
-        // A successful request (200 OK) is considered a success.
         results[endpoint] = response.status === 200;
       } catch (error) {
         console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
@@ -137,14 +135,12 @@ class TravelpayoutsApiService {
         checkEndpoint('airports', ENDPOINTS.airports),
         checkEndpoint('airlines', ENDPOINTS.airlines),
         checkEndpoint('cities', ENDPOINTS.cities),
-        checkEndpoint('otas', ENDPOINTS.gates),
         checkEndpoint('countries', ENDPOINTS.countries),
         checkEndpoint('planes', ENDPOINTS.planes),
         checkEndpoint('routes', ENDPOINTS.routes),
         checkEndpoint('alliances', ENDPOINTS.alliances),
       ]);
 
-      // Test flight endpoint via proxy
       if (API_TOKEN) {
         try {
             const flightParams: FlightSearchParams = {
@@ -201,7 +197,6 @@ class TravelpayoutsApiService {
       
       const response = await axios.get(ENDPOINTS.flightSearch, { params: searchParams });
       
-      // The proxy now returns the correct flight structure
       return response.data;
 
     } catch (error: any) {
@@ -366,20 +361,6 @@ class TravelpayoutsApiService {
       return [];
     }
   }
-  
-  async getGates(): Promise<Gate[]> {
-    try {
-      const response = await axios.get(ENDPOINTS.gates, {
-        headers: { 'Accept-Encoding': 'gzip,deflate,compress' },
-        timeout: 5000,
-      });
-      return response.data || [];
-    } catch (error: any) {
-      console.error('Error fetching gates:', error.message);
-      throw error;
-    }
-  }
-
 
   async getCities() {
     try {

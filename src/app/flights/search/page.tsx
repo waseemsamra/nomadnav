@@ -74,12 +74,24 @@ function SearchResultsContent() {
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
 
-  // Fetch OTAs on client side
+  // Fetch OTAs on client side - this is the reliable way
   useEffect(() => {
-    travelpayoutsApi.getGates().then(setAllOtas).catch(err => {
-      console.error("Failed to fetch OTAs on client:", err);
-      toast.error("Could not load travel agency data.");
-    });
+    async function fetchOtas() {
+        try {
+            const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
+            if (response.ok) {
+                const data = await response.json();
+                setAllOtas(data);
+            } else {
+                console.error("Failed to fetch OTAs from client:", response.statusText);
+                toast.error("Could not load travel agency data.");
+            }
+        } catch (err) {
+            console.error("Error fetching OTAs on client:", err);
+            toast.error("Could not load travel agency data.");
+        }
+    }
+    fetchOtas();
   }, []);
 
   // Fetch flights 
