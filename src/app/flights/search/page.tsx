@@ -60,6 +60,9 @@ function SearchResultsContent() {
 
   const [departureTimeRange, setDepartureTimeRange] = useState({ min: 0, max: 1440 });
   const [selectedDepartureTime, setSelectedDepartureTime] = useState([0, 1440]);
+  
+  const [otaOptions, setOtaOptions] = useState<{ id: string; name: string; price: number; }[]>([]);
+  const [selectedOtas, setSelectedOtas] = useState<string[]>([]);
 
 
   // Extract search parameters
@@ -72,7 +75,7 @@ function SearchResultsContent() {
 
   // Fetch flights
   useEffect(() => {
-    const fetchFlights = async () => {
+    const fetchFlightsAndOtas = async () => {
       if (!origin || !destination || !depart_date) {
         router.push('/');
         return;
@@ -81,15 +84,18 @@ function SearchResultsContent() {
       setLoading(true);
 
       try {
-        const flightData = await travelpayoutsApi.searchFlights({
-          origin,
-          destination,
-          depart_date,
-          return_date: return_date || undefined,
-          passengers: parseInt(passengers),
-          currency: 'USD',
-          limit: 50, // Increased limit
-        });
+        const [flightData, otaData] = await Promise.all([
+          travelpayoutsApi.searchFlights({
+            origin,
+            destination,
+            depart_date,
+            return_date: return_date || undefined,
+            passengers: parseInt(passengers),
+            currency: 'USD',
+            limit: 50,
+          }),
+          travelpayoutsApi.getGates()
+        ]);
         
         console.log('Fetched flights:', flightData.length);
         setFlights(flightData);
@@ -109,7 +115,25 @@ function SearchResultsContent() {
           const maxDuration = durations.length > 0 ? Math.max(...durations) : 1440;
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
-          
+
+          const gatePrices: { [key: string]: number } = {};
+          flightData.forEach(flight => {
+            if (!gatePrices[flight.gate] || flight.price < gatePrices[flight.gate]) {
+              gatePrices[flight.gate] = flight.price;
+            }
+          });
+
+          const otaInfo = otaData
+            .filter(ota => gatePrices[ota.code])
+            .map(ota => ({
+              id: ota.code,
+              name: ota.name,
+              price: Math.round(gatePrices[ota.code])
+            }))
+            .sort((a, b) => a.price - b.price);
+            
+          setOtaOptions(otaInfo);
+          setSelectedOtas(otaInfo.map(ota => ota.id));
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -120,7 +144,7 @@ function SearchResultsContent() {
       }
     };
 
-    fetchFlights();
+    fetchFlightsAndOtas();
   }, [origin, destination, depart_date, return_date, passengers, router]);
   
   // This effect now correctly depends on flights and baggageFilter
@@ -173,6 +197,19 @@ function SearchResultsContent() {
       const allStops = stopOptions.map(opt => opt.value);
       setSelectedStops(checked ? allStops : []);
   }
+  
+  const handleOtaSelection = (otaId: string) => {
+    setSelectedOtas(prev => 
+      prev.includes(otaId)
+        ? prev.filter(id => id !== otaId)
+        : [...prev, otaId]
+    );
+  };
+
+  const handleSelectAllOtas = (checked: boolean) => {
+    setSelectedOtas(checked ? otaOptions.map(ota => ota.id) : []);
+  };
+
 
   const handleResetFilters = () => {
     setFilters(initialFilterState);
@@ -183,6 +220,7 @@ function SearchResultsContent() {
     setSelectedDuration([durationRange.min, durationRange.max]);
     setSelectedPrice([priceRange.min, priceRange.max]);
     setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
+    setSelectedOtas(otaOptions.map(ota => ota.id));
   };
 
   const formatDuration = (minutes: number) => {
@@ -255,8 +293,9 @@ function SearchResultsContent() {
         selectedDuration,
         selectedPrice,
         selectedDepartureTime,
+        selectedOtas,
     });
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
   
   const flightGroups = useMemo(() => {
     const groups: { [key: string]: Flight[] } = {};
@@ -309,18 +348,6 @@ function SearchResultsContent() {
         </AccordionContent>
       </AccordionItem>
     );
-    
-    const exampleOTAs = [
-      { id: 'MYTR', name: 'Mytrip.com', price: 163 },
-      { id: 'CITY', name: 'City.Travel', price: 164 },
-      { id: 'WING', name: 'Wingie', price: 170 },
-      { id: 'TRIP', name: 'Trip.com', price: 163 },
-      { id: 'TIKT', name: 'Tiket.com', price: 172 },
-      { id: 'FD', name: 'Flydubai', price: 180 },
-      { id: 'QR', name: 'Qatar Airways', price: 210 },
-      { id: 'PZTR', name: 'Pobeda', price: 155 },
-    ];
-
 
     return (
       <Card className="lg:sticky lg:top-24">
@@ -503,25 +530,33 @@ function SearchResultsContent() {
                      <p className="p-2 text-sm text-muted-foreground">Airport filter is not available.</p>
                   </FilterSection>
 
-                  <FilterSection title="Online travel agencies">
+                  <FilterSection title="Online travel agencies" disabled={otaOptions.length === 0}>
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                              <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
-                                    <Checkbox id="select-all-otas" defaultChecked />
+                                    <Checkbox 
+                                      id="select-all-otas" 
+                                      checked={selectedOtas.length === otaOptions.length}
+                                      onCheckedChange={(checked) => handleSelectAllOtas(!!checked)}
+                                    />
                                     <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
                                 </div>
                             </div>
-                            {exampleOTAs.map(ota => (
+                            {otaOptions.map(ota => (
                                <div key={ota.id} className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2">
-                                      <Checkbox id={`ota-${ota.id}`} defaultChecked/>
+                                      <Checkbox 
+                                        id={`ota-${ota.id}`} 
+                                        checked={selectedOtas.includes(ota.id)}
+                                        onCheckedChange={() => handleOtaSelection(ota.id)}
+                                      />
                                       <Label htmlFor={`ota-${ota.id}`}>{ota.name}</Label>
                                   </div>
                                   <span className="text-sm text-muted-foreground">${ota.price}</span>
                               </div>
                             ))}
                         </div>
-                        <p className="p-2 text-xs text-muted-foreground">OTA filtering is not yet available.</p>
+                        <p className="p-2 text-xs text-muted-foreground">OTA filtering is now live.</p>
                   </FilterSection>
               </Accordion>
           </CardContent>

@@ -13,6 +13,13 @@ export interface Airport {
   flightable: boolean;
 }
 
+export interface Gate {
+  code: string;
+  name: string;
+  main_url: string;
+}
+
+
 export interface BaggageInfo {
     price: number;
     has_baggage: boolean;
@@ -167,7 +174,7 @@ class TravelpayoutsApiService {
         destination: params.destination,
         depart_date: params.depart_date,
         currency: params.currency || 'USD',
-        limit: (params.limit || 30).toString(),
+        limit: (params.limit || 50).toString(),
       });
 
       if (params.return_date) {
@@ -176,12 +183,8 @@ class TravelpayoutsApiService {
       
       const response = await axios.get(ENDPOINTS.flightSearch, { params: searchParams });
       
-      // Mock OTA data
-      const mockOtas = ['Trip.com', 'Kiwi.com', 'Mytrip.com'];
-      return response.data.map((flight: Flight, index: number) => ({
-          ...flight,
-          gate: mockOtas[index % mockOtas.length]
-      }));
+      // The proxy now returns the correct flight structure
+      return response.data;
 
     } catch (error: any) {
       console.error('API call failed, returning empty result:', error.response?.data || error.message);
@@ -216,7 +219,8 @@ class TravelpayoutsApiService {
         baggageFilter,
         selectedDuration,
         selectedPrice,
-        selectedDepartureTime
+        selectedDepartureTime,
+        selectedOtas,
     }: {
         flights: Flight[],
         filters: { sortBy: 'price' | 'duration' | 'departure' },
@@ -225,11 +229,13 @@ class TravelpayoutsApiService {
         baggageFilter: 'all' | 'without' | 'with',
         selectedDuration: number[],
         selectedPrice: number[],
-        selectedDepartureTime: number[]
+        selectedDepartureTime: number[],
+        selectedOtas: string[],
     }): Flight[] {
         let filtered = [...flights]
             .filter(flight => selectedAirlines.includes(flight.airline))
             .filter(flight => selectedStops.includes(flight.transfers))
+            .filter(flight => selectedOtas.includes(flight.gate))
             .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
             .filter(flight => {
                 const price = this.getFlightDisplayPrice(flight, baggageFilter);
@@ -342,6 +348,17 @@ class TravelpayoutsApiService {
       return [];
     }
   }
+  
+  async getGates(): Promise<Gate[]> {
+    try {
+      const response = await axios.get(ENDPOINTS.gates, { timeout: 5000 });
+      return response.data || [];
+    } catch (error: any) {
+      console.error('Error fetching gates:', error.message);
+      return [];
+    }
+  }
+
 
   async getCities() {
     try {
