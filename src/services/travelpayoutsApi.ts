@@ -123,9 +123,11 @@ class TravelpayoutsApiService {
     const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
       try {
         const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
-        // A successful response (200 OK) is enough to consider the endpoint working.
-        // Some endpoints like alliances might return an empty array.
-        results[endpoint] = response.status === 200 && response.data !== null;
+        if (endpoint === 'otas') {
+          results[endpoint] = response.status === 200 && Array.isArray(response.data) && response.data.length > 0;
+        } else {
+          results[endpoint] = response.status === 200 && response.data !== null;
+        }
       } catch (error) {
         console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
         results[endpoint] = false;
