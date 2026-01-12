@@ -94,27 +94,24 @@ function SearchResultsContent() {
         console.log('Fetched flights:', flightData.length);
         setFlights(flightData);
 
-        const uniqueAirlines = [...new Set(flightData.map(f => f.airline))].sort();
-        setAvailableAirlines(uniqueAirlines);
-        setSelectedAirlines(uniqueAirlines);
-        
-        const uniqueStops = [...new Set(flightData.map(f => f.transfers))];
-        setSelectedStops(uniqueStops);
-
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
+
+          const uniqueAirlines = [...new Set(flightData.map(f => f.airline))].sort();
+          setAvailableAirlines(uniqueAirlines);
+          setSelectedAirlines(uniqueAirlines);
           
+          const uniqueStops = [...new Set(flightData.map(f => f.transfers))];
+          setSelectedStops(uniqueStops);
+
           const durations = flightData.map(f => f.duration).filter(d => d > 0);
-          const minDuration = Math.min(...durations);
-          const maxDuration = Math.max(...durations);
+          const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
+          const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
 
-          const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
-          const minPrice = Math.min(...prices);
-          const maxPrice = Math.max(...prices);
-          setPriceRange({ min: minPrice, max: maxPrice });
-          setSelectedPrice([minPrice, maxPrice]);
+          // This needs to be calculated *after* setting flights,
+          // so we calculate it again in the next useEffect hook
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -127,6 +124,16 @@ function SearchResultsContent() {
 
     fetchFlights();
   }, [origin, destination, depart_date, return_date, passengers, router]);
+  
+  useEffect(() => {
+    if (flights.length > 0) {
+      const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+      setPriceRange({ min: minPrice, max: maxPrice });
+      setSelectedPrice([minPrice, maxPrice]);
+    }
+  }, [flights, baggageFilter]);
 
 
   const handleBookFlight = (flight: Flight) => {
@@ -476,7 +483,7 @@ function SearchResultsContent() {
                               <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
                           </div>
                           {availableAirlines.map((airline, index) => (
-                               <div key={index} className="flex items-center space-x-2">
+                               <div key={`${airline}-${index}`} className="flex items-center space-x-2">
                                   <Checkbox
                                       id={`airline-${airline}`}
                                       checked={selectedAirlines.includes(airline)}
@@ -681,3 +688,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
