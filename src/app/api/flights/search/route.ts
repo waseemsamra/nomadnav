@@ -84,14 +84,14 @@ export async function GET(req: NextRequest) {
                 price: flight.price,
                 airline: airlines[flight.airline] || flight.airline,
                 airline_code: flight.airline,
-                flight_number: `TP${1000 + index}`,
+                flight_number: flight.flight_number || `TP${1000 + index}`,
                 departure_at: flight.departure_at,
                 return_at: flight.return_at,
                 origin: flight.origin,
                 destination: flight.destination,
                 transfers: flight.number_of_changes,
                 duration: flight.duration,
-                link: flight.link,
+                link: `https://www.travelpayouts.com${flight.link}`,
                 currency: apiParams.get('currency'),
             }));
             return NextResponse.json(flightsWithDetails);
