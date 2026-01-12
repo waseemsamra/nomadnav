@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { type Flight } from '@/services/travelpayoutsApi';
-import { format, parseISO, add } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Briefcase, ChevronDown, ChevronUp, XIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '../ui/badge';
@@ -67,17 +67,13 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
     }, [allOffers, actualBaggagePref]);
 
     const arrivalTime = useMemo(() => {
-        const departureDate = parseISO(cheapestOffer.departure_at);
-        // For one-way, if return_at exists, it's the arrival time. Otherwise calculate.
-        if (!cheapestOffer.return_at || cheapestOffer.return_at === cheapestOffer.departure_at) {
-            return add(departureDate, { minutes: cheapestOffer.duration });
-        }
-        // For round-trip, return_at is for the return flight. So calculate arrival for the outbound.
-        if(cheapestOffer.return_at && cheapestOffer.return_at !== cheapestOffer.departure_at && otherOffers.length === 0){
+        // For one-way, return_at is the arrival time. For round-trip, it's the return flight's departure.
+        // The API logic seems to populate return_at with arrival for one-way from prices_for_dates
+        if (cheapestOffer.return_at) {
              return parseISO(cheapestOffer.return_at);
         }
-        return add(departureDate, { minutes: cheapestOffer.duration });
-
+        // Fallback for other endpoints that might not have return_at for one-way
+        return new Date(new Date(cheapestOffer.departure_at).getTime() + cheapestOffer.duration * 60000);
     }, [cheapestOffer.departure_at, cheapestOffer.duration, cheapestOffer.return_at]);
 
     const sortedOtherOffers = useMemo(() => {
@@ -218,5 +214,3 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
 };
 
 export default FlightCard;
-
-    
