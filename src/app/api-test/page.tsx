@@ -13,6 +13,10 @@ import {
   Cloud,
   Database,
   ExternalLink,
+  Globe,
+  Users,
+  Paperclip,
+  Book,
 } from 'lucide-react';
 import { travelpayoutsApi, type Flight } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -23,9 +27,14 @@ type ApiStatus = {
   endpoints: {
     airports: boolean;
     airlines: boolean;
+
     cities: boolean;
     flights: boolean;
     otas: boolean;
+    countries: boolean;
+    planes: boolean;
+    routes: boolean;
+    alliances: boolean;
   };
   tokenValid: boolean;
 } | null;
@@ -54,7 +63,7 @@ export default function ApiTestPage() {
       setApiStatus({
         success: false,
         message: 'Test failed: ' + error.message,
-        endpoints: { airports: false, airlines: false, cities: false, flights: false, otas: false },
+        endpoints: { airports: false, airlines: false, cities: false, flights: false, otas: false, countries: false, planes: false, routes: false, alliances: false },
         tokenValid: false,
       });
     } finally {
@@ -84,6 +93,13 @@ export default function ApiTestPage() {
 
   const StatusIcon = ({ status }: { status: boolean }) => 
     status ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />;
+
+  const EndpointStatus = ({ name, icon, status }: { name: string, icon: React.ReactNode, status: boolean }) => (
+    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+      <span className="flex items-center gap-2 capitalize"><div className="w-4 h-4 text-gray-500">{icon}</div>{name}</span>
+      <StatusIcon status={status} />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -147,32 +163,21 @@ export default function ApiTestPage() {
                 </h3>
                 {testing ? (
                   <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
+                    {[...Array(9)].map((_, i) => (
                       <div key={i} className="bg-gray-100 rounded-lg p-3 animate-pulse h-10" />
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Airports</span>
-                      <StatusIcon status={apiStatus?.endpoints.airports || false} />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Airlines</span>
-                      <StatusIcon status={apiStatus?.endpoints.airlines || false} />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Cities</span>
-                      <StatusIcon status={apiStatus?.endpoints.cities || false} />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>OTAs</span>
-                      <StatusIcon status={apiStatus?.endpoints.otas || false} />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="flex items-center gap-2"><Plane className="w-4 h-4 text-gray-500"/>Flights</span>
-                      <StatusIcon status={apiStatus?.endpoints.flights || false} />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <EndpointStatus name="Flights" icon={<Plane />} status={apiStatus?.endpoints.flights || false} />
+                    <EndpointStatus name="OTAs" icon={<Users />} status={apiStatus?.endpoints.otas || false} />
+                    <EndpointStatus name="Airports" icon={<Database />} status={apiStatus?.endpoints.airports || false} />
+                    <EndpointStatus name="Airlines" icon={<Database />} status={apiStatus?.endpoints.airlines || false} />
+                    <EndpointStatus name="Cities" icon={<Database />} status={apiStatus?.endpoints.cities || false} />
+                    <EndpointStatus name="Countries" icon={<Globe />} status={apiStatus?.endpoints.countries || false} />
+                    <EndpointStatus name="Planes" icon={<Paperclip />} status={apiStatus?.endpoints.planes || false} />
+                    <EndpointStatus name="Routes" icon={<Paperclip />} status={apiStatus?.endpoints.routes || false} />
+                    <EndpointStatus name="Alliances" icon={<Book />} status={apiStatus?.endpoints.alliances || false} />
                   </div>
                 )}
               </div>

@@ -68,6 +68,9 @@ const ENDPOINTS = {
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
   countries: 'https://api.travelpayouts.com/data/en/countries.json',
   gates: 'https://api.travelpayouts.com/data/en/gates.json',
+  planes: 'https://api.travelpayouts.com/data/en/planes.json',
+  routes: 'https://api.travelpayouts.com/data/en/routes.json',
+  alliances: 'https://api.travelpayouts.com/data/en/alliances.json',
   
   // Internal proxy for flight search
   flightSearch: '/api/flights/search'
@@ -98,6 +101,10 @@ class TravelpayoutsApiService {
       cities: boolean;
       flights: boolean;
       otas: boolean;
+      countries: boolean;
+      planes: boolean;
+      routes: boolean;
+      alliances: boolean;
     };
     tokenValid: boolean;
   }> {
@@ -107,24 +114,33 @@ class TravelpayoutsApiService {
       cities: false,
       flights: false,
       otas: false,
+      countries: false,
+      planes: false,
+      routes: false,
+      alliances: false,
+    };
+
+    const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
+      try {
+        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
+        results[endpoint] = Array.isArray(response.data) && response.data.length > 0;
+      } catch (error) {
+        console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
+        results[endpoint] = false;
+      }
     };
 
     try {
-      // Test airports endpoint
-      const airportsRes = await axios.get(ENDPOINTS.airports, { timeout: 5000 });
-      results.airports = Array.isArray(airportsRes.data) && airportsRes.data.length > 0;
-
-      // Test airlines endpoint
-      const airlinesRes = await axios.get(ENDPOINTS.airlines, { timeout: 5000 });
-      results.airlines = Array.isArray(airlinesRes.data) && airlinesRes.data.length > 0;
-
-      // Test cities endpoint
-      const citiesRes = await axios.get(ENDPOINTS.cities, { timeout: 5000 });
-      results.cities = Array.isArray(citiesRes.data) && citiesRes.data.length > 0;
-
-      // Test OTAs endpoint
-      const otasRes = await axios.get(ENDPOINTS.gates, { timeout: 5000 });
-      results.otas = Array.isArray(otasRes.data) && otasRes.data.length > 0;
+      await Promise.all([
+        checkEndpoint('airports', ENDPOINTS.airports),
+        checkEndpoint('airlines', ENDPOINTS.airlines),
+        checkEndpoint('cities', ENDPOINTS.cities),
+        checkEndpoint('otas', ENDPOINTS.gates),
+        checkEndpoint('countries', ENDPOINTS.countries),
+        checkEndpoint('planes', ENDPOINTS.planes),
+        checkEndpoint('routes', ENDPOINTS.routes),
+        checkEndpoint('alliances', ENDPOINTS.alliances),
+      ]);
 
       // Test flight endpoint via proxy
       if (API_TOKEN) {
