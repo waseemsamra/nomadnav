@@ -128,37 +128,6 @@ export async function GET(req: NextRequest) {
             });
             return NextResponse.json(flightsWithDetails);
         } else {
-            console.warn('API returned no data, trying without date filter...', apiResponse.data);
-            // Fallback: try again without date filter
-            delete apiParams.depart_date;
-            delete apiParams.return_date;
-            
-            const fallbackUrl = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
-            const fallbackResponse = await axios.get(fallbackUrl, { timeout: 15000 });
-            
-            if(fallbackResponse.data && fallbackResponse.data.success && fallbackResponse.data.data.length > 0) {
-                 const flightsWithDetails = fallbackResponse.data.data.map((flight: any, index: number) => {
-                    const enrichedFlight = {
-                        id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.value}-${flight.gate}-${index}`,
-                        price: flight.value,
-                        airline: airlines[flight.airline] || flight.airline,
-                        airline_code: flight.airline,
-                        flight_number: flight.flight_number || `TP${1000 + index}`,
-                        departure_at: flight.departure_at,
-                        return_at: flight.return_at,
-                        origin: flight.origin,
-                        destination: flight.destination,
-                        transfers: flight.number_of_changes,
-                        duration: flight.duration,
-                        link: `https://www.travelpayouts.com${flight.link}`,
-                        currency: apiParams.currency,
-                        gate: flight.gate,
-                    };
-                    return addEstimatedBaggagePrices(enrichedFlight);
-                });
-                return NextResponse.json(flightsWithDetails);
-            }
-
             return NextResponse.json([]);
         }
 
