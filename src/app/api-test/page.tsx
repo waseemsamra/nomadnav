@@ -99,6 +99,12 @@ export default function ApiTestPage() {
       setFlightLoading(false);
     }
   };
+  
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
 
   const StatusIcon = ({ status }: { status: boolean }) => 
     status ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />;
@@ -326,7 +332,10 @@ export default function ApiTestPage() {
                           ${flight.price}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {flight.airline} • {flight.flight_number}
+                          {flight.airline} ({flight.airline_code}) • {flight.flight_number}
+                        </div>
+                         <div className="text-sm text-gray-500 mt-1">
+                          Sold by: <span className="font-medium text-gray-700">{flight.gate}</span>
                         </div>
                       </div>
                       <div className="text-right">
@@ -339,7 +348,7 @@ export default function ApiTestPage() {
                       </div>
                     </div>
                     <div className="text-sm text-gray-500">
-                      Duration: {Math.floor(flight.duration / 60)}h {flight.duration % 60}m
+                      Duration: {formatDuration(flight.duration)}
                     </div>
                   </div>
                 ))}
@@ -355,3 +364,5 @@ export default function ApiTestPage() {
     </div>
   );
 }
+
+    
