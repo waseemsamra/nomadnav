@@ -344,7 +344,7 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'Travel time', 'Airfares', 'Departure/Arrival times', 'Airlines']}>
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Departure/Arrival times', 'Airlines']}>
                   <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
