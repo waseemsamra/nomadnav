@@ -136,7 +136,7 @@ class TravelpayoutsApiService {
         checkEndpoint('airports', ENDPOINTS.airports),
         checkEndpoint('airlines', ENDPOINTS.airlines),
         checkEndpoint('cities', ENDPOINTS.cities),
-        checkEndpoint('otas', ENDPOINTS.gates),
+        // checkEndpoint('otas', ENDPOINTS.gates), // This will be checked on client-side
         checkEndpoint('countries', ENDPOINTS.countries),
         checkEndpoint('planes', ENDPOINTS.planes),
         checkEndpoint('routes', ENDPOINTS.routes),
@@ -367,6 +367,12 @@ class TravelpayoutsApiService {
   }
   
   async getGates(): Promise<Gate[]> {
+    if (typeof window === 'undefined') {
+        // This function should only be called on the client.
+        // Return empty array or throw error if on server.
+        console.warn('getGates() was called on the server. It will not fetch data.');
+        return [];
+    }
     try {
       const response = await fetch(ENDPOINTS.gates);
       if (!response.ok) {
@@ -376,6 +382,7 @@ class TravelpayoutsApiService {
       return data || [];
     } catch (error: any) {
       console.error('Error fetching gates:', error.message);
+      // Re-throwing the error so client-side callers can handle it
       throw error;
     }
   }

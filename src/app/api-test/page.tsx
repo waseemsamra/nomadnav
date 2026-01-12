@@ -27,7 +27,6 @@ type ApiStatus = {
   endpoints: {
     airports: boolean;
     airlines: boolean;
-
     cities: boolean;
     flights: boolean;
     otas: boolean;
@@ -57,6 +56,16 @@ export default function ApiTestPage() {
     setApiStatus(null);
     try {
       const status = await travelpayoutsApi.testApiConnection();
+      
+      // Test OTAs on the client side since server-side is blocked
+      const otas = await travelpayoutsApi.getGates();
+      status.endpoints.otas = otas.length > 0;
+      
+      const workingEndpoints = Object.values(status.endpoints).filter(v => v).length;
+      const totalEndpoints = Object.values(status.endpoints).length;
+      status.message = `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`;
+      status.success = workingEndpoints > 0;
+
       setApiStatus(status);
     } catch (error: any) {
       console.error('Test failed:', error);
@@ -301,7 +310,3 @@ export default function ApiTestPage() {
     </div>
   );
 }
-
-    
-
-    
