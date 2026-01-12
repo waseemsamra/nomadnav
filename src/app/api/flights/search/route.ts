@@ -18,7 +18,7 @@ async function getAirlinesData() {
 
     try {
         const response = await axios.get(AIRLINES_ENDPOINT, {
-            headers: { 'Accept-Encoding': 'gzip,deflate,compress' },
+            headers: { 'Accept-Encoding': 'gzip, deflate, compress' },
         });
         if (response.data) {
             airlinesCache = response.data.reduce((acc: any, airline: any) => {
