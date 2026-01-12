@@ -224,6 +224,7 @@ class TravelpayoutsApiService {
     public filterAndSortFlights({
         flights,
         filters,
+        ticketFilter,
         selectedAirlines,
         selectedStops,
         baggageFilter,
@@ -234,6 +235,7 @@ class TravelpayoutsApiService {
     }: {
         flights: Flight[],
         filters: { sortBy: 'price' | 'duration' | 'departure' },
+        ticketFilter: 'all-tickets' | 'best-tickets',
         selectedAirlines: string[],
         selectedStops: number[],
         baggageFilter: 'all' | 'without' | 'with',
@@ -243,7 +245,7 @@ class TravelpayoutsApiService {
         selectedOtas: string[],
     }): Flight[] {
         let filtered = [...flights]
-            .filter(flight => selectedAirlines.includes(flight.airline))
+            .filter(flight => selectedAirlines.includes(flight.airline_code))
             .filter(flight => selectedStops.includes(flight.transfers))
             .filter(flight => selectedOtas.includes(flight.gate))
             .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
@@ -256,6 +258,20 @@ class TravelpayoutsApiService {
                 const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
                 return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
             });
+
+        // Apply "Best tickets" filter if selected
+        if (ticketFilter === 'best-tickets' && filtered.length > 0) {
+            const minPrice = Math.min(...filtered.map(f => this.getFlightDisplayPrice(f, baggageFilter)));
+            const minDuration = Math.min(...filtered.map(f => f.duration));
+            
+            const priceThreshold = minPrice * 1.5; // up to 50% more expensive
+            const durationThreshold = minDuration * 1.5; // up to 50% longer
+
+            filtered = filtered.filter(f => 
+                this.getFlightDisplayPrice(f, baggageFilter) <= priceThreshold &&
+                f.duration <= durationThreshold
+            );
+        }
 
         switch (filters.sortBy) {
             case 'price':
@@ -375,5 +391,3 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams, Gate };
-
-    

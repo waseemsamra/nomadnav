@@ -31,6 +31,7 @@ type FilterState = {
 };
 
 type BaggageFilterType = 'all' | 'without' | 'with';
+type TicketFilterType = 'all-tickets' | 'best-tickets';
 
 
 const initialFilterState: FilterState = {
@@ -48,6 +49,7 @@ function SearchResultsContent() {
   
   // All filter states are managed here
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
+  const [ticketFilter, setTicketFilter] = useState<TicketFilterType>('all-tickets');
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
   const [baggageFilter, setBaggageFilter] = useState<BaggageFilterType>('all');
@@ -61,7 +63,8 @@ function SearchResultsContent() {
 
   // Memoized options derived from flight data
   const airlineOptions = useMemo(() => {
-      const uniqueAirlines = [...new Map(flights.map(f => [f.airline, { code: f.airline_code, name: f.airline }])).values()];
+      if (flights.length === 0) return [];
+      const uniqueAirlines = [...new Map(flights.map(f => [f.airline_code, { code: f.airline_code, name: f.airline }])).values()];
       return uniqueAirlines.sort((a,b) => a.name.localeCompare(b.name));
   }, [flights]);
 
@@ -163,58 +166,39 @@ function SearchResultsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin, destination, depart_date, return_date, passengers, cabin_class]);
   
-  // **EFFECT 2: ATOMIC FILTER INITIALIZATION. This is the fix.**
+  // **EFFECT 2: ATOMIC FILTER INITIALIZATION**
   // This single effect runs ONLY when the initial flight data is loaded.
   // It initializes ALL filter states at once to prevent race conditions.
   useEffect(() => {
-    if (flights.length > 0 && loading === false) {
+    if (flights.length > 0) {
       console.log("Initializing all filters atomically based on new flight data...");
       
-      // Price range for the current baggage setting
       const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
       const minPrice = Math.floor(Math.min(...prices));
       const maxPrice = Math.ceil(Math.max(...prices));
       
-      // Duration range
       const durations = flights.map(f => f.duration);
       const minDuration = Math.min(...durations);
       const maxDuration = Math.max(...durations);
 
-      // Unique values for selection filters
-      const uniqueAirlines = [...new Set(flights.map(f => f.airline))];
+      // This is the correct way to get unique values for filters
+      const uniqueAirlineCodes = [...new Set(flights.map(f => f.airline_code))];
       const uniqueStops = [...new Set(flights.map(f => f.transfers))];
-      const uniqueOtas = [...new Set(flights.map(f => f.gate))];
+      const uniqueOtas = [...new Set(flights.map(f => f.gate))].filter(Boolean);
 
       // Set all states together
       setPriceRange({ min: minPrice, max: maxPrice });
       setSelectedPrice([minPrice, maxPrice]);
       setDurationRange({ min: minDuration, max: maxDuration });
       setSelectedDuration([minDuration, maxDuration]);
-      setSelectedAirlines(uniqueAirlines);
+      setSelectedAirlines(uniqueAirlineCodes);
       setSelectedStops(uniqueStops);
       setSelectedOtas(uniqueOtas);
       
       console.log("All filters initialized.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flights, loading]); // This hook MUST only run when flights or loading state changes.
-
-
-  // This effect correctly depends on baggageFilter to recalculate price ranges when it changes.
-  useEffect(() => {
-    if (flights.length > 0) {
-        const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
-        const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
-        const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 0;
-        setPriceRange({ min: minPrice, max: maxPrice });
-        // Only reset selected price if it's out of the new range
-        setSelectedPrice(prev => [
-            Math.max(minPrice, prev[0]),
-            Math.min(maxPrice, prev[1]),
-        ]);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baggageFilter]);
+  }, [flights, baggageFilter]);
   
 
   const handleBookFlight = (flight: Flight) => {
@@ -230,16 +214,16 @@ function SearchResultsContent() {
     setFilters(prev => ({...prev, [key]: value}));
   };
 
-  const handleAirlineSelection = (airlineName: string) => {
+  const handleAirlineSelection = (airlineCode: string) => {
     setSelectedAirlines(prev => 
-      prev.includes(airlineName)
-        ? prev.filter(a => a !== airlineName)
-        : [...prev, airlineName]
+      prev.includes(airlineCode)
+        ? prev.filter(a => a !== airlineCode)
+        : [...prev, airlineCode]
     );
   };
   
   const handleSelectAllAirlines = (checked: boolean) => {
-    setSelectedAirlines(checked ? airlineOptions.map(a => a.name) : []);
+    setSelectedAirlines(checked ? airlineOptions.map(a => a.code) : []);
   }
 
   const handleStopSelection = (stopCount: number) => {
@@ -271,7 +255,7 @@ function SearchResultsContent() {
   const handleResetFilters = () => {
     setFilters(initialFilterState);
     if (flights.length > 0) {
-        setSelectedAirlines([...new Set(flights.map(f => f.airline))]);
+        setSelectedAirlines([...new Set(flights.map(f => f.airline_code))]);
         setSelectedStops([...new Set(flights.map(f => f.transfers))]);
         setSelectedOtas([...new Set(flights.map(f => f.gate))]);
         setSelectedDuration([durationRange.min, durationRange.max]);
@@ -279,6 +263,7 @@ function SearchResultsContent() {
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
     }
     setBaggageFilter('all');
+    setTicketFilter('all-tickets');
   };
 
   const formatDuration = (minutes: number) => {
@@ -308,6 +293,7 @@ function SearchResultsContent() {
     return travelpayoutsApi.filterAndSortFlights({
         flights,
         filters,
+        ticketFilter,
         selectedAirlines,
         selectedStops,
         baggageFilter,
@@ -316,7 +302,7 @@ function SearchResultsContent() {
         selectedDepartureTime,
         selectedOtas,
     });
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
+  }, [flights, filters, ticketFilter, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
   
   const flightGroups = useMemo(() => {
     const groups: { [key: string]: Flight[] } = {};
@@ -380,12 +366,12 @@ function SearchResultsContent() {
               </div>
 
               <div className="space-y-4">
-                  <RadioGroup defaultValue="all-tickets" className="space-y-2" disabled>
-                      <div className="flex items-center space-x-2 opacity-50">
+                  <RadioGroup value={ticketFilter} onValueChange={(v) => setTicketFilter(v as TicketFilterType)} className="space-y-2">
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="all-tickets" id="all-tickets" />
                         <Label htmlFor="all-tickets">All tickets</Label>
                       </div>
-                      <div className="flex items-center space-x-2 opacity-50">
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="best-tickets" id="best-tickets" />
                         <Label htmlFor="best-tickets">Best tickets</Label>
                       </div>
@@ -544,8 +530,8 @@ function SearchResultsContent() {
                                <div key={`${airline.code}-${airline.name}`} className="flex items-center space-x-2">
                                   <Checkbox
                                       id={`airline-${airline.name}`}
-                                      checked={selectedAirlines.includes(airline.name)}
-                                      onCheckedChange={() => handleAirlineSelection(airline.name)}
+                                      checked={selectedAirlines.includes(airline.code)}
+                                      onCheckedChange={() => handleAirlineSelection(airline.code)}
                                   />
                                   <Label htmlFor={`airline-${airline.name}`}>{airline.name}</Label>
                               </div>
