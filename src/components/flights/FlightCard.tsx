@@ -67,14 +67,8 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
     }, [allOffers, actualBaggagePref]);
 
     const arrivalTime = useMemo(() => {
-        // For one-way, return_at is the arrival time. For round-trip, it's the return flight's departure.
-        // The API logic seems to populate return_at with arrival for one-way from prices_for_dates
-        if (cheapestOffer.return_at) {
-             return parseISO(cheapestOffer.return_at);
-        }
-        // Fallback for other endpoints that might not have return_at for one-way
-        return new Date(new Date(cheapestOffer.departure_at).getTime() + cheapestOffer.duration * 60000);
-    }, [cheapestOffer.departure_at, cheapestOffer.duration, cheapestOffer.return_at]);
+        return parseISO(cheapestOffer.return_at);
+    }, [cheapestOffer.return_at]);
 
     const sortedOtherOffers = useMemo(() => {
         return allOffers
@@ -164,7 +158,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
                                 unoptimized
                             />
                         )}
-                        {cheapestOffer.return_at && cheapestOffer.return_at !== cheapestOffer.departure_at && <Badge variant="secondary" className="ml-auto">Round Trip</Badge>}
+                        {cheapestOffer.return_at && new Date(cheapestOffer.return_at).getTime() !== new Date(cheapestOffer.departure_at).getTime() && <Badge variant="secondary" className="ml-auto">Round Trip</Badge>}
                     </div>
 
                     <div className="flex items-center justify-between">

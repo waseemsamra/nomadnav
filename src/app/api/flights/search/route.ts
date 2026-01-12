@@ -139,7 +139,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             duration: flight.duration,
             link: `https://www.travelpayouts.com${flight.link}`,
             currency: currency,
-            gate: flight.gate || 'Direct',
+            gate: flight.gate,
         };
         return addEstimatedBaggagePrices(enrichedFlight);
     });
