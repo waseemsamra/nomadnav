@@ -6,26 +6,23 @@ import React, { Suspense, useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Plane, 
-  Clock, 
-  Calendar,
   Users,
-  Wind,
   Filter,
   X,
-  ChevronRight
+  Calendar,
 } from 'lucide-react';
-import { format, getHours, getMinutes } from 'date-fns';
+import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
+import GroupedFlightResults from '@/components/flights/GroupedFlightResults';
 
 
 type FilterState = {
@@ -113,7 +110,7 @@ function SearchResultsContent() {
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
 
-          const prices = flightData.map(f => f.price);
+          const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
           const minPrice = Math.min(...prices);
           const maxPrice = Math.max(...prices);
           setPriceRange({ min: minPrice, max: maxPrice });
@@ -201,26 +198,11 @@ function SearchResultsContent() {
     }
   };
 
-  const getFlightDisplayPrice = (flight: Flight): number => {
-    // This logic is now based on the enriched baggage data from the API
-    if (baggageFilter === 'with') {
-        let baggageCost = 0;
-        if (!flight.baggage.hand.has_baggage) {
-            baggageCost += flight.baggage.hand.price;
-        }
-         if (!flight.baggage.checked.has_baggage) {
-            baggageCost += flight.baggage.checked.price;
-        }
-        return flight.price + baggageCost;
-    }
-    // 'all' and 'without' show base price
-    return flight.price;
-  }
   
   const stopOptions = useMemo(() => {
     const stopsMap = new Map<number, number>();
     flights.forEach(flight => {
-        const price = getFlightDisplayPrice(flight);
+        const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
         const currentMinPrice = stopsMap.get(flight.transfers);
         if (!currentMinPrice || price < currentMinPrice) {
             stopsMap.set(flight.transfers, price);
@@ -256,41 +238,16 @@ function SearchResultsContent() {
   }, [flights]);
 
   const sortedFlights = useMemo(() => {
-    let filtered = [...flights]
-        .filter(flight => selectedAirlines.includes(flight.airline))
-        .filter(flight => selectedStops.includes(flight.transfers))
-        .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
-        .filter(flight => {
-          const price = getFlightDisplayPrice(flight);
-          return price >= selectedPrice[0] && price <= selectedPrice[1];
-        })
-        .filter(flight => {
-            const departureDate = new Date(flight.departure_at);
-            const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
-            return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
-        });
-
-    if (baggageFilter === 'without') {
-      // For 'without', we are just showing the base price, so no specific filtering needed here
-      // as the price is already the base price.
-    } else if (baggageFilter === 'with') {
-       // The price is adjusted by getFlightDisplayPrice, so sorting will work correctly.
-       // No additional filtering logic needed here as price is handled.
-    }
-
-
-    switch (filters.sortBy) {
-        case 'price':
-            filtered.sort((a,b) => getFlightDisplayPrice(a) - getFlightDisplayPrice(b));
-            break;
-        case 'duration':
-            filtered.sort((a,b) => (a.duration || 9999) - (b.duration || 9999));
-            break;
-        case 'departure':
-            filtered.sort((a,b) => new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime());
-            break;
-    }
-    return filtered;
+    return travelpayoutsApi.filterAndSortFlights({
+        flights,
+        filters,
+        selectedAirlines,
+        selectedStops,
+        baggageFilter,
+        selectedDuration,
+        selectedPrice,
+        selectedDepartureTime,
+    });
   }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime]);
 
   if (loading) {
@@ -515,14 +472,14 @@ function SearchResultsContent() {
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                              <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
-                                    <Checkbox id="select-all-otas" />
+                                    <Checkbox id="select-all-otas" checked/>
                                     <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
                                 </div>
                             </div>
                             {exampleOTAs.map(ota => (
                                <div key={ota.id} className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2">
-                                      <Checkbox id={`ota-${ota.id}`} />
+                                      <Checkbox id={`ota-${ota.id}`} checked/>
                                       <Label htmlFor={`ota-${ota.id}`}>{ota.name}</Label>
                                   </div>
                                   <span className="text-sm text-muted-foreground">${ota.price}</span>
@@ -612,7 +569,7 @@ function SearchResultsContent() {
                 Available Flights ({sortedFlights.length})
               </h2>
               <p className="text-gray-600">
-                Best prices from multiple airlines
+                Best prices from multiple airlines & travel agencies
               </p>
             </div>
 
@@ -643,81 +600,11 @@ function SearchResultsContent() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {sortedFlights.map((flight) => (
-                  <div
-                    key={flight.id}
-                    className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
-                  >
-                    <div className="p-6 md:grid md:grid-cols-4 md:gap-6 items-center">
-                      
-                      {/* Airline Info */}
-                      <div className="col-span-1 flex items-center gap-4 mb-4 md:mb-0">
-                        <Image
-                          src={`https://pics.aviasales.com/92/92/${flight.airline_code}.png`}
-                          alt={`${flight.airline || 'Airline'} logo`}
-                          width={40}
-                          height={40}
-                          className="rounded-full bg-gray-100"
-                          unoptimized
-                        />
-                        <div>
-                           <div className="font-bold text-gray-900">{flight.airline || flight.airline_code}</div>
-                           <div className="text-sm text-gray-500">{flight.flight_number}</div>
-                        </div>
-                      </div>
-
-                      {/* Flight Details */}
-                      <div className="col-span-2 space-y-4 md:space-y-0 md:flex justify-around items-center text-center border-y md:border-y-0 md:border-x py-4 md:py-0">
-                          <div className="flex items-center gap-2 justify-center">
-                            <Calendar className="w-4 h-4 text-gray-400"/>
-                            <div>
-                              <div className="text-gray-500 text-sm">Depart</div>
-                              <div className="font-medium">{formatDate(flight.departure_at)}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 justify-center">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <div>
-                              <div className="text-gray-500 text-sm">Duration</div>
-                              <div className="font-medium">
-                                {flight.duration ? formatDuration(flight.duration) : 'N/A'}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 justify-center">
-                             <Wind className="w-4 h-4 text-gray-400" />
-                            <div>
-                              <div className="text-gray-500 text-sm">Stops</div>
-                              <div className={`font-medium ${flight.transfers > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                  {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
-                              </div>
-                            </div>
-                          </div>
-                      </div>
-
-                      {/* Price & Booking */}
-                       <div className="col-span-1 text-center md:text-right mt-4 md:mt-0">
-                          <div className="text-3xl font-bold text-blue-600">
-                            ${Math.round(getFlightDisplayPrice(flight))}
-                          </div>
-                           <div className="text-sm text-gray-500 mb-4">
-                            per passenger
-                          </div>
-                          <Button
-                            onClick={() => handleBookFlight(flight)}
-                            className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                            disabled={!flight.link}
-                          >
-                            <Plane className="w-5 h-5 mr-2" />
-                            Book Now
-                          </Button>
-                      </div>
-
-                    </div>
-                  </div>
-                ))}
-              </div>
+                <GroupedFlightResults 
+                    flights={sortedFlights} 
+                    onBookFlight={handleBookFlight} 
+                    baggageFilter={baggageFilter}
+                />
             )}
 
             {/* Footer */}

@@ -104,6 +104,7 @@ export async function GET(req: NextRequest) {
 
 
         if (apiResponse.data && apiResponse.data.success) {
+            const mockOtas = ['Trip.com', 'Kiwi.com', 'Mytrip.com', 'GoToGate', 'Expedia'];
             const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => {
                 const enrichedFlight = {
                     id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.price}-${index}`,
@@ -119,6 +120,7 @@ export async function GET(req: NextRequest) {
                     duration: flight.duration,
                     link: `https://www.travelpayouts.com${flight.link}`,
                     currency: apiParams.get('currency'),
+                    gate: mockOtas[index % mockOtas.length], // Mock OTA data
                 };
                 return addEstimatedBaggagePrices(enrichedFlight);
             });

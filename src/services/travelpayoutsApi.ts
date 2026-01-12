@@ -1,5 +1,7 @@
 
+
 import axios from 'axios';
+import { getHours, getMinutes } from 'date-fns';
 
 // Types
 export interface Airport {
@@ -34,10 +36,7 @@ export interface Flight {
     hand: BaggageInfo;
     checked: BaggageInfo;
   };
-  actual: boolean;
-  gate: string;
-  distance: number;
-  found_at: string;
+  gate: string; // This will be the OTA code
 }
 
 export interface FlightSearchParams {
@@ -169,7 +168,13 @@ class TravelpayoutsApiService {
       }
       
       const response = await axios.get(ENDPOINTS.flightSearch, { params: searchParams });
-      return response.data;
+      
+      // Mock OTA data
+      const mockOtas = ['Trip.com', 'Kiwi.com', 'Mytrip.com'];
+      return response.data.map((flight: Flight, index: number) => ({
+          ...flight,
+          gate: mockOtas[index % mockOtas.length]
+      }));
 
     } catch (error: any) {
       console.error('API call failed, returning empty result:', error.response?.data || error.message);
@@ -179,6 +184,69 @@ class TravelpayoutsApiService {
       throw new Error('Failed to search for flights.');
     }
   }
+
+  // ==================== FILTERING & SORTING (CLIENT-SIDE) ====================
+    public getFlightDisplayPrice(flight: Flight, baggageFilter: 'all' | 'without' | 'with'): number {
+        if (baggageFilter === 'with') {
+            let baggageCost = 0;
+            if (!flight.baggage.hand.has_baggage) {
+                baggageCost += flight.baggage.hand.price;
+            }
+            if (!flight.baggage.checked.has_baggage) {
+                baggageCost += flight.baggage.checked.price;
+            }
+            return flight.price + baggageCost;
+        }
+        return flight.price;
+    }
+
+
+    public filterAndSortFlights({
+        flights,
+        filters,
+        selectedAirlines,
+        selectedStops,
+        baggageFilter,
+        selectedDuration,
+        selectedPrice,
+        selectedDepartureTime
+    }: {
+        flights: Flight[],
+        filters: { sortBy: 'price' | 'duration' | 'departure' },
+        selectedAirlines: string[],
+        selectedStops: number[],
+        baggageFilter: 'all' | 'without' | 'with',
+        selectedDuration: number[],
+        selectedPrice: number[],
+        selectedDepartureTime: number[]
+    }): Flight[] {
+        let filtered = [...flights]
+            .filter(flight => selectedAirlines.includes(flight.airline))
+            .filter(flight => selectedStops.includes(flight.transfers))
+            .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
+            .filter(flight => {
+                const price = this.getFlightDisplayPrice(flight, baggageFilter);
+                return price >= selectedPrice[0] && price <= selectedPrice[1];
+            })
+            .filter(flight => {
+                const departureDate = new Date(flight.departure_at);
+                const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
+                return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
+            });
+
+        switch (filters.sortBy) {
+            case 'price':
+                filtered.sort((a, b) => this.getFlightDisplayPrice(a, baggageFilter) - this.getFlightDisplayPrice(b, baggageFilter));
+                break;
+            case 'duration':
+                filtered.sort((a, b) => (a.duration || 9999) - (b.duration || 9999));
+                break;
+            case 'departure':
+                filtered.sort((a, b) => new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime());
+                break;
+        }
+        return filtered;
+    }
 
   // ==================== HELPER METHODS ====================
   
