@@ -758,5 +758,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
