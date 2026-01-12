@@ -4,7 +4,7 @@ import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
-const API_ENDPOINT = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
+const LATEST_PRICES_ENDPOINT = 'https://api.travelpayouts.com/v2/prices/latest';
 const AIRLINES_ENDPOINT = 'https://api.travelpayouts.com/data/en/airlines.json';
 
 let airlinesCache: { [key: string]: string } | null = null;
@@ -21,7 +21,7 @@ async function getAirlinesData() {
         const response = await axios.get(AIRLINES_ENDPOINT, {
             headers: { 'Accept-Encoding': 'gzip, deflate, compress' },
         });
-        if (response.data) {
+        if (response.data && Array.isArray(response.data)) {
             airlinesCache = response.data.reduce((acc: any, airline: any) => {
                 if (airline.code && airline.name) {
                   acc[airline.code] = airline.name;
@@ -48,18 +48,24 @@ function addEstimatedBaggagePrices(flight: any): Flight {
     baggage: {
         hand: {
             price: CARRY_ON_PRICE,
-            // A simple heuristic for free carry-on for legacy carriers
-            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline_code), 
+            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline), 
         },
         checked: {
             price: CHECKED_BAGGAGE_PRICE,
-            // A simple heuristic for free checked baggage on more expensive flights
             has_baggage: basePrice > 400,
         },
     },
-    // The main price should be the base price without extras
     price: basePrice,
   };
+}
+
+async function fetchFlightsFromApi(params: URLSearchParams) {
+    const url = `${LATEST_PRICES_ENDPOINT}?${params.toString()}`;
+    const response = await axios.get(url, {
+        timeout: 15000,
+        headers: { 'X-Access-Token': API_TOKEN, 'Accept-Encoding': 'gzip, deflate, compress' },
+    });
+    return response.data;
 }
 
 
@@ -68,7 +74,8 @@ export async function GET(req: NextRequest) {
 
     const origin = searchParams.get('origin');
     const destination = searchParams.get('destination');
-    const departure_at = searchParams.get('depart_date'); 
+    const depart_date = searchParams.get('depart_date'); 
+    const return_date = searchParams.get('return_date');
 
     if (!origin || !destination) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
@@ -79,39 +86,43 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const apiParams: { [key: string]: any } = {
+        const apiParams = new URLSearchParams({
             origin: origin,
             destination: destination,
             currency: searchParams.get('currency') || 'USD',
             limit: searchParams.get('limit') || '30',
             sorting: 'price',
-            unique: false,
-        };
+            trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
+            show_to_affiliates: 'true',
+        });
+        
+        let apiResponse;
 
-        if (departure_at) {
-            apiParams['departure_at'] = departure_at; 
+        // First attempt: search with specific depart_date if provided
+        if (depart_date) {
+            const specificDateParams = new URLSearchParams(apiParams);
+            specificDateParams.set('depart_date', depart_date);
+             if (return_date) {
+                specificDateParams.set('return_date', return_date);
+            }
+            apiResponse = await fetchFlightsFromApi(specificDateParams);
+        } else {
+             apiResponse = await fetchFlightsFromApi(apiParams);
+        }
+        
+        // Fallback: If no results with specific date, try without it
+        if (!apiResponse.data || apiResponse.data.length === 0) {
+            console.log('No results with specific date, trying fallback without date.');
+            apiResponse = await fetchFlightsFromApi(apiParams);
         }
 
-        const return_at = searchParams.get('return_date');
-        if (return_at) {
-            apiParams['return_at'] = return_at; 
-        }
-
-        const url = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
+        const airlines = await getAirlinesData();
         
-        const [apiResponse, airlines] = await Promise.all([
-             axios.get(url, { 
-                timeout: 15000,
-                headers: { 'X-Access-Token': API_TOKEN }
-             }),
-             getAirlinesData(),
-        ]);
-        
-        if (apiResponse.data && apiResponse.data.success && apiResponse.data.data.length > 0) {
-            const flightsWithDetails = apiResponse.data.data.map((flight: any) => {
+        if (apiResponse.success && apiResponse.data.length > 0) {
+            const flightsWithDetails = apiResponse.data.map((flight: any) => {
                 const airlineName = airlines[flight.airline] || flight.airline;
                 const enrichedFlight = {
-                    id: flight.link, 
+                    id: flight.link || `${flight.airline}-${flight.flight_number}-${flight.departure_at}`, 
                     price: flight.price,
                     airline: airlineName,
                     airline_code: flight.airline,
@@ -123,7 +134,7 @@ export async function GET(req: NextRequest) {
                     transfers: flight.transfers,
                     duration: flight.duration,
                     link: `https://www.travelpayouts.com${flight.link}`,
-                    currency: apiParams.currency,
+                    currency: apiParams.get('currency') || 'USD',
                     gate: flight.gate || 'Direct',
                 };
                 return addEstimatedBaggagePrices(enrichedFlight);
