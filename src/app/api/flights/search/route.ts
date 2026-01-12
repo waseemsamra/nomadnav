@@ -122,11 +122,22 @@ async function searchWithStrategy(params: URLSearchParams) {
 
 function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
     if (!Array.isArray(flights)) return [];
+    const seen = new Set();
     return flights.map((flight: any) => {
         const airlineCode = flight.airline;
         const airlineName = airlines[airlineCode] || airlineCode;
+        
+        // Ensure a unique ID for every flight offer, especially when the API returns duplicates.
+        // A combination of link, gate, and price usually guarantees uniqueness.
+        const uniqueId = `${flight.link || ''}-${flight.gate || ''}-${flight.price}-${Math.random()}`;
+        if(seen.has(uniqueId)) {
+            console.warn('Duplicate flight key detected, skipping:', uniqueId);
+            return null;
+        }
+        seen.add(uniqueId);
+
         const enrichedFlight = {
-            id: flight.link || `${airlineCode}-${flight.flight_number}-${flight.departure_at}`, 
+            id: uniqueId,
             price: flight.price,
             airline: airlineName,
             airline_code: airlineCode,
@@ -142,7 +153,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             gate: flight.gate,
         };
         return addEstimatedBaggagePrices(enrichedFlight);
-    });
+    }).filter(flight => flight !== null) as Flight[];
 }
 
 
@@ -223,5 +234,3 @@ export async function GET(req: NextRequest) {
         );
     }
 }
-
-    

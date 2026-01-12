@@ -119,60 +119,54 @@ class TravelpayoutsApiService {
       alliances: true, // Alliance data is local
     };
 
-    const checkEndpoint = async (endpoint: keyof Omit<typeof results, 'otas' | 'alliances'>, url: string) => {
+    const checkEndpoint = async (endpoint: keyof Omit<typeof results, 'otas' | 'alliances' | 'flights'>, url: string) => {
       try {
         const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
-        results[endpoint] = response.status === 200;
+        results[endpoint] = response.status === 200 && Array.isArray(response.data) && response.data.length > 0;
       } catch (error) {
         console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
         results[endpoint] = false;
       }
     };
-
-    try {
-      await Promise.all([
-        checkEndpoint('airports', ENDPOINTS.airports),
-        checkEndpoint('airlines', ENDPOINTS.airlines),
-        checkEndpoint('cities', ENDPOINTS.cities),
-        checkEndpoint('countries', ENDPOINTS.countries),
-        checkEndpoint('planes', ENDPOINTS.planes),
-        checkEndpoint('routes', ENDPOINTS.routes),
-      ]);
-
-      if (API_TOKEN) {
-        try {
-            const flightParams: FlightSearchParams = {
-                origin: 'JFK',
-                destination: 'LAX',
-                depart_date: '2025-08-01',
-                limit: 1,
-            };
-            await this.searchFlights(flightParams);
-            results.flights = true; 
-        } catch (flightError: any) {
-          console.log('Flight API test warning:', flightError.message);
-          results.flights = false;
-        }
+    
+    // Check static data endpoints
+    await Promise.all([
+      checkEndpoint('airports', ENDPOINTS.airports),
+      checkEndpoint('airlines', ENDPOINTS.airlines),
+      checkEndpoint('cities', ENDPOINTS.cities),
+      checkEndpoint('countries', ENDPOINTS.countries),
+      checkEndpoint('planes', ENDPOINTS.planes),
+      checkEndpoint('routes', ENDPOINTS.routes),
+    ]);
+    
+    // Check flight search endpoint if token is present
+    if (API_TOKEN) {
+      try {
+        const flightParams: FlightSearchParams = {
+          origin: 'JFK',
+          destination: 'LAX',
+          depart_date: '2025-08-01',
+          limit: 1,
+        };
+        const flights = await this.searchFlights(flightParams);
+        // The test is successful if the API call doesn't throw and returns an array (even an empty one)
+        results.flights = true;
+      } catch (flightError: any) {
+        console.warn('Flight API test failed:', flightError.message);
+        results.flights = false;
       }
-
-      const workingEndpoints = Object.values(results).filter(v => v).length;
-      const totalEndpoints = Object.values(results).length;
-
-      return {
-        success: workingEndpoints > 0,
-        message: `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
-        endpoints: results,
-        tokenValid: !!API_TOKEN && API_TOKEN.length === 32,
-      };
-
-    } catch (error: any) {
-      return {
-        success: false,
-        message: `Connection failed: ${error.message}`,
-        endpoints: results,
-        tokenValid: !!API_TOKEN && API_TOKEN.length === 32,
-      };
     }
+
+
+    const workingEndpoints = Object.values(results).filter(v => v).length;
+    const totalEndpoints = Object.values(results).length;
+
+    return {
+      success: workingEndpoints > 0,
+      message: `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
+      endpoints: results,
+      tokenValid: !!API_TOKEN && API_TOKEN.length === 32,
+    };
   }
 
 
