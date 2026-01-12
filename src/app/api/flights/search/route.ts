@@ -3,7 +3,7 @@ import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
-const API_ENDPOINT = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
+const API_ENDPOINT = 'https://api.travelpayouts.com/v2/prices/latest';
 const AIRLINES_ENDPOINT = 'https://api.travelpayouts.com/data/en/airlines.json';
 
 let airlinesCache: { [key: string]: string } | null = null;
@@ -81,11 +81,13 @@ export async function GET(req: NextRequest) {
             currency: searchParams.get('currency') || 'USD',
             limit: searchParams.get('limit') || '30',
             sorting: 'price',
+            show_to_affiliates: 'true', // Crucial for OTA data
+            token: API_TOKEN
         });
 
         const departure_date = searchParams.get('depart_date');
         if (departure_date) {
-            apiParams.append('departure_date', departure_date);
+            apiParams.append('depart_date', departure_date);
         }
 
         const return_date = searchParams.get('return_date');
@@ -96,23 +98,20 @@ export async function GET(req: NextRequest) {
         const url = `${API_ENDPOINT}?${apiParams.toString()}`;
         
         const [apiResponse, airlines] = await Promise.all([
-             axios.get(url, {
-                headers: { 'x-access-token': API_TOKEN },
-             }),
+             axios.get(url), // No longer needs x-access-token header, uses token param
              getAirlinesData(),
         ]);
 
 
         if (apiResponse.data && apiResponse.data.success) {
-            const mockOtas = ['Trip.com', 'Kiwi.com', 'Mytrip.com', 'GoToGate', 'Expedia'];
             const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => {
                 const enrichedFlight = {
-                    id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.price}-${index}`,
-                    price: flight.price,
+                    id: `${flight.origin}-${flight.destination}-${flight.depart_at}-${flight.value}-${flight.gate}-${index}`,
+                    price: flight.value, // price is 'value' in this endpoint
                     airline: airlines[flight.airline] || flight.airline,
                     airline_code: flight.airline,
                     flight_number: flight.flight_number || `TP${1000 + index}`,
-                    departure_at: flight.departure_at,
+                    departure_at: flight.depart_at, // departure time is 'depart_at'
                     return_at: flight.return_at,
                     origin: flight.origin,
                     destination: flight.destination,
@@ -120,7 +119,7 @@ export async function GET(req: NextRequest) {
                     duration: flight.duration,
                     link: `https://www.travelpayouts.com${flight.link}`,
                     currency: apiParams.get('currency'),
-                    gate: mockOtas[index % mockOtas.length], // Mock OTA data
+                    gate: flight.gate, // Real OTA data
                 };
                 return addEstimatedBaggagePrices(enrichedFlight);
             });

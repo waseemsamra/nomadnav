@@ -4,7 +4,6 @@ import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { type Flight } from '@/services/travelpayoutsApi';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Clock, Wind, Calendar, Plane } from 'lucide-react';
 import { format } from 'date-fns';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
@@ -111,7 +110,7 @@ const GroupedFlightResults: React.FC<GroupedFlightResultsProps> = ({
       if (!groups[otaName]) {
         groups[otaName] = {
           otaName,
-          otaLogo: `https://pics.aviasales.com/92/36/${otaName.replace(/\s/g, '').replace('.com', '').toUpperCase()}.png`,
+          otaLogo: `https://pics.aviasales.com/92/36/${otaName.replace(/\./g, '')}.png`,
           cheapestPrice: displayPrice,
           bestFlight: flight,
           flights: [],
@@ -147,7 +146,11 @@ const GroupedFlightResults: React.FC<GroupedFlightResultsProps> = ({
                         height={32}
                         className="bg-gray-100 rounded p-1 object-contain"
                         unoptimized
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        onError={(e) => { 
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            // You could also have a fallback text element appear here
+                        }}
                     />
                     <div>
                         <div className="font-bold text-gray-900">{group.otaName}</div>
@@ -158,9 +161,11 @@ const GroupedFlightResults: React.FC<GroupedFlightResultsProps> = ({
                 </div>
 
                 <div className="col-span-1 flex items-center justify-center text-sm">
-                    <Button variant="link" onClick={() => setOpenOta(openOta === group.otaName ? null : group.otaName)}>
-                       {openOta === group.otaName ? 'Hide all' : 'Show all'}
-                    </Button>
+                     {group.flights.length > 1 && (
+                        <Button variant="link" onClick={() => setOpenOta(openOta === group.otaName ? null : group.otaName)}>
+                        {openOta === group.otaName ? 'Hide all' : `Show all (${group.flights.length})`}
+                        </Button>
+                    )}
                 </div>
                 
                 <div className="col-span-1 text-center md:text-right mt-4 md:mt-0">
@@ -178,7 +183,9 @@ const GroupedFlightResults: React.FC<GroupedFlightResultsProps> = ({
             {/* Expanded Flights List */}
             {openOta === group.otaName && (
                 <div className="bg-gray-50/50">
-                    {group.flights.map(flight => (
+                    {group.flights
+                        .sort((a,b) => travelpayoutsApi.getFlightDisplayPrice(a, baggageFilter) - travelpayoutsApi.getFlightDisplayPrice(b, baggageFilter))
+                        .map(flight => (
                         <FlightDetailCard 
                             key={flight.id} 
                             flight={flight} 
