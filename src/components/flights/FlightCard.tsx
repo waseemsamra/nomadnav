@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
+import { type Flight } from '@/services/travelpayoutsApi';
 import { format, parseISO, add } from 'date-fns';
 import { Briefcase, ChevronDown, ChevronUp, XIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -50,9 +50,9 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
         return `${hours}h ${mins}m`;
     };
     
-    const displayPrice = (flight: Flight, baggagePref: 'without' | 'with'): number => {
+    const displayPrice = (flight: Flight): number => {
         let price = flight.price;
-        if (baggagePref === 'with') {
+        if (actualBaggagePref === 'with') {
             price += flight.baggage.checked.price;
         }
         return Math.round(price);
@@ -62,19 +62,28 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
 
     const cheapestOffer = useMemo(() => {
         return allOffers.reduce((cheapest, current) => {
-            return displayPrice(current, 'without') < displayPrice(cheapest, 'without') ? current : cheapest;
+            return displayPrice(current) < displayPrice(cheapest) ? current : cheapest;
         }, allOffers[0]);
-    }, [allOffers]);
+    }, [allOffers, actualBaggagePref]);
 
     const arrivalTime = useMemo(() => {
         const departureDate = parseISO(cheapestOffer.departure_at);
+        // For one-way, if return_at exists, it's the arrival time. Otherwise calculate.
+        if (!cheapestOffer.return_at || cheapestOffer.return_at === cheapestOffer.departure_at) {
+            return add(departureDate, { minutes: cheapestOffer.duration });
+        }
+        // For round-trip, return_at is for the return flight. So calculate arrival for the outbound.
+        if(cheapestOffer.return_at && cheapestOffer.return_at !== cheapestOffer.departure_at && otherOffers.length === 0){
+             return parseISO(cheapestOffer.return_at);
+        }
         return add(departureDate, { minutes: cheapestOffer.duration });
-    }, [cheapestOffer.departure_at, cheapestOffer.duration]);
+
+    }, [cheapestOffer.departure_at, cheapestOffer.duration, cheapestOffer.return_at]);
 
     const sortedOtherOffers = useMemo(() => {
         return allOffers
             .filter(offer => offer.id !== cheapestOffer.id)
-            .sort((a, b) => displayPrice(a, actualBaggagePref) - displayPrice(b, actualBaggagePref));
+            .sort((a, b) => displayPrice(a) - displayPrice(b));
     }, [allOffers, cheapestOffer.id, actualBaggagePref]);
     
 
@@ -116,7 +125,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
                             className="w-full h-auto py-2 px-3 text-center bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-lg mb-1"
                             onClick={() => onBookFlight(cheapestOffer)}
                         >
-                            Book ${displayPrice(cheapestOffer, actualBaggagePref)}
+                            Book ${displayPrice(cheapestOffer)}
                         </Button>
                         <p className="text-center text-sm text-gray-500">{getOtaName(cheapestOffer.gate)}</p>
                     </div>
@@ -128,7 +137,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
                                     <span className="text-blue-600 hover:underline cursor-pointer" onClick={() => onBookFlight(offer)}>
                                         {getOtaName(offer.gate)}
                                     </span>
-                                    <span className='font-semibold text-blue-600'>${displayPrice(offer, actualBaggagePref)}</span>
+                                    <span className='font-semibold text-blue-600'>${displayPrice(offer)}</span>
                                 </div>
                             ))}
                         </CollapsibleContent>
@@ -159,7 +168,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
                                 unoptimized
                             />
                         )}
-                        {cheapestOffer.return_at && <Badge variant="secondary" className="ml-auto">Round Trip</Badge>}
+                        {cheapestOffer.return_at && cheapestOffer.return_at !== cheapestOffer.departure_at && <Badge variant="secondary" className="ml-auto">Round Trip</Badge>}
                     </div>
 
                     <div className="flex items-center justify-between">
