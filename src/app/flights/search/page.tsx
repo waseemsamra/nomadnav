@@ -273,7 +273,7 @@ function SearchResultsContent() {
                               </div>
                           </div>
                           {stopOptions.map(opt => (
-                               <div key={opt.value} className="flex items-center justify-between">
+                               <div key={`stop-opt-${opt.value}`} className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2">
                                     <Checkbox
                                         id={`stop-${opt.value}`}
@@ -569,3 +569,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
