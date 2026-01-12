@@ -75,30 +75,35 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const apiParams = new URLSearchParams({
+        const apiParams: { [key: string]: string } = {
             origin: origin,
             destination: destination,
             currency: searchParams.get('currency') || 'USD',
             limit: searchParams.get('limit') || '30',
             sorting: 'price',
-            show_to_affiliates: 'true', // Crucial for OTA data
-            token: API_TOKEN
-        });
+            show_to_affiliates: 'true',
+            token: API_TOKEN,
+            trip_class: '0', // Economy
+            page: '1',
+            unique: 'false',
+        };
 
         const departure_date = searchParams.get('depart_date');
         if (departure_date) {
-            apiParams.append('depart_date', departure_date);
+            // Correct format YYYY-MM-DD to YYYY-MM
+            apiParams['depart_date'] = departure_date.substring(0, 7);
         }
 
         const return_date = searchParams.get('return_date');
         if (return_date) {
-            apiParams.append('return_date', return_date);
+            // Correct format YYYY-MM-DD to YYYY-MM
+            apiParams['return_date'] = return_date.substring(0, 7);
         }
 
-        const url = `${API_ENDPOINT}?${apiParams.toString()}`;
+        const url = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
         
         const [apiResponse, airlines] = await Promise.all([
-             axios.get(url), // No longer needs x-access-token header, uses token param
+             axios.get(url),
              getAirlinesData(),
         ]);
 
@@ -118,7 +123,7 @@ export async function GET(req: NextRequest) {
                     transfers: flight.number_of_changes,
                     duration: flight.duration,
                     link: `https://www.travelpayouts.com${flight.link}`,
-                    currency: apiParams.get('currency'),
+                    currency: apiParams.currency,
                     gate: flight.gate, // Real OTA data
                 };
                 return addEstimatedBaggagePrices(enrichedFlight);
