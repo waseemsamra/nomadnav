@@ -101,6 +101,7 @@ export default function ApiTestPage() {
   };
   
   const formatDuration = (minutes: number) => {
+    if (typeof minutes !== 'number' || isNaN(minutes)) return 'N/A';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
