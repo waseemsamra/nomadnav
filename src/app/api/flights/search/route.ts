@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
 
         if (apiResponse.data && apiResponse.data.success) {
             const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => ({
-                id: flight.id || `${flight.origin}-${flight.destination}-${index}`,
+                id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.price}-${index}`,
                 price: flight.price,
                 airline: airlines[flight.airline] || flight.airline,
                 airline_code: flight.airline,
