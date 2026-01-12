@@ -67,7 +67,8 @@ const ENDPOINTS = {
   airports: 'https://api.travelpayouts.com/data/en/airports.json',
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
   countries: 'https://api.travelpayouts.com/data/en/countries.json',
-  gates: 'https://api.travelpayouts.com/data/en/gates.json',
+  // Use internal proxy for gates
+  gates: '/api/gates',
   planes: 'https://api.travelpayouts.com/data/en/planes.json',
   routes: 'https://api.travelpayouts.com/data/en/routes.json',
   alliances: 'https://api.travelpayouts.com/data/en/alliances.json',
@@ -136,7 +137,7 @@ class TravelpayoutsApiService {
         checkEndpoint('airports', ENDPOINTS.airports),
         checkEndpoint('airlines', ENDPOINTS.airlines),
         checkEndpoint('cities', ENDPOINTS.cities),
-        // checkEndpoint('otas', ENDPOINTS.gates), // This will be checked on client-side
+        checkEndpoint('otas', ENDPOINTS.gates),
         checkEndpoint('countries', ENDPOINTS.countries),
         checkEndpoint('planes', ENDPOINTS.planes),
         checkEndpoint('routes', ENDPOINTS.routes),
@@ -367,22 +368,14 @@ class TravelpayoutsApiService {
   }
   
   async getGates(): Promise<Gate[]> {
-    if (typeof window === 'undefined') {
-        // This function should only be called on the client.
-        // Return empty array or throw error if on server.
-        console.warn('getGates() was called on the server. It will not fetch data.');
-        return [];
-    }
     try {
-      const response = await fetch(ENDPOINTS.gates);
-      if (!response.ok) {
-        throw new Error(`Request failed with status code ${response.status}`);
-      }
-      const data = await response.json();
-      return data || [];
+      const response = await axios.get(ENDPOINTS.gates, {
+        headers: { 'Accept-Encoding': 'gzip,deflate,compress' },
+        timeout: 5000,
+      });
+      return response.data || [];
     } catch (error: any) {
       console.error('Error fetching gates:', error.message);
-      // Re-throwing the error so client-side callers can handle it
       throw error;
     }
   }

@@ -57,10 +57,6 @@ export default function ApiTestPage() {
     try {
       const status = await travelpayoutsApi.testApiConnection();
       
-      // Test OTAs on the client side since server-side is blocked
-      const otas = await travelpayoutsApi.getGates();
-      status.endpoints.otas = otas.length > 0;
-      
       const workingEndpoints = Object.values(status.endpoints).filter(v => v).length;
       const totalEndpoints = Object.values(status.endpoints).length;
       status.message = `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`;
