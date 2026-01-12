@@ -168,7 +168,7 @@ function SearchResultsContent() {
   
   // **EFFECT 2: ATOMIC FILTER INITIALIZATION**
   // This single effect runs ONLY when the initial flight data is loaded.
-  // It initializes ALL filter states at once to prevent race conditions.
+  // It initializes ALL filter states at once to prevent race conditions and disappearing flights.
   useEffect(() => {
     if (flights.length > 0) {
       console.log("Initializing all filters atomically based on new flight data...");
@@ -185,7 +185,7 @@ function SearchResultsContent() {
       const uniqueStops = [...new Set(flights.map(f => f.transfers))];
       const uniqueOtas = [...new Set(flights.map(f => f.gate))].filter(Boolean);
 
-      // Set all states together
+      // ATOMIC UPDATE: Set all filter states in a single render cycle.
       setPriceRange({ min: minPrice, max: maxPrice });
       setSelectedPrice([minPrice, maxPrice]);
       setDurationRange({ min: minDuration, max: maxDuration });
@@ -194,9 +194,9 @@ function SearchResultsContent() {
       setSelectedStops(uniqueStops);
       setSelectedOtas(uniqueOtas);
       
-      console.log("All filters initialized.");
+      console.log("All filters initialized successfully.");
     }
-  // This dependency array is critical. It ensures this only runs when `flights` changes.
+  // This dependency array is critical. It ensures this only runs when `flights` reference changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flights]);
   
