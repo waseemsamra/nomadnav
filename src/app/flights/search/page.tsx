@@ -465,7 +465,7 @@ function SearchResultsContent() {
                   </FilterSection>
                   
                    <FilterSection title="Connecting airports" disabled>
-                     <p>Connecting airports filter content</p>
+                     <p className="p-2 text-sm text-muted-foreground">Connecting airports filter is not available with this API.</p>
                   </FilterSection>
 
                   <FilterSection title="Airlines" disabled={availableAirlines.length === 0}>
@@ -492,11 +492,11 @@ function SearchResultsContent() {
                   </FilterSection>
                   
                   <FilterSection title="Airports" disabled>
-                     <p>Airports filter content</p>
+                     <p className="p-2 text-sm text-muted-foreground">Airport filter is not available.</p>
                   </FilterSection>
 
                    <FilterSection title="Online travel agencies" disabled>
-                     <p>Agencies filter content</p>
+                     <p className="p-2 text-sm text-muted-foreground">Agency filter is not available.</p>
                   </FilterSection>
               </Accordion>
           </CardContent>
