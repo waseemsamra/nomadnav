@@ -173,7 +173,7 @@ function SearchResultsContent() {
           });
               
       setOtaOptions(activeOtaInfo);
-      setSelectedOtas(activeOtaInfo.map(ota => ota.id));
+      setSelectedOtas(allOtas.map(ota => ota.code));
     }
   }, [flights, allOtas]);
 
