@@ -367,7 +367,7 @@ class TravelpayoutsApiService {
   
   async getGates(): Promise<Gate[]> {
     try {
-      const response = await axios.get(ENDPOINTS.gates, { timeout: 5000 });
+      const response = await axios.get(ENDPOINTS.gates, { timeout: 10000, headers: {'Accept-Encoding': 'gzip, deflate, compress'} });
       return response.data || [];
     } catch (error: any) {
       console.error('Error fetching gates:', error.message);
@@ -391,4 +391,4 @@ class TravelpayoutsApiService {
 export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
-export type { Airport, Flight, FlightSearchParams };
+export type { Airport, Flight, FlightSearchParams, Gate };

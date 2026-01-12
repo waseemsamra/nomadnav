@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
+import { type Flight, travelpayoutsApi, type Gate } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
@@ -557,7 +557,6 @@ function SearchResultsContent() {
                               </div>
                             ))}
                         </div>
-                        <p className="p-2 text-xs text-muted-foreground">OTA filtering is now live.</p>
                   </FilterSection>
               </Accordion>
           </CardContent>
