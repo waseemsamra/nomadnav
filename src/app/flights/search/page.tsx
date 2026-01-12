@@ -311,10 +311,14 @@ function SearchResultsContent() {
     );
     
     const exampleOTAs = [
-        { id: 'trip', name: 'Trip.com', price: 163 },
-        { id: 'mytrip', name: 'Mytrip.com', price: 163 },
-        { id: 'city', name: 'City.Travel', price: 164 },
-        { id: 'wingie', name: 'Wingie', price: 170 },
+      { id: 'MYTR', name: 'Mytrip.com', price: 163 },
+      { id: 'CITY', name: 'City.Travel', price: 164 },
+      { id: 'WING', name: 'Wingie', price: 170 },
+      { id: 'TRIP', name: 'Trip.com', price: 163 },
+      { id: 'TIKT', name: 'Tiket.com', price: 172 },
+      { id: 'FD', name: 'Flydubai', price: 180 },
+      { id: 'QR', name: 'Qatar Airways', price: 210 },
+      { id: 'PZTR', name: 'Pobeda', price: 155 },
     ];
 
 
