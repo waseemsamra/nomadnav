@@ -75,17 +75,17 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const apiParams: { [key: string]: string } = {
+        const apiParams: { [key: string]: any } = {
             origin: origin,
             destination: destination,
             currency: searchParams.get('currency') || 'USD',
-            limit: searchParams.get('limit') || '30',
+            limit: searchParams.get('limit') || '50',
             sorting: 'price',
             show_to_affiliates: 'true',
             token: API_TOKEN,
-            trip_class: '0', // Economy
-            page: '1',
-            unique: 'false',
+            trip_class: 0,
+            page: 1,
+            unique: false,
         };
 
         const departure_date = searchParams.get('depart_date');
@@ -103,20 +103,19 @@ export async function GET(req: NextRequest) {
         const url = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
         
         const [apiResponse, airlines] = await Promise.all([
-             axios.get(url),
+             axios.get(url, { timeout: 15000 }),
              getAirlinesData(),
         ]);
 
-
-        if (apiResponse.data && apiResponse.data.success) {
+        if (apiResponse.data && apiResponse.data.success && apiResponse.data.data.length > 0) {
             const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => {
                 const enrichedFlight = {
-                    id: `${flight.origin}-${flight.destination}-${flight.depart_at}-${flight.value}-${flight.gate}-${index}`,
+                    id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.value}-${flight.gate}-${index}`,
                     price: flight.value, // price is 'value' in this endpoint
                     airline: airlines[flight.airline] || flight.airline,
                     airline_code: flight.airline,
                     flight_number: flight.flight_number || `TP${1000 + index}`,
-                    departure_at: flight.depart_at, // departure time is 'depart_at'
+                    departure_at: flight.departure_at, // departure time is 'departure_at'
                     return_at: flight.return_at,
                     origin: flight.origin,
                     destination: flight.destination,
@@ -130,7 +129,37 @@ export async function GET(req: NextRequest) {
             });
             return NextResponse.json(flightsWithDetails);
         } else {
-            console.warn('API returned success=false or no data', apiResponse.data);
+            console.warn('API returned no data, trying without date filter...', apiResponse.data);
+            // Fallback: try again without date filter
+            delete apiParams.depart_date;
+            delete apiParams.return_date;
+            
+            const fallbackUrl = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
+            const fallbackResponse = await axios.get(fallbackUrl, { timeout: 15000 });
+            
+            if(fallbackResponse.data && fallbackResponse.data.success && fallbackResponse.data.data.length > 0) {
+                 const flightsWithDetails = fallbackResponse.data.data.map((flight: any, index: number) => {
+                    const enrichedFlight = {
+                        id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.value}-${flight.gate}-${index}`,
+                        price: flight.value,
+                        airline: airlines[flight.airline] || flight.airline,
+                        airline_code: flight.airline,
+                        flight_number: flight.flight_number || `TP${1000 + index}`,
+                        departure_at: flight.departure_at,
+                        return_at: flight.return_at,
+                        origin: flight.origin,
+                        destination: flight.destination,
+                        transfers: flight.number_of_changes,
+                        duration: flight.duration,
+                        link: `https://www.travelpayouts.com${flight.link}`,
+                        currency: apiParams.currency,
+                        gate: flight.gate,
+                    };
+                    return addEstimatedBaggagePrices(enrichedFlight);
+                });
+                return NextResponse.json(flightsWithDetails);
+            }
+
             return NextResponse.json([]);
         }
 
