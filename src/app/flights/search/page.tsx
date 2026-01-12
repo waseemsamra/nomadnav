@@ -496,7 +496,7 @@ function SearchResultsContent() {
                   </FilterSection>
 
                    <FilterSection title="Online travel agencies" disabled>
-                     <p className="p-2 text-sm text-muted-foreground">Agency filter is not available.</p>
+                     <p className="p-2 text-sm text-muted-foreground">Agency filter is not available with this API.</p>
                   </FilterSection>
               </Accordion>
           </CardContent>
