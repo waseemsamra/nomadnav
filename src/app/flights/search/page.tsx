@@ -74,23 +74,9 @@ function SearchResultsContent() {
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
 
-  // Fetch OTAs (gates) on client-side
+  // Fetch flights and OTAs
   useEffect(() => {
-    async function fetchOtas() {
-      try {
-        const otaData = await travelpayoutsApi.getGates();
-        setAllOtas(otaData);
-      } catch (error) {
-        console.error("Failed to fetch OTAs on client", error);
-        toast.error("Could not load travel agency data.");
-      }
-    }
-    fetchOtas();
-  }, []);
-
-  // Fetch flights
-  useEffect(() => {
-    const fetchFlights = async () => {
+    async function fetchFlightsAndOtas() {
       if (!origin || !destination || !depart_date) {
         router.push('/');
         return;
@@ -99,7 +85,8 @@ function SearchResultsContent() {
       setLoading(true);
 
       try {
-        const flightData = await travelpayoutsApi.searchFlights({
+        const [flightData, otaData] = await Promise.all([
+          travelpayoutsApi.searchFlights({
             origin,
             destination,
             depart_date,
@@ -107,14 +94,18 @@ function SearchResultsContent() {
             passengers: parseInt(passengers),
             currency: 'USD',
             limit: 50,
-          });
+          }),
+          travelpayoutsApi.getGates()
+        ]);
         
         console.log('Fetched flights:', flightData.length);
         setFlights(flightData);
+        setAllOtas(otaData);
 
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
           
+          // --- BEGIN ATOMIC FILTER INITIALIZATION ---
           const uniqueAirlines = [...new Set(flightData.map(f => f.airline))].sort();
           setAvailableAirlines(uniqueAirlines);
           setSelectedAirlines(uniqueAirlines);
@@ -127,20 +118,49 @@ function SearchResultsContent() {
           const maxDuration = durations.length > 0 ? Math.max(...durations) : 1440;
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
+          
+          const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
+          const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
+          const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 0;
+          setPriceRange({ min: minPrice, max: maxPrice });
+          setSelectedPrice([minPrice, maxPrice]);
+
+          if (otaData.length > 0) {
+            const gatePrices: { [key: string]: number } = {};
+            flightData.forEach(flight => {
+                const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
+                if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
+                    gatePrices[flight.gate] = price;
+                }
+            });
+
+            const activeOtaInfo = otaData
+                .filter(ota => gatePrices[ota.code])
+                .map(ota => ({
+                    id: ota.code,
+                    name: ota.name,
+                    price: Math.round(gatePrices[ota.code])
+                }))
+                .sort((a, b) => a.price - b.price);
+                
+            setOtaOptions(activeOtaInfo);
+            setSelectedOtas(activeOtaInfo.map(ota => ota.id));
+          }
+          // --- END ATOMIC FILTER INITIALIZATION ---
         }
       } catch (error: any) {
-        console.error('Error fetching flights:', error);
-        toast.error(error.message || 'Failed to load flights.');
+        console.error('Error fetching flights or OTAs:', error);
+        toast.error(error.message || 'Failed to load flight data.');
         setFlights([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFlights();
+    fetchFlightsAndOtas();
   }, [origin, destination, depart_date, return_date, passengers, router]);
   
-  // This effect now correctly depends on flights and baggageFilter
+  // This effect correctly depends on flights and baggageFilter
   // to recalculate price ranges when either changes.
   useEffect(() => {
     if (flights.length > 0) {
@@ -152,33 +172,6 @@ function SearchResultsContent() {
     }
   }, [flights, baggageFilter]);
   
-  // Process OTAs when flights or the OTA list are loaded
-  useEffect(() => {
-    if (flights.length > 0 && allOtas.length > 0) {
-        const gatePrices: { [key: string]: number } = {};
-        flights.forEach(flight => {
-            const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
-            if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
-                gatePrices[flight.gate] = price;
-            }
-        });
-
-        const otaInfo = allOtas
-            .filter(ota => gatePrices[ota.code])
-            .map(ota => ({
-                id: ota.code,
-                name: ota.name,
-                price: Math.round(gatePrices[ota.code])
-            }))
-            .sort((a, b) => a.price - b.price);
-            
-        setOtaOptions(otaInfo);
-        if (selectedOtas.length === 0) {
-          setSelectedOtas(otaInfo.map(ota => ota.id));
-        }
-    }
-  }, [flights, allOtas, baggageFilter, selectedOtas.length]);
-
 
   const handleBookFlight = (flight: Flight) => {
     if (flight.link) {
@@ -746,5 +739,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
