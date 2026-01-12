@@ -25,6 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Slider } from '@/components/ui/slider';
 
 
 type FilterState = {
@@ -55,6 +56,9 @@ function SearchResultsContent() {
     without: true,
     with: true,
   });
+  
+  const [durationRange, setDurationRange] = useState({ min: 0, max: 0 });
+  const [selectedDuration, setSelectedDuration] = useState([0, 0]);
 
 
   // Extract search parameters
@@ -98,6 +102,12 @@ function SearchResultsContent() {
 
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
+          
+          const durations = flightData.map(f => f.duration).filter(d => d > 0);
+          const minDuration = Math.min(...durations);
+          const maxDuration = Math.max(...durations);
+          setDurationRange({ min: minDuration, max: maxDuration });
+          setSelectedDuration([minDuration, maxDuration]);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -170,6 +180,7 @@ function SearchResultsContent() {
     const allStops = stopOptions.map(opt => opt.value);
     setSelectedStops(allStops);
     setBaggageOptions({ all: true, without: true, with: true });
+    setSelectedDuration([durationRange.min, durationRange.max]);
   };
 
   const formatDuration = (minutes: number) => {
@@ -217,7 +228,9 @@ function SearchResultsContent() {
   const sortedFlights = useMemo(() => {
     let filtered = [...flights]
         .filter(flight => selectedAirlines.includes(flight.airline))
-        .filter(flight => selectedStops.includes(flight.transfers));
+        .filter(flight => selectedStops.includes(flight.transfers))
+        .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
+
 
     // Placeholder for baggage filter logic
     // if (!baggageOptions.all) {
@@ -241,7 +254,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines, selectedStops, baggageOptions]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageOptions, selectedDuration]);
 
   if (loading) {
     return (
@@ -302,7 +315,7 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Airlines', 'Baggage']}>
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'Airlines', 'Travel time']}>
                   <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
@@ -381,9 +394,23 @@ function SearchResultsContent() {
                   <FilterSection title="Departure/Arrival times" disabled>
                      <p>Time filter content</p>
                   </FilterSection>
-                  <FilterSection title="Travel time" disabled>
-                     <p>Travel time filter content</p>
+                  
+                  <FilterSection title="Travel time" disabled={durationRange.max === 0}>
+                      <div className="p-2">
+                        <p className="text-sm text-center mb-2">
+                            {formatDuration(selectedDuration[0])} - {formatDuration(selectedDuration[1])}
+                        </p>
+                        <Slider
+                            min={durationRange.min}
+                            max={durationRange.max}
+                            step={10}
+                            value={selectedDuration}
+                            onValueChange={setSelectedDuration}
+                            minStepsBetweenThumbs={1}
+                        />
+                      </div>
                   </FilterSection>
+                  
                   <FilterSection title="Connecting airports" disabled>
                      <p>Connecting airports filter content</p>
                   </FilterSection>
@@ -651,3 +678,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
