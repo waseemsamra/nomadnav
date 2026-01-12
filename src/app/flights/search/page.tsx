@@ -50,7 +50,7 @@ function SearchResultsContent() {
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
   
-  // State for baggage filter (UI only for now)
+  // State for baggage filter
   const [baggageOptions, setBaggageOptions] = useState({
     all: true,
     without: true,
@@ -163,11 +163,15 @@ function SearchResultsContent() {
   const handleBaggageSelection = (option: keyof typeof baggageOptions) => {
     setBaggageOptions(prev => {
       const newState = { ...prev, [option]: !prev[option] };
+      // Logic to handle 'All' checkbox
       if (option === 'all') {
+        // if 'All' is checked, check all other boxes
         return { all: newState.all, without: newState.all, with: newState.all };
       } else if (!newState.without || !newState.with) {
+        // if any of the other boxes is unchecked, uncheck 'All'
         return { ...newState, all: false };
       } else if (newState.without && newState.with) {
+        // if both sub-options are checked, check 'All'
         return { ...newState, all: true };
       }
       return newState;
@@ -217,8 +221,12 @@ function SearchResultsContent() {
   const baggagePriceOptions = useMemo(() => {
     // This is placeholder logic. When baggage data is available,
     // this should be updated to calculate min prices for each.
-    const withoutBaggageMinPrice = Math.min(...flights.map(f => f.price).filter(p => p > 0));
-    const withBaggageMinPrice = withoutBaggageMinPrice * 1.15; // Placeholder
+    const prices = flights.map(f => f.price).filter(p => p > 0);
+    if (prices.length === 0) return { without: null, with: null };
+
+    const withoutBaggageMinPrice = Math.min(...prices);
+    const withBaggageMinPrice = withoutBaggageMinPrice * 1.15; // Placeholder markup
+    
     return {
         without: isFinite(withoutBaggageMinPrice) ? withoutBaggageMinPrice : null,
         with: isFinite(withBaggageMinPrice) ? Math.round(withBaggageMinPrice) : null,
@@ -232,15 +240,18 @@ function SearchResultsContent() {
         .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
 
 
-    // Placeholder for baggage filter logic
-    // if (!baggageOptions.all) {
-    //   if (baggageOptions.with && !baggageOptions.without) {
-    //     // filter for flights with baggage
-    //   }
-    //   if (!baggageOptions.with && baggageOptions.without) {
-    //     // filter for flights without baggage
-    //   }
-    // }
+    // Placeholder for baggage filter logic. This will not filter anything
+    // until the API provides baggage data and this logic is updated.
+    if (!baggageOptions.all) {
+      if (baggageOptions.with && !baggageOptions.without) {
+        // Placeholder: When data is available, filter for flights that HAVE baggage.
+        // e.g., filtered = filtered.filter(f => f.has_baggage);
+      }
+      if (!baggageOptions.with && baggageOptions.without) {
+        // Placeholder: When data is available, filter for flights that DO NOT HAVE baggage.
+        // e.g., filtered = filtered.filter(f => !f.has_baggage);
+      }
+    }
 
     switch (filters.sortBy) {
         case 'price':
@@ -675,3 +686,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
