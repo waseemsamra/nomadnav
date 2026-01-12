@@ -54,12 +54,14 @@ export default function ApiTestPage() {
     testOtaEndpoint(); // Test OTAs on load
   }, []);
 
-  // Client-side test for OTAs via our own proxy
+  // Client-side test for OTAs
   async function testOtaEndpoint() {
       setOtasLoading(true);
       setOtasError(null);
       try {
-          const response = await fetch('/api/gates');
+          const response = await fetch('https://api.travelpayouts.com/data/en/gates.json', {
+              headers: { 'Accept-Encoding': 'gzip, deflate, compress' }
+          });
           if (response.ok) {
               const data = await response.json();
               setAllOtas(data);
@@ -75,8 +77,8 @@ export default function ApiTestPage() {
                   };
               });
           } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `Request failed with status ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Request failed with status ${response.status}: ${errorText}`);
           }
       } catch (error: any) {
           console.error('OTA endpoint test failed:', error);
@@ -369,3 +371,5 @@ export default function ApiTestPage() {
     </div>
   );
 }
+
+    
