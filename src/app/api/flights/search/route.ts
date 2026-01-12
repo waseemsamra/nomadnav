@@ -4,7 +4,7 @@ import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
-const API_ENDPOINT = 'https://api.travelpayouts.com/v2/prices/latest';
+const API_ENDPOINT = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates'; // Changed endpoint
 const AIRLINES_ENDPOINT = 'https://api.travelpayouts.com/data/en/airlines.json';
 
 let airlinesCache: { [key: string]: string } | null = null;
@@ -80,49 +80,48 @@ export async function GET(req: NextRequest) {
             origin: origin,
             destination: destination,
             currency: searchParams.get('currency') || 'USD',
-            limit: searchParams.get('limit') || '50',
+            limit: searchParams.get('limit') || '30',
             sorting: 'price',
-            show_to_affiliates: 'true',
-            token: API_TOKEN,
-            trip_class: 0,
-            page: 1,
             unique: false,
         };
 
         const departure_date = searchParams.get('depart_date');
         if (departure_date) {
-            apiParams['depart_date'] = departure_date;
+            apiParams['departure_at'] = departure_date; // Use departure_at for v3
         }
 
         const return_date = searchParams.get('return_date');
         if (return_date) {
-            apiParams['return_date'] = return_date;
+            apiParams['return_at'] = return_date; // Use return_at for v3
         }
 
         const url = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
         
         const [apiResponse, airlines] = await Promise.all([
-             axios.get(url, { timeout: 15000 }),
+             axios.get(url, { 
+                timeout: 15000,
+                headers: { 'X-Access-Token': API_TOKEN }
+             }),
              getAirlinesData(),
         ]);
 
         if (apiResponse.data && apiResponse.data.success && apiResponse.data.data.length > 0) {
             const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => {
                 const enrichedFlight = {
-                    id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.value}-${flight.gate}-${index}`,
-                    price: flight.value, // price is 'value' in this endpoint
+                    id: flight.link, // Use link as a more unique ID
+                    price: flight.price,
                     airline: airlines[flight.airline] || flight.airline,
                     airline_code: flight.airline,
-                    flight_number: flight.flight_number || `TP${1000 + index}`,
-                    departure_at: flight.departure_at, // departure time is 'departure_at'
+                    flight_number: flight.flight_number,
+                    departure_at: flight.departure_at,
                     return_at: flight.return_at,
                     origin: flight.origin,
                     destination: flight.destination,
-                    transfers: flight.number_of_changes,
+                    transfers: flight.transfers,
                     duration: flight.duration,
                     link: `https://www.travelpayouts.com${flight.link}`,
                     currency: apiParams.currency,
-                    gate: flight.gate, // Real OTA data
+                    gate: 'Direct', // This endpoint doesn't provide OTA info, so we default
                 };
                 return addEstimatedBaggagePrices(enrichedFlight);
             });
