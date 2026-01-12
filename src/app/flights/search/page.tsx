@@ -118,8 +118,9 @@ function SearchResultsContent() {
 
           const gatePrices: { [key: string]: number } = {};
           flightData.forEach(flight => {
-            if (!gatePrices[flight.gate] || flight.price < gatePrices[flight.gate]) {
-              gatePrices[flight.gate] = flight.price;
+            const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
+            if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
+              gatePrices[flight.gate] = price;
             }
           });
 
