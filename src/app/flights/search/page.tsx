@@ -170,7 +170,7 @@ function SearchResultsContent() {
   // This single effect runs ONLY when the initial flight data is loaded.
   // It initializes ALL filter states at once to prevent race conditions.
   useEffect(() => {
-    if (flights.length > 0) {
+    if (flights.length > 0 && !loading) {
       console.log("Initializing all filters atomically based on new flight data...");
       
       const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
@@ -181,7 +181,6 @@ function SearchResultsContent() {
       const minDuration = Math.min(...durations);
       const maxDuration = Math.max(...durations);
 
-      // This is the correct way to get unique values for filters
       const uniqueAirlineCodes = [...new Set(flights.map(f => f.airline_code))];
       const uniqueStops = [...new Set(flights.map(f => f.transfers))];
       const uniqueOtas = [...new Set(flights.map(f => f.gate))].filter(Boolean);
@@ -198,7 +197,7 @@ function SearchResultsContent() {
       console.log("All filters initialized.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flights, baggageFilter]);
+  }, [flights, loading]);
   
 
   const handleBookFlight = (flight: Flight) => {
@@ -257,7 +256,7 @@ function SearchResultsContent() {
     if (flights.length > 0) {
         setSelectedAirlines([...new Set(flights.map(f => f.airline_code))]);
         setSelectedStops([...new Set(flights.map(f => f.transfers))]);
-        setSelectedOtas([...new Set(flights.map(f => f.gate))]);
+        setSelectedOtas([...new Set(flights.map(f => f.gate))].filter(Boolean));
         setSelectedDuration([durationRange.min, durationRange.max]);
         setSelectedPrice([priceRange.min, priceRange.max]);
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
