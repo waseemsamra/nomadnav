@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { type Flight } from '@/services/travelpayoutsApi';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
 const API_ENDPOINT = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
@@ -31,6 +32,31 @@ async function getAirlinesData() {
         console.error('Failed to fetch airlines:', error);
     }
     return {};
+}
+
+// Function to add estimated baggage prices
+function addEstimatedBaggagePrices(flight: any): Flight {
+  const basePrice = flight.price;
+  const CARRY_ON_PRICE = 25; // Estimated cost for carry-on
+  const CHECKED_BAGGAGE_PRICE = 50; // Estimated cost for checked baggage
+
+  return {
+    ...flight,
+    baggage: {
+        hand: {
+            price: CARRY_ON_PRICE,
+            // A simple heuristic for free carry-on for legacy carriers
+            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline), 
+        },
+        checked: {
+            price: CHECKED_BAGGAGE_PRICE,
+            // A simple heuristic for free checked baggage on more expensive flights
+            has_baggage: basePrice > 400,
+        },
+    },
+    // The main price should be the base price without extras
+    price: basePrice,
+  };
 }
 
 
@@ -78,21 +104,24 @@ export async function GET(req: NextRequest) {
 
 
         if (apiResponse.data && apiResponse.data.success) {
-            const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => ({
-                id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.price}-${index}`,
-                price: flight.price,
-                airline: airlines[flight.airline] || flight.airline,
-                airline_code: flight.airline,
-                flight_number: flight.flight_number || `TP${1000 + index}`,
-                departure_at: flight.departure_at,
-                return_at: flight.return_at,
-                origin: flight.origin,
-                destination: flight.destination,
-                transfers: flight.number_of_changes,
-                duration: flight.duration,
-                link: `https://www.travelpayouts.com${flight.link}`,
-                currency: apiParams.get('currency'),
-            }));
+            const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => {
+                const enrichedFlight = {
+                    id: `${flight.origin}-${flight.destination}-${flight.departure_at}-${flight.price}-${index}`,
+                    price: flight.price,
+                    airline: airlines[flight.airline] || flight.airline,
+                    airline_code: flight.airline,
+                    flight_number: flight.flight_number || `TP${1000 + index}`,
+                    departure_at: flight.departure_at,
+                    return_at: flight.return_at,
+                    origin: flight.origin,
+                    destination: flight.destination,
+                    transfers: flight.number_of_changes,
+                    duration: flight.duration,
+                    link: `https://www.travelpayouts.com${flight.link}`,
+                    currency: apiParams.get('currency'),
+                };
+                return addEstimatedBaggagePrices(enrichedFlight);
+            });
             return NextResponse.json(flightsWithDetails);
         } else {
             console.warn('API returned success=false or no data', apiResponse.data);

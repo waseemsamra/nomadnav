@@ -11,6 +11,11 @@ export interface Airport {
   flightable: boolean;
 }
 
+export interface BaggageInfo {
+    price: number;
+    has_baggage: boolean;
+}
+
 export interface Flight {
   id: string;
   price: number;
@@ -25,6 +30,10 @@ export interface Flight {
   duration: number;
   link: string;
   currency: string;
+  baggage: {
+    hand: BaggageInfo;
+    checked: BaggageInfo;
+  };
   actual: boolean;
   gate: string;
   distance: number;
@@ -275,5 +284,3 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams };
-
-    

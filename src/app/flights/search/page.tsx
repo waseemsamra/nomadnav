@@ -32,6 +32,9 @@ type FilterState = {
   sortBy: 'price' | 'duration' | 'departure';
 };
 
+type BaggageFilterType = 'all' | 'without' | 'with';
+
+
 const initialFilterState: FilterState = {
   sortBy: 'price',
 };
@@ -51,11 +54,7 @@ function SearchResultsContent() {
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
   
   // State for baggage filter
-  const [baggageOptions, setBaggageOptions] = useState({
-    all: true,
-    without: true,
-    with: true,
-  });
+  const [baggageFilter, setBaggageFilter] = useState<BaggageFilterType>('all');
   
   const [durationRange, setDurationRange] = useState({ min: 0, max: 0 });
   const [selectedDuration, setSelectedDuration] = useState([0, 0]);
@@ -160,30 +159,12 @@ function SearchResultsContent() {
       setSelectedStops(checked ? allStops : []);
   }
 
-  const handleBaggageSelection = (option: keyof typeof baggageOptions) => {
-    setBaggageOptions(prev => {
-      const newState = { ...prev, [option]: !prev[option] };
-      // Logic to handle 'All' checkbox
-      if (option === 'all') {
-        // if 'All' is checked, check all other boxes
-        return { all: newState.all, without: newState.all, with: newState.all };
-      } else if (!newState.without || !newState.with) {
-        // if any of the other boxes is unchecked, uncheck 'All'
-        return { ...newState, all: false };
-      } else if (newState.without && newState.with) {
-        // if both sub-options are checked, check 'All'
-        return { ...newState, all: true };
-      }
-      return newState;
-    });
-  }
-
   const handleResetFilters = () => {
     setFilters(initialFilterState);
     setSelectedAirlines(availableAirlines);
     const allStops = stopOptions.map(opt => opt.value);
     setSelectedStops(allStops);
-    setBaggageOptions({ all: true, without: true, with: true });
+    setBaggageFilter('all');
     setSelectedDuration([durationRange.min, durationRange.max]);
   };
 
@@ -200,36 +181,53 @@ function SearchResultsContent() {
       return dateString;
     }
   };
+
+  const getFlightDisplayPrice = (flight: Flight): number => {
+    if (baggageFilter === 'with') {
+        let baggageCost = 0;
+        if (!flight.baggage.hand.has_baggage) {
+            baggageCost += flight.baggage.hand.price;
+        }
+         if (!flight.baggage.checked.has_baggage) {
+            baggageCost += flight.baggage.checked.price;
+        }
+        return flight.price + baggageCost;
+    }
+    // 'all' and 'without' show base price
+    return flight.price;
+  }
   
   const stopOptions = useMemo(() => {
     const stopsMap = new Map<number, number>();
     flights.forEach(flight => {
+        const price = getFlightDisplayPrice(flight);
         const currentMinPrice = stopsMap.get(flight.transfers);
-        if (!currentMinPrice || flight.price < currentMinPrice) {
-            stopsMap.set(flight.transfers, flight.price);
+        if (!currentMinPrice || price < currentMinPrice) {
+            stopsMap.set(flight.transfers, price);
         }
     });
     return Array.from(stopsMap.entries())
         .map(([value, price]) => ({
             value: value,
             label: value === 0 ? 'Direct' : `${value} stop${value > 1 ? 's' : ''}`,
-            price: price,
+            price: Math.round(price),
         }))
         .sort((a,b) => a.value - b.value);
-  }, [flights]);
+  }, [flights, baggageFilter]);
 
   const baggagePriceOptions = useMemo(() => {
-    // This is placeholder logic. When baggage data is available,
-    // this should be updated to calculate min prices for each.
-    const prices = flights.map(f => f.price).filter(p => p > 0);
-    if (prices.length === 0) return { without: null, with: null };
+    const pricesWithout = flights.map(f => f.price);
+    const pricesWith = flights.map(f => getFlightDisplayPrice({...f})); // Recalculate with 'with' logic temporarily
 
-    const withoutBaggageMinPrice = Math.min(...prices);
-    const withBaggageMinPrice = withoutBaggageMinPrice * 1.15; // Placeholder markup
-    
+    if (flights.length === 0) return { without: null, with: null };
+
+    const minWithout = Math.min(...pricesWithout);
+    const minWith = Math.min(...flights.map(f => getFlightDisplayPrice({ ...f, baggage: { ...f.baggage } })));
+
+
     return {
-        without: isFinite(withoutBaggageMinPrice) ? withoutBaggageMinPrice : null,
-        with: isFinite(withBaggageMinPrice) ? Math.round(withBaggageMinPrice) : null,
+      without: isFinite(minWithout) ? Math.round(minWithout) : null,
+      with: isFinite(minWith) ? Math.round(minWith) : null,
     };
   }, [flights]);
 
@@ -239,23 +237,18 @@ function SearchResultsContent() {
         .filter(flight => selectedStops.includes(flight.transfers))
         .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
 
-
-    // Placeholder for baggage filter logic. This will not filter anything
-    // until the API provides baggage data and this logic is updated.
-    if (!baggageOptions.all) {
-      if (baggageOptions.with && !baggageOptions.without) {
-        // Placeholder: When data is available, filter for flights that HAVE baggage.
-        // e.g., filtered = filtered.filter(f => f.has_baggage);
-      }
-      if (!baggageOptions.with && baggageOptions.without) {
-        // Placeholder: When data is available, filter for flights that DO NOT HAVE baggage.
-        // e.g., filtered = filtered.filter(f => !f.has_baggage);
-      }
+    if (baggageFilter === 'without') {
+        // This is a heuristic. Assumes low-cost carriers always charge for bags.
+        filtered = filtered.filter(f => !f.baggage.hand.has_baggage && !f.baggage.checked.has_baggage)
+    } else if (baggageFilter === 'with') {
+        // This is a heuristic. Assumes legacy carriers might include bags.
+        filtered = filtered.filter(f => f.baggage.hand.has_baggage || f.baggage.checked.has_baggage)
     }
+
 
     switch (filters.sortBy) {
         case 'price':
-            filtered.sort((a,b) => a.price - b.price);
+            filtered.sort((a,b) => getFlightDisplayPrice(a) - getFlightDisplayPrice(b));
             break;
         case 'duration':
             filtered.sort((a,b) => (a.duration || 9999) - (b.duration || 9999));
@@ -265,7 +258,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines, selectedStops, baggageOptions, selectedDuration]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration]);
 
   if (loading) {
     return (
@@ -356,44 +349,32 @@ function SearchResultsContent() {
                   </FilterSection>
 
                   <FilterSection title="Baggage">
-                      <div className="space-y-2 pr-2">
-                           <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id="baggage-all"
-                                    checked={baggageOptions.all}
-                                    onCheckedChange={() => handleBaggageSelection('all')}
-                                />
-                                <Label htmlFor="baggage-all" className="font-medium">All</Label>
-                              </div>
+                     <RadioGroup value={baggageFilter} onValueChange={(value: BaggageFilterType) => setBaggageFilter(value)} className="space-y-2 pr-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="all" id="baggage-all"/>
+                              <Label htmlFor="baggage-all" className="font-medium">All</Label>
                           </div>
-                           <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id="baggage-without"
-                                    checked={baggageOptions.without}
-                                    onCheckedChange={() => handleBaggageSelection('without')}
-                                />
-                                <Label htmlFor="baggage-without">Without baggage</Label>
-                              </div>
-                              {baggagePriceOptions.without && (
-                                <span className="text-sm text-muted-foreground">${baggagePriceOptions.without}</span>
-                              )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="without" id="baggage-without"/>
+                              <Label htmlFor="baggage-without">Without baggage</Label>
                           </div>
-                           <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id="baggage-with"
-                                    checked={baggageOptions.with}
-                                    onCheckedChange={() => handleBaggageSelection('with')}
-                                />
-                                <Label htmlFor="baggage-with">Luggage and carry-on</Label>
-                              </div>
-                              {baggagePriceOptions.with && (
-                                <span className="text-sm text-muted-foreground">${baggagePriceOptions.with}</span>
-                              )}
+                          {baggagePriceOptions.without !== null && (
+                              <span className="text-sm text-muted-foreground">${baggagePriceOptions.without}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="with" id="baggage-with"/>
+                              <Label htmlFor="baggage-with">Luggage and carry-on</Label>
                           </div>
-                      </div>
+                          {baggagePriceOptions.with !== null && (
+                              <span className="text-sm text-muted-foreground">${baggagePriceOptions.with}</span>
+                          )}
+                        </div>
+                      </RadioGroup>
                   </FilterSection>
                   
                   <FilterSection title="Duration of stops" disabled={durationRange.max === 0}>
@@ -621,7 +602,7 @@ function SearchResultsContent() {
                       {/* Price & Booking */}
                        <div className="col-span-1 text-center md:text-right mt-4 md:mt-0">
                           <div className="text-3xl font-bold text-blue-600">
-                            ${flight.price}
+                            ${Math.round(getFlightDisplayPrice(flight))}
                           </div>
                            <div className="text-sm text-gray-500 mb-4">
                             per passenger
@@ -686,5 +667,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
