@@ -245,7 +245,7 @@ function SearchResultsContent() {
   const handleResetFilters = () => {
     setFilters(initialFilterState);
     setSelectedAirlines(allAirlines.map(a => a.name));
-    const allStops = stopOptions.map(opt => opt.value);
+    const allStops = [...new Set(flights.map(f => f.transfers))];
     setSelectedStops(allStops);
     setBaggageFilter('all');
     setSelectedDuration([durationRange.min, durationRange.max]);
@@ -411,7 +411,7 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Departure/Arrival times', 'Airlines', 'Online travel agencies', 'Alliances']}>
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Departure/Arrival times', 'Airlines', 'Online travel agencies']}>
                   <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
