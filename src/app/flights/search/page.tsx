@@ -11,7 +11,8 @@ import {
   Users,
   Wind,
   Filter,
-  X
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -22,6 +23,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+
 
 type FilterState = {
   sortBy: 'price' | 'duration' | 'departure';
@@ -172,58 +176,107 @@ function SearchResultsContent() {
     );
   }
 
-  const FilterSidebar = () => (
-    <Card className="lg:sticky lg:top-24">
-        <CardContent className="p-4 space-y-6">
-            <div className="flex justify-between items-center">
-                <h3 className="font-bold text-lg">Sort & Filter</h3>
-                <Button variant="ghost" size="sm" onClick={handleResetFilters}>Reset</Button>
-            </div>
+  const FilterSidebar = () => {
+    
+    const FilterSection = ({ title, children, disabled = false }: { title: string, children: React.ReactNode, disabled?: boolean }) => (
+      <AccordionItem value={title} disabled={disabled}>
+        <AccordionTrigger className={`py-4 text-sm font-semibold ${disabled ? 'text-muted-foreground/50 cursor-not-allowed' : ''}`}>
+           {title.toUpperCase()}
+        </AccordionTrigger>
+        <AccordionContent>
+          {children}
+        </AccordionContent>
+      </AccordionItem>
+    );
 
-            {/* Sort by */}
-            <div className="space-y-2">
-                <label className="font-semibold text-sm">Sort by</label>
-                <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value)}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Sort by..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="price">Price</SelectItem>
-                        <SelectItem value="duration">Duration</SelectItem>
-                        <SelectItem value="departure">Departure Time</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+    return (
+      <Card className="lg:sticky lg:top-24">
+          <CardContent className="p-4">
+              <div className="space-y-4">
+                  <RadioGroup defaultValue="all-tickets" className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="all-tickets" id="all-tickets" />
+                        <Label htmlFor="all-tickets">All tickets</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="best-tickets" id="best-tickets" />
+                        <Label htmlFor="best-tickets">Best tickets</Label>
+                      </div>
+                  </RadioGroup>
 
-            {/* Airlines Filter */}
-            {availableAirlines.length > 1 && (
-                 <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Airlines</h4>
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                        <div className="flex items-center space-x-2">
-                            <Checkbox 
-                                id="select-all-airlines"
-                                checked={selectedAirlines.length === availableAirlines.length}
-                                onCheckedChange={(checked) => handleSelectAllAirlines(!!checked)}
-                            />
-                            <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
-                        </div>
-                        {availableAirlines.map(airline => (
-                             <div key={airline} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`airline-${airline}`}
-                                    checked={selectedAirlines.includes(airline)}
-                                    onCheckedChange={() => handleAirlineSelection(airline)}
-                                />
-                                <Label htmlFor={`airline-${airline}`}>{airline}</Label>
-                            </div>
-                        ))}
-                    </div>
-                 </div>
-            )}
-        </CardContent>
-    </Card>
-  )
+                  <div className="space-y-2 border-t pt-4">
+                      <label className="font-semibold text-sm text-muted-foreground">SORT</label>
+                      <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value)}>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Sort by..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="price">by price</SelectItem>
+                              <SelectItem value="duration">by duration</SelectItem>
+                              <SelectItem value="departure">by departure</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
+              </div>
+
+              <Accordion type="multiple" className="w-full border-t mt-4">
+                  <FilterSection title="Numbers of stops">
+                      <p>Stops filter content</p>
+                  </FilterSection>
+                  <FilterSection title="Baggage" disabled>
+                     <p>Baggage filter content</p>
+                  </FilterSection>
+                   <FilterSection title="Duration of stops" disabled>
+                     <p>Duration of stops filter content</p>
+                  </FilterSection>
+                   <FilterSection title="Airfares" disabled>
+                     <p>Airfares filter content</p>
+                  </FilterSection>
+                  <FilterSection title="Departure/Arrival times" disabled>
+                     <p>Time filter content</p>
+                  </FilterSection>
+                  <FilterSection title="Travel time" disabled>
+                     <p>Travel time filter content</p>
+                  </FilterSection>
+                  <FilterSection title="Connecting airports" disabled>
+                     <p>Connecting airports filter content</p>
+                  </FilterSection>
+
+                  <FilterSection title="Airlines">
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                          <div className="flex items-center space-x-2">
+                              <Checkbox 
+                                  id="select-all-airlines"
+                                  checked={selectedAirlines.length === availableAirlines.length}
+                                  onCheckedChange={(checked) => handleSelectAllAirlines(!!checked)}
+                              />
+                              <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
+                          </div>
+                          {availableAirlines.map(airline => (
+                               <div key={airline} className="flex items-center space-x-2">
+                                  <Checkbox
+                                      id={`airline-${airline}`}
+                                      checked={selectedAirlines.includes(airline)}
+                                      onCheckedChange={() => handleAirlineSelection(airline)}
+                                  />
+                                  <Label htmlFor={`airline-${airline}`}>{airline}</Label>
+                              </div>
+                          ))}
+                      </div>
+                  </FilterSection>
+                  
+                  <FilterSection title="Airports" disabled>
+                     <p>Airports filter content</p>
+                  </FilterSection>
+
+                   <FilterSection title="Online travel agencies" disabled>
+                     <p>Agencies filter content</p>
+                  </FilterSection>
+              </Accordion>
+          </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -275,7 +328,7 @@ function SearchResultsContent() {
         {/* Mobile Filter Sheet */}
         {isFilterOpen && (
             <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setIsFilterOpen(false)}>
-                <div className="fixed inset-y-0 right-0 w-4/5 max-w-sm bg-background z-50 p-4 overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-y-0 left-0 w-4/5 max-w-sm bg-background z-50 p-4 overflow-y-auto" onClick={e => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => setIsFilterOpen(false)} className="absolute top-2 right-2">
                         <X />
                     </Button>
