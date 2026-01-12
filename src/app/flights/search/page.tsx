@@ -196,6 +196,7 @@ function SearchResultsContent() {
       
       console.log("All filters initialized.");
     }
+  // This dependency array is critical. It ensures this only runs when `flights` changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flights]);
   
@@ -738,5 +739,7 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
 
     
