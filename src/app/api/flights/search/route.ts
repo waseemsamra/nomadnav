@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
@@ -90,14 +91,12 @@ export async function GET(req: NextRequest) {
 
         const departure_date = searchParams.get('depart_date');
         if (departure_date) {
-            // Correct format YYYY-MM-DD to YYYY-MM
-            apiParams['depart_date'] = departure_date.substring(0, 7);
+            apiParams['depart_date'] = departure_date;
         }
 
         const return_date = searchParams.get('return_date');
         if (return_date) {
-            // Correct format YYYY-MM-DD to YYYY-MM
-            apiParams['return_date'] = return_date.substring(0, 7);
+            apiParams['return_date'] = return_date;
         }
 
         const url = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
