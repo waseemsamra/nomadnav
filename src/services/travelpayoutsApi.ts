@@ -53,8 +53,8 @@ const ENDPOINTS = {
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
   countries: 'https://api.travelpayouts.com/data/en/countries.json',
   
-  // Flight prices (REAL endpoints that work)
-  pricesForDates: 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates'
+  // Internal proxy for flight search
+  flightSearch: '/api/flights/search'
 };
 
 class TravelpayoutsApiService {
@@ -104,7 +104,7 @@ class TravelpayoutsApiService {
       const citiesRes = await axios.get(ENDPOINTS.cities, { timeout: 5000 });
       results.cities = Array.isArray(citiesRes.data) && citiesRes.data.length > 0;
 
-      // Test flight endpoint (if token is available)
+      // Test flight endpoint via proxy
       if (API_TOKEN) {
         try {
             const flightParams: FlightSearchParams = {
@@ -113,8 +113,7 @@ class TravelpayoutsApiService {
                 depart_date: '2025-08-01',
                 limit: 1,
             };
-            const flightData = await this.searchFlights(flightParams);
-            // V3 endpoint may return empty if no flights, but success is a 200 response
+            await this.searchFlights(flightParams);
             results.flights = true; 
         } catch (flightError: any) {
           console.log('Flight API test warning:', flightError.message);
@@ -143,64 +142,32 @@ class TravelpayoutsApiService {
   }
 
 
-  // ==================== SEARCH FLIGHTS (DIRECT API CALL) ====================
+  // ==================== SEARCH FLIGHTS (VIA PROXY) ====================
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
-    console.log('🔍 Searching flights directly via Travelpayouts API with params:', params);
-    
-    if (!API_TOKEN) {
-      throw new Error('Travelpayouts API token is not configured.');
-    }
+    console.log('🔍 Searching flights via internal proxy with params:', params);
 
     try {
-      const apiParams = new URLSearchParams({
+      const searchParams = new URLSearchParams({
         origin: params.origin,
         destination: params.destination,
+        depart_date: params.depart_date,
         currency: params.currency || 'USD',
         limit: (params.limit || 30).toString(),
-        sorting: 'price',
-        unique: 'false', // Get more results
       });
 
-      if (params.depart_date) {
-        apiParams.append('departure_date', params.depart_date);
-      }
       if (params.return_date) {
-        apiParams.append('return_date', params.return_date);
+        searchParams.append('return_date', params.return_date);
       }
-
-      const url = `${ENDPOINTS.pricesForDates}?${apiParams.toString()}`;
       
-      const [apiResponse, airlines] = await Promise.all([
-         axios.get(url, {
-            headers: { 'x-access-token': API_TOKEN },
-         }),
-         this.getAirlinesData(),
-      ]);
+      const response = await axios.get(ENDPOINTS.flightSearch, { params: searchParams });
+      return response.data;
 
-      if (apiResponse.data && apiResponse.data.success) {
-        const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => ({
-          ...flight,
-          id: flight.id || `${flight.origin}-${flight.destination}-${index}`,
-          airline: airlines[flight.airline] || flight.airline,
-          airline_code: flight.airline,
-          price: flight.price,
-          transfers: flight.number_of_changes,
-          duration: flight.duration,
-          flight_number: `TP${1000 + index}`, // Placeholder, V3 doesn't provide this directly
-          departure_at: flight.departure_at,
-          link: flight.link,
-        }));
-        return flightsWithDetails;
-      } else {
-        console.warn('API returned success=false or no data');
-        return [];
-      }
     } catch (error: any) {
       console.error('API call failed, returning empty result:', error.response?.data || error.message);
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-          throw new Error('Travelpayouts API token is invalid or missing.');
+      if (axios.isAxiosError(error) && error.response?.data.message) {
+          throw new Error(error.response.data.message);
       }
-      return [];
+      throw new Error('Failed to search for flights.');
     }
   }
 
