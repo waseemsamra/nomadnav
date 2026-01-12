@@ -163,46 +163,41 @@ function SearchResultsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin, destination, depart_date, return_date, passengers, cabin_class]);
   
-  // **EFFECT 2: Initialize all filters once flight data is available**
+  // **EFFECT 2: ATOMIC FILTER INITIALIZATION. This is the fix.**
+  // This single effect runs ONLY when the initial flight data is loaded.
+  // It initializes ALL filter states at once to prevent race conditions.
   useEffect(() => {
-    if (flights.length > 0 && !loading) {
-      console.log("Initializing filters based on new flight data...");
+    if (flights.length > 0 && loading === false) {
+      console.log("Initializing all filters atomically based on new flight data...");
       
-      // Price
+      // Price range for the current baggage setting
       const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
-      const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
-      const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 0;
-      setPriceRange({ min: minPrice, max: maxPrice });
-      setSelectedPrice([minPrice, maxPrice]);
-
-      // Duration
+      const minPrice = Math.floor(Math.min(...prices));
+      const maxPrice = Math.ceil(Math.max(...prices));
+      
+      // Duration range
       const durations = flights.map(f => f.duration);
-      const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
-      const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
-      setDurationRange({ min: minDuration, max: maxDuration });
-      setSelectedDuration([minDuration, maxDuration]);
+      const minDuration = Math.min(...durations);
+      const maxDuration = Math.max(...durations);
 
-      // Airlines, Stops, and OTAs
+      // Unique values for selection filters
       const uniqueAirlines = [...new Set(flights.map(f => f.airline))];
       const uniqueStops = [...new Set(flights.map(f => f.transfers))];
-      const activeOtaIds = [...new Set(flights.map(f => f.gate))];
+      const uniqueOtas = [...new Set(flights.map(f => f.gate))];
 
+      // Set all states together
+      setPriceRange({ min: minPrice, max: maxPrice });
+      setSelectedPrice([minPrice, maxPrice]);
+      setDurationRange({ min: minDuration, max: maxDuration });
+      setSelectedDuration([minDuration, maxDuration]);
       setSelectedAirlines(uniqueAirlines);
       setSelectedStops(uniqueStops);
-      setSelectedOtas(activeOtaIds);
-
-      console.log("Filters initialized:", {
-          priceRange: [minPrice, maxPrice],
-          durationRange: [minDuration, maxDuration],
-          selectedAirlines: uniqueAirlines,
-          selectedStops: uniqueStops,
-          selectedOtas: activeOtaIds,
-      });
+      setSelectedOtas(uniqueOtas);
+      
+      console.log("All filters initialized.");
     }
-    // This hook MUST only run when flights or loading state changes.
-    // BaggageFilter is handled in its own effect.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flights, loading]);
+  }, [flights, loading]); // This hook MUST only run when flights or loading state changes.
 
 
   // This effect correctly depends on baggageFilter to recalculate price ranges when it changes.
@@ -219,7 +214,7 @@ function SearchResultsContent() {
         ]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baggageFilter, flights]); // Depend on flights as well
+  }, [baggageFilter]);
   
 
   const handleBookFlight = (flight: Flight) => {
@@ -759,5 +754,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
