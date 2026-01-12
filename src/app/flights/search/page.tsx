@@ -61,6 +61,7 @@ function SearchResultsContent() {
   const [departureTimeRange, setDepartureTimeRange] = useState({ min: 0, max: 1440 });
   const [selectedDepartureTime, setSelectedDepartureTime] = useState([0, 1440]);
   
+  const [allOtas, setAllOtas] = useState<Gate[]>([]);
   const [otaOptions, setOtaOptions] = useState<{ id: string; name: string; price: number; }[]>([]);
   const [selectedOtas, setSelectedOtas] = useState<string[]>([]);
 
@@ -73,9 +74,23 @@ function SearchResultsContent() {
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
 
+  // Fetch OTAs (gates) on client-side
+  useEffect(() => {
+    async function fetchOtas() {
+      try {
+        const otaData = await travelpayoutsApi.getGates();
+        setAllOtas(otaData);
+      } catch (error) {
+        console.error("Failed to fetch OTAs on client", error);
+        toast.error("Could not load travel agency data.");
+      }
+    }
+    fetchOtas();
+  }, []);
+
   // Fetch flights
   useEffect(() => {
-    const fetchFlightsAndOtas = async () => {
+    const fetchFlights = async () => {
       if (!origin || !destination || !depart_date) {
         router.push('/');
         return;
@@ -84,8 +99,7 @@ function SearchResultsContent() {
       setLoading(true);
 
       try {
-        const [flightData, otaData] = await Promise.all([
-          travelpayoutsApi.searchFlights({
+        const flightData = await travelpayoutsApi.searchFlights({
             origin,
             destination,
             depart_date,
@@ -93,9 +107,7 @@ function SearchResultsContent() {
             passengers: parseInt(passengers),
             currency: 'USD',
             limit: 50,
-          }),
-          travelpayoutsApi.getGates()
-        ]);
+          });
         
         console.log('Fetched flights:', flightData.length);
         setFlights(flightData);
@@ -115,26 +127,6 @@ function SearchResultsContent() {
           const maxDuration = durations.length > 0 ? Math.max(...durations) : 1440;
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
-
-          const gatePrices: { [key: string]: number } = {};
-          flightData.forEach(flight => {
-            const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
-            if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
-              gatePrices[flight.gate] = price;
-            }
-          });
-
-          const otaInfo = otaData
-            .filter(ota => gatePrices[ota.code])
-            .map(ota => ({
-              id: ota.code,
-              name: ota.name,
-              price: Math.round(gatePrices[ota.code])
-            }))
-            .sort((a, b) => a.price - b.price);
-            
-          setOtaOptions(otaInfo);
-          setSelectedOtas(otaInfo.map(ota => ota.id));
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -145,7 +137,7 @@ function SearchResultsContent() {
       }
     };
 
-    fetchFlightsAndOtas();
+    fetchFlights();
   }, [origin, destination, depart_date, return_date, passengers, router]);
   
   // This effect now correctly depends on flights and baggageFilter
@@ -159,6 +151,31 @@ function SearchResultsContent() {
         setSelectedPrice([minPrice, maxPrice]);
     }
   }, [flights, baggageFilter]);
+  
+  // Process OTAs when flights or the OTA list are loaded
+  useEffect(() => {
+    if (flights.length > 0 && allOtas.length > 0) {
+        const gatePrices: { [key: string]: number } = {};
+        flights.forEach(flight => {
+            const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
+            if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
+                gatePrices[flight.gate] = price;
+            }
+        });
+
+        const otaInfo = allOtas
+            .filter(ota => gatePrices[ota.code])
+            .map(ota => ({
+                id: ota.code,
+                name: ota.name,
+                price: Math.round(gatePrices[ota.code])
+            }))
+            .sort((a, b) => a.price - b.price);
+            
+        setOtaOptions(otaInfo);
+        setSelectedOtas(otaInfo.map(ota => ota.id));
+    }
+  }, [flights, allOtas, baggageFilter]);
 
 
   const handleBookFlight = (flight: Flight) => {
@@ -727,3 +744,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
