@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -46,55 +45,50 @@ export default function ApiTestPage() {
   const [envToken, setEnvToken] = useState('');
   const [allOtas, setAllOtas] = useState<Gate[]>([]);
   const [otasLoading, setOtasLoading] = useState(true);
+  const [otasError, setOtasError] = useState<string | null>(null);
 
   useEffect(() => {
     // Client-side access to env var
     setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
     testConnection(); // Auto-test on page load
+    testOtaEndpoint(); // Test OTAs on load
   }, []);
 
-  // Client-side test for OTAs
-  useEffect(() => {
-    async function testOtaEndpoint() {
-        setOtasLoading(true);
-        try {
-            const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
-            if (response.ok) {
-                const data = await response.json();
-                setAllOtas(data);
-                setApiStatus(prevStatus => {
-                    if (!prevStatus) return null;
-                    const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
-                    const allEndpoints = { ...updatedEndpoints };
-                    const workingEndpoints = Object.values(allEndpoints).filter(v => v).length;
-                    const totalEndpoints = Object.keys(allEndpoints).length;
-                    return {
-                        ...prevStatus,
-                        success: workingEndpoints > 0,
-                        endpoints: updatedEndpoints,
-                        message: `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
-                    };
-                });
-            } else {
+  // Client-side test for OTAs via our own proxy
+  async function testOtaEndpoint() {
+      setOtasLoading(true);
+      setOtasError(null);
+      try {
+          const response = await fetch('/api/gates');
+          if (response.ok) {
+              const data = await response.json();
+              setAllOtas(data);
               setApiStatus(prevStatus => {
                   if (!prevStatus) return null;
-                  return { ...prevStatus, endpoints: {...prevStatus.endpoints, otas: false} };
+                  const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
+                  const allEndpointsWork = Object.values(updatedEndpoints).every(v => v);
+                  return {
+                      ...prevStatus,
+                      success: allEndpointsWork,
+                      endpoints: updatedEndpoints,
+                      message: allEndpointsWork ? 'All endpoints connected' : prevStatus.message,
+                  };
               });
-            }
-        } catch (error) {
-            console.error('OTA endpoint test failed:', error);
-             setApiStatus(prevStatus => {
-                  if (!prevStatus) return null;
-                  return { ...prevStatus, endpoints: {...prevStatus.endpoints, otas: false} };
-              });
-        } finally {
-            setOtasLoading(false);
-        }
-    }
-    
-    testOtaEndpoint();
-    
-  }, []);
+          } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Request failed with status ${response.status}`);
+          }
+      } catch (error: any) {
+          console.error('OTA endpoint test failed:', error);
+          setOtasError(error.message);
+           setApiStatus(prevStatus => {
+                if (!prevStatus) return null;
+                return { ...prevStatus, endpoints: {...prevStatus.endpoints, otas: false}, success: false };
+            });
+      } finally {
+          setOtasLoading(false);
+      }
+  }
 
 
   const testConnection = async () => {
@@ -145,10 +139,10 @@ export default function ApiTestPage() {
   const StatusIcon = ({ status }: { status: boolean }) => 
     status ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />;
 
-  const EndpointStatus = ({ name, icon, status }: { name: string, icon: React.ReactNode, status: boolean }) => (
+  const EndpointStatus = ({ name, icon, status, loading }: { name: string, icon: React.ReactNode, status: boolean, loading?: boolean }) => (
     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
       <span className="flex items-center gap-2 capitalize"><div className="w-4 h-4 text-gray-500">{icon}</div>{name}</span>
-      <StatusIcon status={status} />
+       {loading ? <RefreshCw className="w-5 h-5 text-gray-400 animate-spin" /> : <StatusIcon status={status} />}
     </div>
   );
 
@@ -172,11 +166,11 @@ export default function ApiTestPage() {
               API Status
             </h2>
             <Button
-              onClick={testConnection}
-              disabled={testing}
+              onClick={() => { testConnection(); testOtaEndpoint(); }}
+              disabled={testing || otasLoading}
               variant="outline"
             >
-              {testing ? (
+              {(testing || otasLoading) ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
                 <RefreshCw className="w-4 h-4" />
@@ -212,25 +206,17 @@ export default function ApiTestPage() {
                   <Cloud className="w-5 h-5 mr-2 text-gray-400" />
                   Service Endpoints
                 </h3>
-                {testing ? (
-                  <div className="space-y-2">
-                    {[...Array(9)].map((_, i) => (
-                      <div key={i} className="bg-gray-100 rounded-lg p-3 animate-pulse h-10" />
-                    ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <EndpointStatus name="Flights" icon={<Plane />} status={apiStatus?.endpoints.flights || false} loading={testing} />
+                    <EndpointStatus name="OTAs" icon={<Users />} status={apiStatus?.endpoints.otas || false} loading={otasLoading} />
+                    <EndpointStatus name="Airports" icon={<Database />} status={apiStatus?.endpoints.airports || false} loading={testing} />
+                    <EndpointStatus name="Airlines" icon={<Database />} status={apiStatus?.endpoints.airlines || false} loading={testing} />
+                    <EndpointStatus name="Cities" icon={<Database />} status={apiStatus?.endpoints.cities || false} loading={testing} />
+                    <EndpointStatus name="Countries" icon={<Globe />} status={apiStatus?.endpoints.countries || false} loading={testing} />
+                    <EndpointStatus name="Planes" icon={<Paperclip />} status={apiStatus?.endpoints.planes || false} loading={testing} />
+                    <EndpointStatus name="Routes" icon={<Paperclip />} status={apiStatus?.endpoints.routes || false} loading={testing} />
+                    <EndpointStatus name="Alliances" icon={<Book />} status={apiStatus?.endpoints.alliances || false} loading={testing} />
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <EndpointStatus name="Flights" icon={<Plane />} status={apiStatus?.endpoints.flights || false} />
-                    <EndpointStatus name="OTAs" icon={<Users />} status={apiStatus?.endpoints.otas || false} />
-                    <EndpointStatus name="Airports" icon={<Database />} status={apiStatus?.endpoints.airports || false} />
-                    <EndpointStatus name="Airlines" icon={<Database />} status={apiStatus?.endpoints.airlines || false} />
-                    <EndpointStatus name="Cities" icon={<Database />} status={apiStatus?.endpoints.cities || false} />
-                    <EndpointStatus name="Countries" icon={<Globe />} status={apiStatus?.endpoints.countries || false} />
-                    <EndpointStatus name="Planes" icon={<Paperclip />} status={apiStatus?.endpoints.planes || false} />
-                    <EndpointStatus name="Routes" icon={<Paperclip />} status={apiStatus?.endpoints.routes || false} />
-                    <EndpointStatus name="Alliances" icon={<Book />} status={apiStatus?.endpoints.alliances || false} />
-                  </div>
-                )}
               </div>
             </div>
 
@@ -319,7 +305,7 @@ export default function ApiTestPage() {
                 </div>
             ) : (
               <div className="text-center py-8 text-red-500">
-                Failed to fetch OTA data. The endpoint might be down or blocking requests.
+                Failed to fetch OTA data. {otasError || 'The endpoint might be down or blocking requests.'}
               </div>
             )}
         </div>
