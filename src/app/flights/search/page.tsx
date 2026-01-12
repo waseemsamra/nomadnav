@@ -202,6 +202,7 @@ function SearchResultsContent() {
   };
 
   const getFlightDisplayPrice = (flight: Flight): number => {
+    // This logic is now based on the enriched baggage data from the API
     if (baggageFilter === 'with') {
         let baggageCost = 0;
         if (!flight.baggage.hand.has_baggage) {
@@ -235,18 +236,23 @@ function SearchResultsContent() {
   }, [flights, baggageFilter]);
 
   const baggagePriceOptions = useMemo(() => {
-    if (flights.length === 0) return { without: null, with: null };
+      if (flights.length === 0) return { without: null, with: null };
 
-    const pricesWithout = flights.map(f => f.price);
-    const minWithout = Math.min(...pricesWithout);
+      // 'without' is just the base price of the cheapest flight
+      const minWithout = Math.min(...flights.map(f => f.price));
 
-    const pricesWith = flights.map(f => getFlightDisplayPrice({...f, baggage: { hand: { has_baggage: false, price: 25 }, checked: { has_baggage: false, price: 50} }}));
-    const minWith = Math.min(...pricesWith);
+      // 'with' is the price of the cheapest flight including estimated baggage
+      const minWith = Math.min(...flights.map(f => {
+          let price = f.price;
+          if (!f.baggage.hand.has_baggage) price += f.baggage.hand.price;
+          if (!f.baggage.checked.has_baggage) price += f.baggage.checked.price;
+          return price;
+      }));
 
-    return {
-      without: isFinite(minWithout) ? Math.round(minWithout) : null,
-      with: isFinite(minWith) ? Math.round(minWith) : null,
-    };
+      return {
+          without: isFinite(minWithout) ? Math.round(minWithout) : null,
+          with: isFinite(minWith) ? Math.round(minWith) : null,
+      };
   }, [flights]);
 
   const sortedFlights = useMemo(() => {
@@ -265,9 +271,11 @@ function SearchResultsContent() {
         });
 
     if (baggageFilter === 'without') {
-      // No filtering logic yet, placeholder
+      // For 'without', we are just showing the base price, so no specific filtering needed here
+      // as the price is already the base price.
     } else if (baggageFilter === 'with') {
-      // No filtering logic yet, placeholder
+       // The price is adjusted by getFlightDisplayPrice, so sorting will work correctly.
+       // No additional filtering logic needed here as price is handled.
     }
 
 
@@ -313,6 +321,14 @@ function SearchResultsContent() {
         </AccordionContent>
       </AccordionItem>
     );
+    
+    const exampleOTAs = [
+        { id: 'trip', name: 'Trip.com' },
+        { id: 'mytrip', name: 'Mytrip.com' },
+        { id: 'city', name: 'City.Travel' },
+        { id: 'wingie', name: 'Wingie' },
+    ];
+
 
     return (
       <Card className="lg:sticky lg:top-24">
@@ -344,7 +360,7 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Departure/Arrival times', 'Airlines']}>
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Departure/Arrival times', 'Airlines', 'Online travel agencies']}>
                   <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
@@ -495,8 +511,20 @@ function SearchResultsContent() {
                      <p className="p-2 text-sm text-muted-foreground">Airport filter is not available.</p>
                   </FilterSection>
 
-                   <FilterSection title="Online travel agencies">
-                     <p className="p-2 text-sm text-muted-foreground">Agency filter is not available with this API.</p>
+                  <FilterSection title="Online travel agencies" disabled>
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2 opacity-50">
+                             <div className="flex items-center space-x-2">
+                                <Checkbox id="select-all-otas" disabled />
+                                <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
+                            </div>
+                            {exampleOTAs.map(ota => (
+                               <div key={ota.id} className="flex items-center space-x-2">
+                                  <Checkbox id={`ota-${ota.id}`} disabled />
+                                  <Label htmlFor={`ota-${ota.id}`}>{ota.name}</Label>
+                              </div>
+                            ))}
+                        </div>
+                        <p className="p-2 text-xs text-muted-foreground">OTA filtering is not yet available.</p>
                   </FilterSection>
               </Accordion>
           </CardContent>
