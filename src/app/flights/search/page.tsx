@@ -53,11 +53,13 @@ function SearchResultsContent() {
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
   
-  // State for baggage filter
   const [baggageFilter, setBaggageFilter] = useState<BaggageFilterType>('all');
   
   const [durationRange, setDurationRange] = useState({ min: 0, max: 0 });
   const [selectedDuration, setSelectedDuration] = useState([0, 0]);
+
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 0 });
+  const [selectedPrice, setSelectedPrice] = useState([0, 0]);
 
 
   // Extract search parameters
@@ -107,6 +109,12 @@ function SearchResultsContent() {
           const maxDuration = Math.max(...durations);
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
+
+          const prices = flightData.map(f => f.price);
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          setPriceRange({ min: minPrice, max: maxPrice });
+          setSelectedPrice([minPrice, maxPrice]);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -166,6 +174,7 @@ function SearchResultsContent() {
     setSelectedStops(allStops);
     setBaggageFilter('all');
     setSelectedDuration([durationRange.min, durationRange.max]);
+    setSelectedPrice([priceRange.min, priceRange.max]);
   };
 
   const formatDuration = (minutes: number) => {
@@ -216,14 +225,13 @@ function SearchResultsContent() {
   }, [flights, baggageFilter]);
 
   const baggagePriceOptions = useMemo(() => {
-    const pricesWithout = flights.map(f => f.price);
-    const pricesWith = flights.map(f => getFlightDisplayPrice({...f})); // Recalculate with 'with' logic temporarily
-
     if (flights.length === 0) return { without: null, with: null };
 
+    const pricesWithout = flights.map(f => f.price);
     const minWithout = Math.min(...pricesWithout);
-    const minWith = Math.min(...flights.map(f => getFlightDisplayPrice({ ...f, baggage: { ...f.baggage } })));
 
+    const pricesWith = flights.map(f => getFlightDisplayPrice({...f, baggage: { hand: { has_baggage: false, price: 25 }, checked: { has_baggage: false, price: 50} }}));
+    const minWith = Math.min(...pricesWith);
 
     return {
       without: isFinite(minWithout) ? Math.round(minWithout) : null,
@@ -235,14 +243,16 @@ function SearchResultsContent() {
     let filtered = [...flights]
         .filter(flight => selectedAirlines.includes(flight.airline))
         .filter(flight => selectedStops.includes(flight.transfers))
-        .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
+        .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
+        .filter(flight => {
+          const price = getFlightDisplayPrice(flight);
+          return price >= selectedPrice[0] && price <= selectedPrice[1];
+        });
 
     if (baggageFilter === 'without') {
-        // This is a heuristic. Assumes low-cost carriers always charge for bags.
-        filtered = filtered.filter(f => !f.baggage.hand.has_baggage && !f.baggage.checked.has_baggage)
+      // No filtering logic yet, placeholder
     } else if (baggageFilter === 'with') {
-        // This is a heuristic. Assumes legacy carriers might include bags.
-        filtered = filtered.filter(f => f.baggage.hand.has_baggage || f.baggage.checked.has_baggage)
+      // No filtering logic yet, placeholder
     }
 
 
@@ -258,7 +268,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice]);
 
   if (loading) {
     return (
@@ -319,7 +329,7 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'Airlines', 'Duration of stops']}>
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'Duration of stops', 'Airfares', 'Airlines']}>
                   <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
@@ -379,8 +389,8 @@ function SearchResultsContent() {
                   
                   <FilterSection title="Duration of stops" disabled={durationRange.max === 0}>
                       <div className="p-2">
-                        <p className="text-sm text-center mb-2">
-                            {formatDuration(selectedDuration[0])} - {formatDuration(selectedDuration[1])}
+                        <p className="text-sm text-center mb-2 text-muted-foreground">
+                            From {formatDuration(selectedDuration[0])} to {formatDuration(selectedDuration[1])}
                         </p>
                         <Slider
                             min={durationRange.min}
@@ -393,8 +403,20 @@ function SearchResultsContent() {
                       </div>
                   </FilterSection>
 
-                   <FilterSection title="Airfares" disabled>
-                     <p>Airfares filter content</p>
+                   <FilterSection title="Airfares" disabled={priceRange.max === 0}>
+                     <div className="p-2">
+                        <p className="text-sm text-center mb-2 text-muted-foreground">
+                            From ${Math.round(selectedPrice[0])} to ${Math.round(selectedPrice[1])}
+                        </p>
+                        <Slider
+                            min={priceRange.min}
+                            max={priceRange.max}
+                            step={10}
+                            value={selectedPrice}
+                            onValueChange={setSelectedPrice}
+                            minStepsBetweenThumbs={1}
+                        />
+                      </div>
                   </FilterSection>
                   <FilterSection title="Departure/Arrival times" disabled>
                      <p>Time filter content</p>
