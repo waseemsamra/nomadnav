@@ -452,7 +452,7 @@ function SearchResultsContent() {
                               <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
                           </div>
                           {availableAirlines.map(airline => (
-                               <div key={airline} className="flex items-center space-x-2">
+                               <div key={`airline-${airline}`} className="flex items-center space-x-2">
                                   <Checkbox
                                       id={`airline-${airline}`}
                                       checked={selectedAirlines.includes(airline)}
@@ -464,7 +464,7 @@ function SearchResultsContent() {
                       </div>
                   </FilterSection>
                   
-                  <FilterSection title="Airports" disabled>
+                   <FilterSection title="Airports" disabled>
                      <p className="p-2 text-sm text-muted-foreground">Airport filter is not available.</p>
                   </FilterSection>
 
