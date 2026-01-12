@@ -49,7 +49,7 @@ function addEstimatedBaggagePrices(flight: any): Flight {
         hand: {
             price: CARRY_ON_PRICE,
             // A simple heuristic for free carry-on for legacy carriers
-            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline), 
+            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline_code), 
         },
         checked: {
             price: CHECKED_BAGGAGE_PRICE,
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 
     const origin = searchParams.get('origin');
     const destination = searchParams.get('destination');
-    const departure_date = searchParams.get('depart_date'); // Changed from depart_date
+    const departure_at = searchParams.get('depart_date'); 
 
     if (!origin || !destination) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
@@ -88,13 +88,13 @@ export async function GET(req: NextRequest) {
             unique: false,
         };
 
-        if (departure_date) {
-            apiParams['departure_at'] = departure_date; 
+        if (departure_at) {
+            apiParams['departure_at'] = departure_at; 
         }
 
-        const return_date = searchParams.get('return_date');
-        if (return_date) {
-            apiParams['return_at'] = return_date; 
+        const return_at = searchParams.get('return_date');
+        if (return_at) {
+            apiParams['return_at'] = return_at; 
         }
 
         const url = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
@@ -109,10 +109,11 @@ export async function GET(req: NextRequest) {
         
         if (apiResponse.data && apiResponse.data.success && apiResponse.data.data.length > 0) {
             const flightsWithDetails = apiResponse.data.data.map((flight: any) => {
+                const airlineName = airlines[flight.airline] || flight.airline;
                 const enrichedFlight = {
                     id: flight.link, 
                     price: flight.price,
-                    airline: airlines[flight.airline] || flight.airline, // Correctly lookup airline name
+                    airline: airlineName,
                     airline_code: flight.airline,
                     flight_number: flight.flight_number,
                     departure_at: flight.departure_at,
@@ -123,7 +124,7 @@ export async function GET(req: NextRequest) {
                     duration: flight.duration,
                     link: `https://www.travelpayouts.com${flight.link}`,
                     currency: apiParams.currency,
-                    gate: 'Direct',
+                    gate: flight.gate || 'Direct',
                 };
                 return addEstimatedBaggagePrices(enrichedFlight);
             });
