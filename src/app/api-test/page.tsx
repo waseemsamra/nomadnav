@@ -25,6 +25,7 @@ type ApiStatus = {
     airlines: boolean;
     cities: boolean;
     flights: boolean;
+    otas: boolean;
   };
   tokenValid: boolean;
 } | null;
@@ -53,7 +54,7 @@ export default function ApiTestPage() {
       setApiStatus({
         success: false,
         message: 'Test failed: ' + error.message,
-        endpoints: { airports: false, airlines: false, cities: false, flights: false },
+        endpoints: { airports: false, airlines: false, cities: false, flights: false, otas: false },
         tokenValid: false,
       });
     } finally {
@@ -146,7 +147,7 @@ export default function ApiTestPage() {
                 </h3>
                 {testing ? (
                   <div className="space-y-2">
-                    {[...Array(4)].map((_, i) => (
+                    {[...Array(5)].map((_, i) => (
                       <div key={i} className="bg-gray-100 rounded-lg p-3 animate-pulse h-10" />
                     ))}
                   </div>
@@ -163,6 +164,10 @@ export default function ApiTestPage() {
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Cities</span>
                       <StatusIcon status={apiStatus?.endpoints.cities || false} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>OTAs</span>
+                      <StatusIcon status={apiStatus?.endpoints.otas || false} />
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <span className="flex items-center gap-2"><Plane className="w-4 h-4 text-gray-500"/>Flights</span>

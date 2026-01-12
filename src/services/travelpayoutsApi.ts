@@ -60,6 +60,7 @@ const ENDPOINTS = {
   airports: 'https://api.travelpayouts.com/data/en/airports.json',
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
   countries: 'https://api.travelpayouts.com/data/en/countries.json',
+  gates: 'https://api.travelpayouts.com/data/en/gates.json',
   
   // Internal proxy for flight search
   flightSearch: '/api/flights/search'
@@ -89,6 +90,7 @@ class TravelpayoutsApiService {
       airlines: boolean;
       cities: boolean;
       flights: boolean;
+      otas: boolean;
     };
     tokenValid: boolean;
   }> {
@@ -97,6 +99,7 @@ class TravelpayoutsApiService {
       airlines: false,
       cities: false,
       flights: false,
+      otas: false,
     };
 
     try {
@@ -111,6 +114,10 @@ class TravelpayoutsApiService {
       // Test cities endpoint
       const citiesRes = await axios.get(ENDPOINTS.cities, { timeout: 5000 });
       results.cities = Array.isArray(citiesRes.data) && citiesRes.data.length > 0;
+
+      // Test OTAs endpoint
+      const otasRes = await axios.get(ENDPOINTS.gates, { timeout: 5000 });
+      results.otas = Array.isArray(otasRes.data) && otasRes.data.length > 0;
 
       // Test flight endpoint via proxy
       if (API_TOKEN) {
