@@ -20,6 +20,7 @@ import {
 import { travelpayoutsApi, type Flight, type Gate } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 import { OTA_DATA } from '@/lib/ota-data';
+import { ALLIANCE_DATA } from '@/lib/alliance-data';
 
 type ApiStatus = {
   success: boolean;
@@ -45,6 +46,7 @@ export default function ApiTestPage() {
   const [flightLoading, setFlightLoading] = useState(false);
   const [envToken, setEnvToken] = useState('');
   const [allOtas] = useState<Gate[]>(OTA_DATA);
+  const [alliances] = useState(ALLIANCE_DATA);
 
   useEffect(() => {
     // Client-side access to env var
@@ -242,31 +244,58 @@ export default function ApiTestPage() {
           </div>
         </div>
 
-        {/* OTA (Gates) Data */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mt-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-              <Users className="w-5 h-5 mr-2" />
-              Online Travel Agencies (Gates)
-            </h2>
-            {allOtas.length > 0 ? (
-                <div className="max-h-96 overflow-y-auto space-y-2 pr-4">
-                  <p className="text-sm text-gray-600 mb-4">Successfully loaded {allOtas.length} OTAs from local data.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {allOtas.map(ota => (
-                      <div key={ota.code} className="p-3 border rounded-lg bg-gray-50">
-                        <p className="font-bold text-gray-800">{ota.name}</p>
-                        <p className="text-sm text-gray-500 font-mono">{ota.code}</p>
-                      </div>
-                    ))}
-                  </div>
+        {/* Local Data Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+            {/* OTA (Gates) Data */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <Users className="w-5 h-5 mr-2" />
+                Online Travel Agencies (Gates)
+                </h2>
+                {allOtas.length > 0 ? (
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-4">
+                    <p className="text-sm text-gray-600 mb-4">Successfully loaded {allOtas.length} OTAs from local data.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {allOtas.slice(0, 10).map(ota => (
+                          <div key={ota.code} className="p-3 border rounded-lg bg-gray-50">
+                              <p className="font-bold text-gray-800">{ota.name}</p>
+                              <p className="text-sm text-gray-500 font-mono">{ota.code}</p>
+                          </div>
+                        ))}
+                    </div>
+                     {allOtas.length > 10 && <p className='text-sm text-center mt-2 text-muted-foreground'>...and {allOtas.length - 10} more.</p>}
+                    </div>
+                ) : (
+                <div className="text-center py-8 text-red-500">
+                    Failed to load OTA data. The local data file might be missing or empty.
                 </div>
-            ) : (
-              <div className="text-center py-8 text-red-500">
-                Failed to load OTA data. The local data file might be missing or empty.
-              </div>
-            )}
+                )}
+            </div>
+            
+            {/* Alliance Data */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                  <Book className="w-5 h-5 mr-2" />
+                  Airline Alliances
+                </h2>
+                {alliances.length > 0 ? (
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-4">
+                      <p className="text-sm text-gray-600 mb-4">Successfully loaded {alliances.length} Alliances from local data.</p>
+                      <div className="space-y-4">
+                        {alliances.map(alliance => (
+                          <div key={alliance.name} className="p-3 border rounded-lg bg-gray-50">
+                            <p className="font-bold text-gray-800">{alliance.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                ) : (
+                  <div className="text-center py-8 text-red-500">
+                    Failed to load Alliance data. The local data file might be missing or empty.
+                  </div>
+                )}
+            </div>
         </div>
-
 
         {/* Flight Search Results */}
         {(flightLoading || testFlights.length > 0) && (

@@ -69,7 +69,6 @@ const ENDPOINTS = {
   countries: 'https://api.travelpayouts.com/data/en/countries.json',
   planes: 'https://api.travelpayouts.com/data/en/planes.json',
   routes: 'https://api.travelpayouts.com/data/en/routes.json',
-  alliances: 'https://api.travelpayouts.com/data/en/alliances.json',
   
   // Internal proxy for flight search
   flightSearch: '/api/flights/search'
@@ -116,10 +115,10 @@ class TravelpayoutsApiService {
       countries: false,
       planes: false,
       routes: false,
-      alliances: false,
+      alliances: true, // Alliance data is local
     };
 
-    const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
+    const checkEndpoint = async (endpoint: keyof Omit<typeof results, 'otas' | 'alliances'>, url: string) => {
       try {
         const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
         results[endpoint] = response.status === 200;
@@ -137,7 +136,6 @@ class TravelpayoutsApiService {
         checkEndpoint('countries', ENDPOINTS.countries),
         checkEndpoint('planes', ENDPOINTS.planes),
         checkEndpoint('routes', ENDPOINTS.routes),
-        checkEndpoint('alliances', ENDPOINTS.alliances),
       ]);
 
       if (API_TOKEN) {
