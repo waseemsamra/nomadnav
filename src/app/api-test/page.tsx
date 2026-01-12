@@ -60,24 +60,34 @@ export default function ApiTestPage() {
                 setApiStatus(prevStatus => {
                     if (!prevStatus) return null;
                     const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
-                    const workingEndpoints = Object.values(updatedEndpoints).filter(v => v).length;
-                    const totalEndpoints = Object.values(updatedEndpoints).length;
+                    const allEndpoints = { ...updatedEndpoints };
+                    const workingEndpoints = Object.values(allEndpoints).filter(v => v).length;
+                    const totalEndpoints = Object.keys(allEndpoints).length;
                     return {
                         ...prevStatus,
+                        success: workingEndpoints > 0,
                         endpoints: updatedEndpoints,
                         message: `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
                     };
                 });
+            } else {
+              setApiStatus(prevStatus => {
+                  if (!prevStatus) return null;
+                  return { ...prevStatus, endpoints: {...prevStatus.endpoints, otas: false} };
+              });
             }
         } catch (error) {
             console.error('OTA endpoint test failed:', error);
+             setApiStatus(prevStatus => {
+                  if (!prevStatus) return null;
+                  return { ...prevStatus, endpoints: {...prevStatus.endpoints, otas: false} };
+              });
         }
     }
     
-    if (apiStatus) {
-        testOtaEndpoint();
-    }
-  }, [apiStatus?.success]);
+    testOtaEndpoint();
+    
+  }, []);
 
 
   const testConnection = async () => {
