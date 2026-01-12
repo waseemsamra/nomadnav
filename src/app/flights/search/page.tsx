@@ -402,7 +402,7 @@ function SearchResultsContent() {
                       </RadioGroup>
                   </FilterSection>
                   
-                  <FilterSection title="Travel time" disabled={durationRange.max === 0}>
+                  <FilterSection title="TRAVEL TIME" disabled={durationRange.max === 0}>
                       <div className="p-2">
                         <p className="text-sm text-center mb-2 text-muted-foreground">
                             {formatDuration(selectedDuration[0])} - {formatDuration(selectedDuration[1])}
