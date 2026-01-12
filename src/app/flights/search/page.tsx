@@ -69,7 +69,6 @@ function SearchResultsContent() {
   const [selectedOtas, setSelectedOtas] = useState<string[]>([]);
   
   const [alliances] = useState(ALLIANCE_DATA);
-  const [selectedAlliances, setSelectedAlliances] = useState<string[]>(alliances.map(a => a.name));
 
 
   // Extract search parameters
@@ -228,35 +227,6 @@ function SearchResultsContent() {
   const handleSelectAllOtas = (checked: boolean) => {
     setSelectedOtas(checked ? otaOptions.map(ota => ota.id) : []);
   };
-  
-  const handleAllianceSelection = (allianceName: string) => {
-    const alliance = alliances.find(a => a.name === allianceName);
-    if (!alliance) return;
-
-    const isSelected = selectedAlliances.includes(allianceName);
-
-    setSelectedAlliances(prev =>
-        isSelected ? prev.filter(a => a !== allianceName) : [...prev, allianceName]
-    );
-
-    // This logic is simplified: it just adds/removes all airlines from the alliance
-    // A more complex implementation would consider airlines belonging to multiple selected alliances
-    if (isSelected) { // if it was selected, we are deselecting it
-        // Do not remove airlines if they belong to another selected alliance
-        const airlinesToKeep: string[] = [];
-        const otherSelectedAlliances = selectedAlliances.filter(a => a !== allianceName);
-        otherSelectedAlliances.forEach(name => {
-            const otherAlliance = alliances.find(a => a.name === name);
-            if(otherAlliance) airlinesToKeep.push(...otherAlliance.airlines);
-        });
-
-        const airlinesToRemove = alliance.airlines.filter(code => !airlinesToKeep.includes(code));
-        setSelectedAirlines(prev => prev.filter(code => !airlinesToRemove.includes(code)));
-    } else { // if it was not selected, we are selecting it
-        const airlinesToAdd = alliance.airlines.filter(code => availableAirlines.includes(code));
-        setSelectedAirlines(prev => [...new Set([...prev, ...airlinesToAdd])]);
-    }
-  };
 
 
   const handleResetFilters = () => {
@@ -269,7 +239,6 @@ function SearchResultsContent() {
     setSelectedPrice([priceRange.min, priceRange.max]);
     setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
     setSelectedOtas(otaOptions.map(ota => ota.id));
-    setSelectedAlliances(alliances.map(a => a.name));
   };
 
   const formatDuration = (minutes: number) => {
@@ -553,21 +522,6 @@ function SearchResultsContent() {
                      <p className="p-2 text-sm text-muted-foreground">Connecting airports filter is not available with this API.</p>
                   </FilterSection>
 
-                  <FilterSection title="Alliances">
-                    <div className="space-y-2 pr-2">
-                        {alliances.map(alliance => (
-                            <div key={alliance.name} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`alliance-${alliance.name}`}
-                                    checked={selectedAlliances.includes(alliance.name)}
-                                    onCheckedChange={() => handleAllianceSelection(alliance.name)}
-                                />
-                                <Label htmlFor={`alliance-${alliance.name}`}>{alliance.name}</Label>
-                            </div>
-                        ))}
-                    </div>
-                  </FilterSection>
-
                   <FilterSection title="Airlines" disabled={availableAirlines.length === 0}>
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                           <div className="flex items-center space-x-2">
@@ -791,3 +745,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
