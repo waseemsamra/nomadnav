@@ -173,7 +173,8 @@ function SearchResultsContent() {
           });
               
       setOtaOptions(activeOtaInfo);
-      setSelectedOtas(allOtas.map(ota => ota.code));
+      const activeOtaIds = activeOtaInfo.filter(o => o.price !== null).map(ota => ota.id);
+      setSelectedOtas(activeOtaIds.length > 0 ? activeOtaIds : allOtas.map(ota => ota.code));
     }
   }, [flights, allOtas]);
 
@@ -568,7 +569,7 @@ function SearchResultsContent() {
                                 <div className="flex items-center space-x-2">
                                     <Checkbox 
                                       id="select-all-otas" 
-                                      checked={selectedOtas.length === otaOptions.length}
+                                      checked={selectedOtas.length === otaOptions.map(o => o.id).length}
                                       onCheckedChange={(checked) => handleSelectAllOtas(!!checked)}
                                     />
                                     <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
