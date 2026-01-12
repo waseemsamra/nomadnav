@@ -313,7 +313,8 @@ function SearchResultsContent() {
   const flightGroups = useMemo(() => {
     const groups: { [key: string]: Flight[] } = {};
     sortedFlights.forEach(flight => {
-        const groupId = `${flight.origin}-${flight.destination}-${flight.airline_code}-${flight.flight_number}-${flight.departure_at.slice(0,16)}`;
+        // Group by airline, origin, destination, and departure time (ignoring seconds)
+        const groupId = `${flight.airline_code}-${flight.flight_number}-${flight.origin}-${flight.destination}-${flight.departure_at.slice(0, 16)}`;
         if (!groups[groupId]) {
             groups[groupId] = [];
         }
