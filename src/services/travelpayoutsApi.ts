@@ -147,6 +147,10 @@ class TravelpayoutsApiService {
   async searchFlights(params: FlightSearchParams): Promise<Flight[]> {
     console.log('🔍 Searching flights directly via Travelpayouts API with params:', params);
     
+    if (!API_TOKEN) {
+      throw new Error('Travelpayouts API token is not configured.');
+    }
+
     try {
       const apiParams = new URLSearchParams({
         origin: params.origin,
@@ -304,3 +308,5 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams };
+
+    
