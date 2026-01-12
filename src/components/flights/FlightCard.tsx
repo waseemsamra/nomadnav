@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { type Flight } from '@/services/travelpayoutsApi';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addMinutes } from 'date-fns';
 import { Briefcase, ChevronDown, ChevronUp, XIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '../ui/badge';
@@ -61,14 +61,18 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
     const allOffers = useMemo(() => [bestFlight, ...otherOffers], [bestFlight, otherOffers]);
 
     const cheapestOffer = useMemo(() => {
+        if (!allOffers || allOffers.length === 0) return bestFlight;
         return allOffers.reduce((cheapest, current) => {
             return displayPrice(current) < displayPrice(cheapest) ? current : cheapest;
         }, allOffers[0]);
-    }, [allOffers, actualBaggagePref]);
+    }, [allOffers, actualBaggagePref, bestFlight]);
 
     const arrivalTime = useMemo(() => {
-        return parseISO(cheapestOffer.return_at);
-    }, [cheapestOffer.return_at]);
+        // For one-way, return_at is the arrival. For round-trip, it's the return departure.
+        // We'll calculate arrival based on duration for simplicity, as the API structure varies.
+        const departure = parseISO(cheapestOffer.departure_at);
+        return addMinutes(departure, cheapestOffer.duration);
+    }, [cheapestOffer.departure_at, cheapestOffer.duration]);
 
     const sortedOtherOffers = useMemo(() => {
         return allOffers
@@ -135,7 +139,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
                         {sortedOtherOffers.length > 0 && (
                             <CollapsibleTrigger asChild>
                                 <button className="w-full mt-2 text-sm text-blue-600 font-semibold flex items-center justify-start gap-1">
-                                <span>{isOpen ? 'Hide deals' : 'Show more deals'}</span>
+                                <span>{isOpen ? 'Hide deals' : `+${sortedOtherOffers.length} more deals`}</span>
                                 {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
                             </CollapsibleTrigger>
@@ -195,8 +199,8 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
 
                         {/* Arrival */}
                         <div className="text-right w-28">
-                           <p className="text-3xl font-bold">{formatTime(arrivalTime)}</p>
-                           <p className="text-sm text-gray-500">{formatDate(arrivalTime)}</p>
+                           <p className="text-3xl font-bold">{formatTime(cheapestOffer.return_at)}</p>
+                           <p className="text-sm text-gray-500">{formatDate(cheapestOffer.return_at)}</p>
                            <p className="text-sm font-semibold">{cheapestOffer.destination}</p>
                         </div>
                     </div>
@@ -208,3 +212,5 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
 };
 
 export default FlightCard;
+
+    

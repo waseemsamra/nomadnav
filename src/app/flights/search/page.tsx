@@ -91,7 +91,7 @@ function SearchResultsContent() {
       const gatePrices: { [key: string]: number } = {};
       flights.forEach(flight => {
           const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
-          if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
+          if (flight.gate && (!gatePrices[flight.gate] || price < gatePrices[flight.gate])) {
               gatePrices[flight.gate] = price;
           }
       });
@@ -170,10 +170,10 @@ function SearchResultsContent() {
   // This single effect runs ONLY when the initial flight data is loaded.
   // It initializes ALL filter states at once to prevent race conditions.
   useEffect(() => {
-    if (flights.length > 0 && !loading) {
+    if (flights.length > 0) {
       console.log("Initializing all filters atomically based on new flight data...");
       
-      const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
+      const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
       const minPrice = Math.floor(Math.min(...prices));
       const maxPrice = Math.ceil(Math.max(...prices));
       
@@ -197,7 +197,7 @@ function SearchResultsContent() {
       console.log("All filters initialized.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flights, loading]);
+  }, [flights]);
   
 
   const handleBookFlight = (flight: Flight) => {
@@ -234,8 +234,7 @@ function SearchResultsContent() {
   };
 
   const handleSelectAllStops = (checked: boolean) => {
-      const allStops = stopOptions.map(opt => opt.value);
-      setSelectedStops(checked ? allStops : []);
+      setSelectedStops(checked ? stopOptions.map(opt => opt.value) : []);
   }
   
   const handleOtaSelection = (otaId: string) => {
@@ -655,32 +654,32 @@ function SearchResultsContent() {
               </p>
             </div>
 
-            {flights.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No flights match your search
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  We couldn't find any flights for the selected route and dates. Try a different search.
-                </p>
-                <Button onClick={() => router.push('/')}>
-                  Try a New Search
-                </Button>
-              </div>
-            ) : flightGroups.length === 0 ? (
+            {flights.length > 0 && flightGroups.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No flights match your filters
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Try adjusting your filters to see more results.
-                </p>
-                <Button onClick={handleResetFilters}>
-                  Clear All Filters
-                </Button>
-              </div>
+                  <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No flights match your filters
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your filters to see more results.
+                  </p>
+                  <Button onClick={handleResetFilters}>
+                    Clear All Filters
+                  </Button>
+                </div>
+            ) : flights.length === 0 && !loading ? (
+                <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+                  <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No flights match your search
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    We couldn't find any flights for the selected route and dates. Try a different search.
+                  </p>
+                  <Button onClick={() => router.push('/')}>
+                    Try a New Search
+                  </Button>
+                </div>
             ) : (
               <div className="space-y-4">
                 {flightGroups.map(({ bestFlight, otherOffers }) => (
@@ -739,3 +738,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
