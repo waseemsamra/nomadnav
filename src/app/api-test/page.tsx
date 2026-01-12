@@ -44,47 +44,13 @@ export default function ApiTestPage() {
   const [testFlights, setTestFlights] = useState<Flight[]>([]);
   const [flightLoading, setFlightLoading] = useState(false);
   const [envToken, setEnvToken] = useState('');
-  const [allOtas, setAllOtas] = useState<Gate[]>([]);
-  const [otasLoading, setOtasLoading] = useState(true);
-  const [otasError, setOtasError] = useState<string | null>(null);
+  const [allOtas] = useState<Gate[]>(OTA_DATA);
 
   useEffect(() => {
     // Client-side access to env var
     setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
     testConnection(); // Auto-test on page load
-    testOtaEndpoint(); // Test OTAs on load
   }, []);
-
-  // Client-side test for OTAs - now loads from local data
-  async function testOtaEndpoint() {
-      setOtasLoading(true);
-      setOtasError(null);
-      try {
-          // Load data from the local file
-          const data = OTA_DATA;
-          setAllOtas(data);
-          setApiStatus(prevStatus => {
-              if (!prevStatus) return null;
-              const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
-              const allEndpointsWork = Object.values(updatedEndpoints).every(v => v);
-              return {
-                  ...prevStatus,
-                  success: allEndpointsWork,
-                  endpoints: updatedEndpoints,
-                  message: allEndpointsWork ? 'All endpoints connected' : prevStatus.message,
-              };
-          });
-      } catch (error: any) {
-          console.error('OTA local data loading failed:', error);
-          setOtasError(error.message);
-           setApiStatus(prevStatus => {
-                if (!prevStatus) return null;
-                return { ...prevStatus, endpoints: {...prevStatus.endpoints, otas: false}, success: false };
-            });
-      } finally {
-          setOtasLoading(false);
-      }
-  }
 
 
   const testConnection = async () => {
@@ -162,11 +128,11 @@ export default function ApiTestPage() {
               API Status
             </h2>
             <Button
-              onClick={() => { testConnection(); testOtaEndpoint(); }}
-              disabled={testing || otasLoading}
+              onClick={testConnection}
+              disabled={testing}
               variant="outline"
             >
-              {(testing || otasLoading) ? (
+              {testing ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
                 <RefreshCw className="w-4 h-4" />
@@ -204,7 +170,7 @@ export default function ApiTestPage() {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <EndpointStatus name="Flights" icon={<Plane />} status={apiStatus?.endpoints.flights || false} loading={testing} />
-                    <EndpointStatus name="OTAs" icon={<Users />} status={apiStatus?.endpoints.otas || false} loading={otasLoading} />
+                    <EndpointStatus name="OTAs" icon={<Users />} status={apiStatus?.endpoints.otas || false} loading={testing} />
                     <EndpointStatus name="Airports" icon={<Database />} status={apiStatus?.endpoints.airports || false} loading={testing} />
                     <EndpointStatus name="Airlines" icon={<Database />} status={apiStatus?.endpoints.airlines || false} loading={testing} />
                     <EndpointStatus name="Cities" icon={<Database />} status={apiStatus?.endpoints.cities || false} loading={testing} />
@@ -282,12 +248,7 @@ export default function ApiTestPage() {
               <Users className="w-5 h-5 mr-2" />
               Online Travel Agencies (Gates)
             </h2>
-            {otasLoading ? (
-              <div className="text-center py-8 text-gray-500">
-                  <RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2" />
-                  Loading OTA data...
-              </div>
-            ) : allOtas.length > 0 ? (
+            {allOtas.length > 0 ? (
                 <div className="max-h-96 overflow-y-auto space-y-2 pr-4">
                   <p className="text-sm text-gray-600 mb-4">Successfully loaded {allOtas.length} OTAs from local data.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -301,7 +262,7 @@ export default function ApiTestPage() {
                 </div>
             ) : (
               <div className="text-center py-8 text-red-500">
-                Failed to load OTA data. {otasError || 'The local data file might be missing or empty.'}
+                Failed to load OTA data. The local data file might be missing or empty.
               </div>
             )}
         </div>
@@ -365,3 +326,5 @@ export default function ApiTestPage() {
     </div>
   );
 }
+
+    

@@ -99,7 +99,7 @@ class TravelpayoutsApiService {
       airlines: boolean;
       cities: boolean;
       flights: boolean;
-      otas: boolean; // This will be handled client-side
+      otas: boolean;
       countries: boolean;
       planes: boolean;
       routes: boolean;
@@ -112,7 +112,7 @@ class TravelpayoutsApiService {
       airlines: false,
       cities: false,
       flights: false,
-      otas: false, // Default to false, will be tested on client
+      otas: true, // OTA data is now local, so it's always "connected"
       countries: false,
       planes: false,
       routes: false,
@@ -377,3 +377,5 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams, Gate };
+
+    
