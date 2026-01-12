@@ -88,7 +88,7 @@ function SearchResultsContent() {
           return_date: return_date || undefined,
           passengers: parseInt(passengers),
           currency: 'USD',
-          limit: 30,
+          limit: 50, // Increased limit
         });
         
         console.log('Fetched flights:', flightData.length);
@@ -96,22 +96,20 @@ function SearchResultsContent() {
 
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
-
+          
           const uniqueAirlines = [...new Set(flightData.map(f => f.airline))].sort();
           setAvailableAirlines(uniqueAirlines);
           setSelectedAirlines(uniqueAirlines);
           
-          const uniqueStops = [...new Set(flightData.map(f => f.transfers))];
+          const uniqueStops = [...new Set(flightData.map(f => f.transfers))].sort((a,b) => a - b);
           setSelectedStops(uniqueStops);
 
           const durations = flightData.map(f => f.duration).filter(d => d > 0);
           const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
-          const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
+          const maxDuration = durations.length > 0 ? Math.max(...durations) : 1440;
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
-
-          // This needs to be calculated *after* setting flights,
-          // so we calculate it again in the next useEffect hook
+          
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -125,13 +123,15 @@ function SearchResultsContent() {
     fetchFlights();
   }, [origin, destination, depart_date, return_date, passengers, router]);
   
+  // This effect now correctly depends on flights and baggageFilter
+  // to recalculate price ranges when either changes.
   useEffect(() => {
     if (flights.length > 0) {
-      const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
-      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-      setPriceRange({ min: minPrice, max: maxPrice });
-      setSelectedPrice([minPrice, maxPrice]);
+        const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
+        const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
+        const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 0;
+        setPriceRange({ min: minPrice, max: maxPrice });
+        setSelectedPrice([minPrice, maxPrice]);
     }
   }, [flights, baggageFilter]);
 
@@ -207,11 +207,12 @@ function SearchResultsContent() {
 
   
   const stopOptions = useMemo(() => {
+    if (flights.length === 0) return [];
     const stopsMap = new Map<number, number>();
     flights.forEach(flight => {
         const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
         const currentMinPrice = stopsMap.get(flight.transfers);
-        if (!currentMinPrice || price < currentMinPrice) {
+        if (currentMinPrice === undefined || price < currentMinPrice) {
             stopsMap.set(flight.transfers, price);
         }
     });
@@ -260,8 +261,7 @@ function SearchResultsContent() {
   const flightGroups = useMemo(() => {
     const groups: { [key: string]: Flight[] } = {};
     sortedFlights.forEach(flight => {
-        // A simple way to group flights by their core route, ignoring the OTA
-        const groupId = `${flight.airline_code}-${flight.flight_number}-${flight.departure_at}`;
+        const groupId = `${flight.origin}-${flight.destination}-${flight.airline_code}-${flight.flight_number}-${flight.departure_at.slice(0,16)}`;
         if (!groups[groupId]) {
             groups[groupId] = [];
         }
@@ -335,7 +335,7 @@ function SearchResultsContent() {
 
                   <div className="space-y-2 border-t pt-4">
                       <label className="font-semibold text-sm text-muted-foreground">SORT</label>
-                      <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value)}>
+                      <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value as 'price' | 'duration' | 'departure')}>
                           <SelectTrigger>
                               <SelectValue placeholder="Sort by..." />
                           </SelectTrigger>
@@ -406,7 +406,7 @@ function SearchResultsContent() {
                       </RadioGroup>
                   </FilterSection>
                   
-                  <FilterSection title="TRAVEL TIME" disabled={durationRange.max === 0}>
+                  <FilterSection title="TRAVEL TIME" disabled={durationRange.max === 0 || durationRange.min === durationRange.max}>
                       <div className="p-2">
                         <p className="text-sm text-center mb-2 text-muted-foreground">
                             {formatDuration(selectedDuration[0])} - {formatDuration(selectedDuration[1])}
@@ -422,7 +422,7 @@ function SearchResultsContent() {
                       </div>
                   </FilterSection>
 
-                   <FilterSection title="Airfares" disabled={priceRange.max === 0}>
+                   <FilterSection title="Airfares" disabled={priceRange.max === 0 || priceRange.min === priceRange.max}>
                      <div className="p-2">
                         <p className="text-sm text-center mb-2 text-muted-foreground">
                             From ${Math.round(selectedPrice[0])} to ${Math.round(selectedPrice[1])}
@@ -688,5 +688,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
