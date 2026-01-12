@@ -47,7 +47,10 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
                             <span className="font-bold text-lg">Book</span>
                             <span className="font-bold text-xl ml-2">${displayPrice(bestFlight)}</span>
                         </Button>
-                        <p className="text-center text-sm text-gray-500 mt-1">{bestFlight.gate}</p>
+                        <div className="flex items-center justify-center gap-2 mt-1">
+                            <Image src={`https://pics.avs.io/20/20/${bestFlight.gate}.png`} alt={bestFlight.gate} width={16} height={16} unoptimized />
+                            <p className="text-center text-sm text-gray-500">{bestFlight.gate}</p>
+                        </div>
                     </div>
 
                     <div className="mt-4 space-y-1">
@@ -57,7 +60,10 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
                                 className="w-full flex justify-between items-center text-sm text-blue-600 hover:underline"
                                 onClick={() => onBookFlight(offer)}
                             >
-                                <span>{offer.gate}</span>
+                                <span className="flex items-center gap-1">
+                                    <Image src={`https://pics.avs.io/20/20/${offer.gate}.png`} alt={offer.gate} width={12} height={12} unoptimized/>
+                                    {offer.gate}
+                                </span>
                                 <span className="font-semibold">${displayPrice(offer)}</span>
                             </button>
                         ))}
