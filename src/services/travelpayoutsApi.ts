@@ -368,11 +368,11 @@ class TravelpayoutsApiService {
   
   async getGates(): Promise<Gate[]> {
     try {
-      const response = await axios.get(ENDPOINTS.gates, { 
-        timeout: 10000, 
-        headers: {
+      const response = await axios.get(ENDPOINTS.gates, {
+        timeout: 10000,
+        headers: { 
           'Accept-Encoding': 'gzip, deflate, compress'
-        } 
+        },
       });
       return response.data || [];
     } catch (error: any) {
