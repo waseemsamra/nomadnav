@@ -80,31 +80,34 @@ async function searchWithStrategy(params: URLSearchParams) {
     let apiResponse = null;
 
     // Strategy 1: Try v3 prices_for_dates (best for specific dates)
-    try {
-        console.log('Attempting search with aviasales/v3/prices_for_dates...');
-        const v3Params = new URLSearchParams(params);
-        v3Params.set('departure_at', params.get('depart_date')!);
-        if (params.has('return_date')) {
-            v3Params.set('return_at', params.get('return_date')!);
-        }
-        v3Params.delete('depart_date');
-        v3Params.delete('return_date');
+    if (params.get('depart_date')) {
+        try {
+            console.log('Attempting search with aviasales/v3/prices_for_dates...');
+            const v3Params = new URLSearchParams(params);
+            v3Params.set('departure_at', params.get('depart_date')!);
+            if (params.has('return_date')) {
+                v3Params.set('return_at', params.get('return_date')!);
+            }
+            v3Params.delete('depart_date');
+            v3Params.delete('return_date');
 
-        apiResponse = await fetchWithEndpoint('/aviasales/v3/prices_for_dates', v3Params);
-        if (apiResponse.success && apiResponse.data.length > 0) {
-            console.log(`✓ Success with v3/prices_for_dates. Found ${apiResponse.data.length} flights.`);
-            return apiResponse;
+            apiResponse = await fetchWithEndpoint('/aviasales/v3/prices_for_dates', v3Params);
+            if (apiResponse.success && apiResponse.data.length > 0) {
+                console.log(`✓ Success with v3/prices_for_dates. Found ${apiResponse.data.length} flights.`);
+                return apiResponse;
+            }
+            console.log('No results from v3/prices_for_dates, trying next strategy.');
+        } catch (e: any) {
+            console.warn('v3/prices_for_dates failed:', e.message);
         }
-        console.log('No results from v3/prices_for_dates, trying next strategy.');
-    } catch (e: any) {
-        console.warn('v3/prices_for_dates failed:', e.message);
     }
 
     // Strategy 2: Fallback to v2/prices/latest
     try {
         console.log('Falling back to v2/prices/latest...');
-        params.set('sorting', 'price');
-        apiResponse = await fetchWithEndpoint('/v2/prices/latest', params);
+        const v2Params = new URLSearchParams(params);
+        v2Params.set('sorting', 'price');
+        apiResponse = await fetchWithEndpoint('/v2/prices/latest', v2Params);
         if (apiResponse.success && apiResponse.data.length > 0) {
             console.log(`✓ Success with v2/prices/latest. Found ${apiResponse.data.length} flights.`);
             return apiResponse;
@@ -118,6 +121,7 @@ async function searchWithStrategy(params: URLSearchParams) {
 }
 
 function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
+    if (!Array.isArray(flights)) return [];
     return flights.map((flight: any) => {
         const airlineCode = flight.airline;
         const airlineName = airlines[airlineCode] || airlineCode;
@@ -219,3 +223,5 @@ export async function GET(req: NextRequest) {
         );
     }
 }
+
+    

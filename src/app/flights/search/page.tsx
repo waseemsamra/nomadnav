@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { type Flight, travelpayoutsApi, type Gate } from '@/services/travelpayoutsApi';
+import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
@@ -165,45 +165,44 @@ function SearchResultsContent() {
   
   // **EFFECT 2: Initialize all filters once flight data is available**
   useEffect(() => {
-      if (flights.length > 0) {
-          console.log("Initializing filters based on flight data...");
-          // Price
-          const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
-          const minPrice = Math.floor(Math.min(...prices));
-          const maxPrice = Math.ceil(Math.max(...prices));
-          setPriceRange({ min: minPrice, max: maxPrice });
-          setSelectedPrice([minPrice, maxPrice]);
+    if (flights.length > 0 && !loading) {
+      console.log("Initializing filters based on new flight data...");
+      
+      // Price
+      const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
+      const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
+      const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 0;
+      setPriceRange({ min: minPrice, max: maxPrice });
+      setSelectedPrice([minPrice, maxPrice]);
 
-          // Duration
-          const durations = flights.map(f => f.duration);
-          const minDuration = Math.min(...durations);
-          const maxDuration = Math.max(...durations);
-          setDurationRange({ min: minDuration, max: maxDuration });
-          setSelectedDuration([minDuration, maxDuration]);
+      // Duration
+      const durations = flights.map(f => f.duration);
+      const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
+      const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
+      setDurationRange({ min: minDuration, max: maxDuration });
+      setSelectedDuration([minDuration, maxDuration]);
 
-          // Airlines
-          const uniqueAirlines = [...new Set(flights.map(f => f.airline))];
-          setSelectedAirlines(uniqueAirlines);
-          
-          // Stops
-          const uniqueStops = [...new Set(flights.map(f => f.transfers))];
-          setSelectedStops(uniqueStops);
+      // Airlines, Stops, and OTAs
+      const uniqueAirlines = [...new Set(flights.map(f => f.airline))];
+      const uniqueStops = [...new Set(flights.map(f => f.transfers))];
+      const activeOtaIds = [...new Set(flights.map(f => f.gate))];
 
-          // OTAs
-          const activeOtaIds = [...new Set(flights.map(f => f.gate))];
-          setSelectedOtas(activeOtaIds);
+      setSelectedAirlines(uniqueAirlines);
+      setSelectedStops(uniqueStops);
+      setSelectedOtas(activeOtaIds);
 
-          console.log("Filters initialized:", {
-              selectedPrice: [minPrice, maxPrice],
-              selectedDuration: [minDuration, maxDuration],
-              selectedAirlines: uniqueAirlines,
-              selectedStops: uniqueStops,
-              selectedOtas: activeOtaIds,
-          });
-      }
-  // This hook should ONLY run when the core flight data changes.
+      console.log("Filters initialized:", {
+          priceRange: [minPrice, maxPrice],
+          durationRange: [minDuration, maxDuration],
+          selectedAirlines: uniqueAirlines,
+          selectedStops: uniqueStops,
+          selectedOtas: activeOtaIds,
+      });
+    }
+    // This hook MUST only run when flights or loading state changes.
+    // BaggageFilter is handled in its own effect.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flights]);
+  }, [flights, loading]);
 
 
   // This effect correctly depends on baggageFilter to recalculate price ranges when it changes.
@@ -213,10 +212,14 @@ function SearchResultsContent() {
         const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
         const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 0;
         setPriceRange({ min: minPrice, max: maxPrice });
-        setSelectedPrice([minPrice, maxPrice]);
+        // Only reset selected price if it's out of the new range
+        setSelectedPrice(prev => [
+            Math.max(minPrice, prev[0]),
+            Math.min(maxPrice, prev[1]),
+        ]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baggageFilter]);
+  }, [baggageFilter, flights]); // Depend on flights as well
   
 
   const handleBookFlight = (flight: Flight) => {
@@ -323,6 +326,7 @@ function SearchResultsContent() {
   const flightGroups = useMemo(() => {
     const groups: { [key: string]: Flight[] } = {};
     sortedFlights.forEach(flight => {
+        // Group by a more stable identifier (airline, flight number, times)
         const groupId = `${flight.airline_code}-${flight.flight_number}-${flight.origin}-${flight.destination}-${flight.departure_at.slice(0, 16)}`;
         if (!groups[groupId]) {
             groups[groupId] = [];
@@ -755,3 +759,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
