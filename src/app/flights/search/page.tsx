@@ -14,7 +14,7 @@ import {
   X,
   ChevronRight
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, getHours, getMinutes } from 'date-fns';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,9 @@ function SearchResultsContent() {
 
   const [priceRange, setPriceRange] = useState({ min: 0, max: 0 });
   const [selectedPrice, setSelectedPrice] = useState([0, 0]);
+
+  const [departureTimeRange, setDepartureTimeRange] = useState({ min: 0, max: 1440 });
+  const [selectedDepartureTime, setSelectedDepartureTime] = useState([0, 1440]);
 
 
   // Extract search parameters
@@ -175,6 +178,7 @@ function SearchResultsContent() {
     setBaggageFilter('all');
     setSelectedDuration([durationRange.min, durationRange.max]);
     setSelectedPrice([priceRange.min, priceRange.max]);
+    setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
   };
 
   const formatDuration = (minutes: number) => {
@@ -182,6 +186,12 @@ function SearchResultsContent() {
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
   };
+
+  const formatTime = (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+    const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
 
   const formatDate = (dateString: string) => {
     try {
@@ -247,6 +257,11 @@ function SearchResultsContent() {
         .filter(flight => {
           const price = getFlightDisplayPrice(flight);
           return price >= selectedPrice[0] && price <= selectedPrice[1];
+        })
+        .filter(flight => {
+            const departureDate = new Date(flight.departure_at);
+            const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
+            return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
         });
 
     if (baggageFilter === 'without') {
@@ -268,7 +283,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime]);
 
   if (loading) {
     return (
@@ -329,7 +344,7 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'Duration of stops', 'Airfares', 'Airlines']}>
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'Duration of stops', 'Airfares', 'Departure/Arrival times', 'Airlines']}>
                   <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
@@ -418,8 +433,35 @@ function SearchResultsContent() {
                         />
                       </div>
                   </FilterSection>
-                  <FilterSection title="Departure/Arrival times" disabled>
-                     <p>Time filter content</p>
+                  <FilterSection title="Departure/Arrival times">
+                     <div className="p-2 space-y-4">
+                        <div>
+                          <p className="text-sm text-center mb-2 text-muted-foreground">
+                              Departure time: {formatTime(selectedDepartureTime[0])} - {formatTime(selectedDepartureTime[1])}
+                          </p>
+                          <Slider
+                              min={departureTimeRange.min}
+                              max={departureTimeRange.max}
+                              step={15}
+                              value={selectedDepartureTime}
+                              onValueChange={setSelectedDepartureTime}
+                              minStepsBetweenThumbs={1}
+                          />
+                        </div>
+                         <div className="opacity-50">
+                          <p className="text-sm text-center mb-2 text-muted-foreground">
+                              Arrival time: 00:00 - 23:59
+                          </p>
+                          <Slider
+                              defaultValue={[0, 1440]}
+                              min={0}
+                              max={1440}
+                              step={15}
+                              minStepsBetweenThumbs={1}
+                              disabled
+                          />
+                        </div>
+                      </div>
                   </FilterSection>
                   
                    <FilterSection title="Connecting airports" disabled>
