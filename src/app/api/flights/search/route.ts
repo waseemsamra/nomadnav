@@ -96,25 +96,14 @@ export async function GET(req: NextRequest) {
             show_to_affiliates: 'true',
         });
         
-        let apiResponse;
-
-        // First attempt: search with specific depart_date if provided
         if (depart_date) {
-            const specificDateParams = new URLSearchParams(apiParams);
-            specificDateParams.set('depart_date', depart_date);
-             if (return_date) {
-                specificDateParams.set('return_date', return_date);
-            }
-            apiResponse = await fetchFlightsFromApi(specificDateParams);
-        } else {
-             apiResponse = await fetchFlightsFromApi(apiParams);
+            apiParams.set('depart_date', depart_date);
+        }
+        if (return_date) {
+            apiParams.set('return_date', return_date);
         }
         
-        // Fallback: If no results with specific date, try without it
-        if (!apiResponse.data || apiResponse.data.length === 0) {
-            console.log('No results with specific date, trying fallback without date.');
-            apiResponse = await fetchFlightsFromApi(apiParams);
-        }
+        const apiResponse = await fetchFlightsFromApi(apiParams);
 
         const airlines = await getAirlinesData();
         
@@ -152,3 +141,5 @@ export async function GET(req: NextRequest) {
         );
     }
 }
+
+    
