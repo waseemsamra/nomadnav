@@ -4,7 +4,7 @@ import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
-const API_ENDPOINT = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates'; // Changed endpoint
+const API_ENDPOINT = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
 const AIRLINES_ENDPOINT = 'https://api.travelpayouts.com/data/en/airlines.json';
 
 let airlinesCache: { [key: string]: string } | null = null;
@@ -23,7 +23,9 @@ async function getAirlinesData() {
         });
         if (response.data) {
             airlinesCache = response.data.reduce((acc: any, airline: any) => {
-                acc[airline.code] = airline.name;
+                if (airline.code && airline.name) {
+                  acc[airline.code] = airline.name;
+                }
                 return acc;
             }, {});
             airlinesCacheTimestamp = now;
@@ -66,6 +68,7 @@ export async function GET(req: NextRequest) {
 
     const origin = searchParams.get('origin');
     const destination = searchParams.get('destination');
+    const departure_date = searchParams.get('depart_date'); // Changed from depart_date
 
     if (!origin || !destination) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
@@ -85,14 +88,13 @@ export async function GET(req: NextRequest) {
             unique: false,
         };
 
-        const departure_date = searchParams.get('depart_date');
         if (departure_date) {
-            apiParams['departure_at'] = departure_date; // Use departure_at for v3
+            apiParams['departure_at'] = departure_date; 
         }
 
         const return_date = searchParams.get('return_date');
         if (return_date) {
-            apiParams['return_at'] = return_date; // Use return_at for v3
+            apiParams['return_at'] = return_date; 
         }
 
         const url = `${API_ENDPOINT}?${new URLSearchParams(apiParams).toString()}`;
@@ -104,13 +106,13 @@ export async function GET(req: NextRequest) {
              }),
              getAirlinesData(),
         ]);
-
+        
         if (apiResponse.data && apiResponse.data.success && apiResponse.data.data.length > 0) {
-            const flightsWithDetails = apiResponse.data.data.map((flight: any, index: number) => {
+            const flightsWithDetails = apiResponse.data.data.map((flight: any) => {
                 const enrichedFlight = {
-                    id: flight.link, // Use link as a more unique ID
+                    id: flight.link, 
                     price: flight.price,
-                    airline: airlines[flight.airline] || flight.airline,
+                    airline: airlines[flight.airline] || flight.airline, // Correctly lookup airline name
                     airline_code: flight.airline,
                     flight_number: flight.flight_number,
                     departure_at: flight.departure_at,
@@ -121,7 +123,7 @@ export async function GET(req: NextRequest) {
                     duration: flight.duration,
                     link: `https://www.travelpayouts.com${flight.link}`,
                     currency: apiParams.currency,
-                    gate: 'Direct', // This endpoint doesn't provide OTA info, so we default
+                    gate: 'Direct',
                 };
                 return addEstimatedBaggagePrices(enrichedFlight);
             });
