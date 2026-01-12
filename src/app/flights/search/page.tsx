@@ -451,8 +451,8 @@ function SearchResultsContent() {
                               />
                               <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
                           </div>
-                          {availableAirlines.map(airline => (
-                               <div key={`airline-${airline}`} className="flex items-center space-x-2">
+                          {availableAirlines.map((airline) => (
+                               <div key={airline} className="flex items-center space-x-2">
                                   <Checkbox
                                       id={`airline-${airline}`}
                                       checked={selectedAirlines.includes(airline)}
@@ -472,14 +472,14 @@ function SearchResultsContent() {
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                              <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
-                                    <Checkbox id="select-all-otas" checked/>
+                                    <Checkbox id="select-all-otas" defaultChecked />
                                     <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
                                 </div>
                             </div>
                             {exampleOTAs.map(ota => (
                                <div key={ota.id} className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2">
-                                      <Checkbox id={`ota-${ota.id}`} checked/>
+                                      <Checkbox id={`ota-${ota.id}`} defaultChecked/>
                                       <Label htmlFor={`ota-${ota.id}`}>{ota.name}</Label>
                                   </div>
                                   <span className="text-sm text-muted-foreground">${ota.price}</span>
