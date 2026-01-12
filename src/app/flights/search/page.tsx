@@ -78,7 +78,7 @@ function SearchResultsContent() {
   useEffect(() => {
     async function fetchOtas() {
         try {
-            const response = await fetch('/api/gates');
+            const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
             if (response.ok) {
                 const data = await response.json();
                 setAllOtas(data);

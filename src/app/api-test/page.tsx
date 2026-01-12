@@ -59,7 +59,8 @@ export default function ApiTestPage() {
       setOtasLoading(true);
       setOtasError(null);
       try {
-          const response = await fetch('/api/gates');
+          // Use direct client-side fetch, which is proven to work
+          const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
           if (response.ok) {
               const data = await response.json();
               setAllOtas(data);
