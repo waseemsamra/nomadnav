@@ -55,7 +55,6 @@ export async function GET(req: NextRequest) {
             currency: searchParams.get('currency') || 'USD',
             limit: searchParams.get('limit') || '30',
             sorting: 'price',
-            unique: 'false',
         });
 
         const departure_date = searchParams.get('depart_date');
