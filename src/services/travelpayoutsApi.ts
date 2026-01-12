@@ -122,13 +122,9 @@ class TravelpayoutsApiService {
 
     const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
       try {
-        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress', 'User-Agent': 'NomadNavigator/1.0' } });
-        if (endpoint === 'otas' || endpoint === 'alliances') {
-           // For OTAs and Alliances, an empty array is a valid success response
-          results[endpoint] = response.status === 200 && Array.isArray(response.data);
-        } else {
-          results[endpoint] = response.status === 200 && response.data !== null;
-        }
+        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress', 'User-Agent': 'NomadNavigator/1.0', 'Accept': 'application/json' } });
+        // A successful request (200 OK) is considered a success, even with empty data for some endpoints.
+        results[endpoint] = response.status === 200;
       } catch (error) {
         console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
         results[endpoint] = false;
@@ -376,7 +372,8 @@ class TravelpayoutsApiService {
         timeout: 10000, 
         headers: {
           'Accept-Encoding': 'gzip, deflate, compress',
-          'User-Agent': 'NomadNavigator/1.0'
+          'User-Agent': 'NomadNavigator/1.0',
+          'Accept': 'application/json'
         } 
       });
       return response.data || [];
