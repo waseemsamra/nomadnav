@@ -323,10 +323,10 @@ function SearchResultsContent() {
     );
     
     const exampleOTAs = [
-        { id: 'trip', name: 'Trip.com' },
-        { id: 'mytrip', name: 'Mytrip.com' },
-        { id: 'city', name: 'City.Travel' },
-        { id: 'wingie', name: 'Wingie' },
+        { id: 'trip', name: 'Trip.com', price: 163 },
+        { id: 'mytrip', name: 'Mytrip.com', price: 163 },
+        { id: 'city', name: 'City.Travel', price: 164 },
+        { id: 'wingie', name: 'Wingie', price: 170 },
     ];
 
 
@@ -511,16 +511,21 @@ function SearchResultsContent() {
                      <p className="p-2 text-sm text-muted-foreground">Airport filter is not available.</p>
                   </FilterSection>
 
-                  <FilterSection title="Online travel agencies" disabled>
-                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2 opacity-50">
-                             <div className="flex items-center space-x-2">
-                                <Checkbox id="select-all-otas" disabled />
-                                <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
+                  <FilterSection title="Online travel agencies">
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                             <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox id="select-all-otas" />
+                                    <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
+                                </div>
                             </div>
                             {exampleOTAs.map(ota => (
-                               <div key={ota.id} className="flex items-center space-x-2">
-                                  <Checkbox id={`ota-${ota.id}`} disabled />
-                                  <Label htmlFor={`ota-${ota.id}`}>{ota.name}</Label>
+                               <div key={ota.id} className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                      <Checkbox id={`ota-${ota.id}`} />
+                                      <Label htmlFor={`ota-${ota.id}`}>{ota.name}</Label>
+                                  </div>
+                                  <span className="text-sm text-muted-foreground">${ota.price}</span>
                               </div>
                             ))}
                         </div>
