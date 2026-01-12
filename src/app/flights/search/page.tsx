@@ -173,9 +173,11 @@ function SearchResultsContent() {
             .sort((a, b) => a.price - b.price);
             
         setOtaOptions(otaInfo);
-        setSelectedOtas(otaInfo.map(ota => ota.id));
+        if (selectedOtas.length === 0) {
+          setSelectedOtas(otaInfo.map(ota => ota.id));
+        }
     }
-  }, [flights, allOtas, baggageFilter]);
+  }, [flights, allOtas, baggageFilter, selectedOtas.length]);
 
 
   const handleBookFlight = (flight: Flight) => {
