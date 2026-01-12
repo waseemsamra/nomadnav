@@ -326,7 +326,7 @@ export default function ApiTestPage() {
                           ${flight.price}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {flight.airline_code} • {flight.flight_number}
+                          {flight.airline} • {flight.flight_number}
                         </div>
                       </div>
                       <div className="text-right">
