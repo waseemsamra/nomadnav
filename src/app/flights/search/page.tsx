@@ -48,6 +48,14 @@ function SearchResultsContent() {
   const [availableAirlines, setAvailableAirlines] = useState<string[]>([]);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
+  
+  // State for baggage filter (UI only for now)
+  const [baggageOptions, setBaggageOptions] = useState({
+    all: true,
+    without: true,
+    with: true,
+  });
+
 
   // Extract search parameters
   const origin = searchParams.get('origin') || '';
@@ -142,11 +150,26 @@ function SearchResultsContent() {
       setSelectedStops(checked ? allStops : []);
   }
 
+  const handleBaggageSelection = (option: keyof typeof baggageOptions) => {
+    setBaggageOptions(prev => {
+      const newState = { ...prev, [option]: !prev[option] };
+      if (option === 'all') {
+        return { all: newState.all, without: newState.all, with: newState.all };
+      } else if (!newState.without || !newState.with) {
+        return { ...newState, all: false };
+      } else if (newState.without && newState.with) {
+        return { ...newState, all: true };
+      }
+      return newState;
+    });
+  }
+
   const handleResetFilters = () => {
     setFilters(initialFilterState);
     setSelectedAirlines(availableAirlines);
     const allStops = stopOptions.map(opt => opt.value);
     setSelectedStops(allStops);
+    setBaggageOptions({ all: true, without: true, with: true });
   };
 
   const formatDuration = (minutes: number) => {
@@ -180,11 +203,31 @@ function SearchResultsContent() {
         .sort((a,b) => a.value - b.value);
   }, [flights]);
 
+  const baggagePriceOptions = useMemo(() => {
+    // This is placeholder logic. When baggage data is available,
+    // this should be updated to calculate min prices for each.
+    const withoutBaggageMinPrice = Math.min(...flights.map(f => f.price).filter(p => p > 0));
+    const withBaggageMinPrice = withoutBaggageMinPrice * 1.15; // Placeholder
+    return {
+        without: isFinite(withoutBaggageMinPrice) ? withoutBaggageMinPrice : null,
+        with: isFinite(withBaggageMinPrice) ? Math.round(withBaggageMinPrice) : null,
+    };
+  }, [flights]);
+
   const sortedFlights = useMemo(() => {
     let filtered = [...flights]
         .filter(flight => selectedAirlines.includes(flight.airline))
         .filter(flight => selectedStops.includes(flight.transfers));
 
+    // Placeholder for baggage filter logic
+    // if (!baggageOptions.all) {
+    //   if (baggageOptions.with && !baggageOptions.without) {
+    //     // filter for flights with baggage
+    //   }
+    //   if (!baggageOptions.with && baggageOptions.without) {
+    //     // filter for flights without baggage
+    //   }
+    // }
 
     switch (filters.sortBy) {
         case 'price':
@@ -198,7 +241,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines, selectedStops]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageOptions]);
 
   if (loading) {
     return (
@@ -259,8 +302,8 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Airlines']}>
-                  <FilterSection title="Numbers of stops">
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Airlines', 'Baggage']}>
+                  <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2">
@@ -287,9 +330,48 @@ function SearchResultsContent() {
                           ))}
                       </div>
                   </FilterSection>
-                  <FilterSection title="Baggage" disabled>
-                     <p>Baggage filter content</p>
+
+                  <FilterSection title="Baggage">
+                      <div className="space-y-2 pr-2">
+                           <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="baggage-all"
+                                    checked={baggageOptions.all}
+                                    onCheckedChange={() => handleBaggageSelection('all')}
+                                />
+                                <Label htmlFor="baggage-all" className="font-medium">All</Label>
+                              </div>
+                          </div>
+                           <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="baggage-without"
+                                    checked={baggageOptions.without}
+                                    onCheckedChange={() => handleBaggageSelection('without')}
+                                />
+                                <Label htmlFor="baggage-without">Without baggage</Label>
+                              </div>
+                              {baggagePriceOptions.without && (
+                                <span className="text-sm text-muted-foreground">${baggagePriceOptions.without}</span>
+                              )}
+                          </div>
+                           <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="baggage-with"
+                                    checked={baggageOptions.with}
+                                    onCheckedChange={() => handleBaggageSelection('with')}
+                                />
+                                <Label htmlFor="baggage-with">Luggage and carry-on</Label>
+                              </div>
+                              {baggagePriceOptions.with && (
+                                <span className="text-sm text-muted-foreground">${baggagePriceOptions.with}</span>
+                              )}
+                          </div>
+                      </div>
                   </FilterSection>
+
                    <FilterSection title="Duration of stops" disabled>
                      <p>Duration of stops filter content</p>
                   </FilterSection>
@@ -306,7 +388,7 @@ function SearchResultsContent() {
                      <p>Connecting airports filter content</p>
                   </FilterSection>
 
-                  <FilterSection title="Airlines">
+                  <FilterSection title="Airlines" disabled={availableAirlines.length === 0}>
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                           <div className="flex items-center space-x-2">
                               <Checkbox 
@@ -569,5 +651,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
