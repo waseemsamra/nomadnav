@@ -67,7 +67,6 @@ const ENDPOINTS = {
   airports: 'https://api.travelpayouts.com/data/en/airports.json',
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
   countries: 'https://api.travelpayouts.com/data/en/countries.json',
-  gates: 'https://api.travelpayouts.com/data/en/gates.json',
   planes: 'https://api.travelpayouts.com/data/en/planes.json',
   routes: 'https://api.travelpayouts.com/data/en/routes.json',
   alliances: 'https://api.travelpayouts.com/data/en/alliances.json',

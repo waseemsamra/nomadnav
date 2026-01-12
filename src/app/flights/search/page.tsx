@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
 import FlightCard from '@/components/flights/FlightCard';
+import { OTA_DATA } from '@/lib/ota-data';
 
 
 type FilterState = {
@@ -74,24 +75,9 @@ function SearchResultsContent() {
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
 
-  // Fetch OTAs on client side - this is the reliable way
+  // Load OTAs from local data
   useEffect(() => {
-    async function fetchOtas() {
-        try {
-            const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
-            if (response.ok) {
-                const data = await response.json();
-                setAllOtas(data);
-            } else {
-                console.error("Failed to fetch OTAs from client:", response.statusText);
-                toast.error("Could not load travel agency data.");
-            }
-        } catch (err) {
-            console.error("Error fetching OTAs on client:", err);
-            toast.error("Could not load travel agency data.");
-        }
-    }
-    fetchOtas();
+    setAllOtas(OTA_DATA);
   }, []);
 
   // Fetch flights 

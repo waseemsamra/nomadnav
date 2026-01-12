@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { travelpayoutsApi, type Flight, type Gate } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
+import { OTA_DATA } from '@/lib/ota-data';
 
 type ApiStatus = {
   success: boolean;
@@ -54,33 +55,27 @@ export default function ApiTestPage() {
     testOtaEndpoint(); // Test OTAs on load
   }, []);
 
-  // Client-side test for OTAs
+  // Client-side test for OTAs - now loads from local data
   async function testOtaEndpoint() {
       setOtasLoading(true);
       setOtasError(null);
       try {
-          // Use direct client-side fetch, which is proven to work
-          const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
-          if (response.ok) {
-              const data = await response.json();
-              setAllOtas(data);
-              setApiStatus(prevStatus => {
-                  if (!prevStatus) return null;
-                  const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
-                  const allEndpointsWork = Object.values(updatedEndpoints).every(v => v);
-                  return {
-                      ...prevStatus,
-                      success: allEndpointsWork,
-                      endpoints: updatedEndpoints,
-                      message: allEndpointsWork ? 'All endpoints connected' : prevStatus.message,
-                  };
-              });
-          } else {
-            const errorText = await response.text();
-            throw new Error(`Request failed with status ${response.status}: ${errorText}`);
-          }
+          // Load data from the local file
+          const data = OTA_DATA;
+          setAllOtas(data);
+          setApiStatus(prevStatus => {
+              if (!prevStatus) return null;
+              const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
+              const allEndpointsWork = Object.values(updatedEndpoints).every(v => v);
+              return {
+                  ...prevStatus,
+                  success: allEndpointsWork,
+                  endpoints: updatedEndpoints,
+                  message: allEndpointsWork ? 'All endpoints connected' : prevStatus.message,
+              };
+          });
       } catch (error: any) {
-          console.error('OTA endpoint test failed:', error);
+          console.error('OTA local data loading failed:', error);
           setOtasError(error.message);
            setApiStatus(prevStatus => {
                 if (!prevStatus) return null;
@@ -290,11 +285,11 @@ export default function ApiTestPage() {
             {otasLoading ? (
               <div className="text-center py-8 text-gray-500">
                   <RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2" />
-                  Fetching OTA data...
+                  Loading OTA data...
               </div>
             ) : allOtas.length > 0 ? (
                 <div className="max-h-96 overflow-y-auto space-y-2 pr-4">
-                  <p className="text-sm text-gray-600 mb-4">Successfully fetched {allOtas.length} OTAs.</p>
+                  <p className="text-sm text-gray-600 mb-4">Successfully loaded {allOtas.length} OTAs from local data.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {allOtas.map(ota => (
                       <div key={ota.code} className="p-3 border rounded-lg bg-gray-50">
@@ -306,7 +301,7 @@ export default function ApiTestPage() {
                 </div>
             ) : (
               <div className="text-center py-8 text-red-500">
-                Failed to fetch OTA data. {otasError || 'The endpoint might be down or blocking requests.'}
+                Failed to load OTA data. {otasError || 'The local data file might be missing or empty.'}
               </div>
             )}
         </div>
