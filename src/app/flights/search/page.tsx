@@ -49,7 +49,7 @@ function SearchResultsContent() {
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  const [availableAirlines, setAvailableAirlines] = useState<string[]>([]);
+  const [allAirlines, setAllAirlines] = useState<{ code: string; name: string }[]>([]);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
   
@@ -65,7 +65,7 @@ function SearchResultsContent() {
   const [selectedDepartureTime, setSelectedDepartureTime] = useState([0, 1440]);
   
   const [allOtas] = useState<Gate[]>(OTA_DATA);
-  const [otaOptions, setOtaOptions] = useState<{ id: string; name: string; price: number; }[]>([]);
+  const [otaOptions, setOtaOptions] = useState<{ id: string; name: string; price: number | null; }[]>([]);
   const [selectedOtas, setSelectedOtas] = useState<string[]>([]);
   
   const [alliances] = useState(ALLIANCE_DATA);
@@ -79,6 +79,20 @@ function SearchResultsContent() {
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
 
+  useEffect(() => {
+    async function fetchInitialData() {
+      try {
+        const airlinesData = await travelpayoutsApi.getAirlines();
+        const formattedAirlines = airlinesData.map((a: any) => ({ code: a.code, name: a.name }));
+        setAllAirlines(formattedAirlines);
+        setSelectedAirlines(formattedAirlines.map(a => a.name));
+      } catch (error) {
+        console.error("Failed to fetch airlines", error);
+        toast.error("Could not load airline filter data.");
+      }
+    }
+    fetchInitialData();
+  }, []);
 
   // Fetch flights 
   useEffect(() => {
@@ -106,10 +120,6 @@ function SearchResultsContent() {
 
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
-          
-          const uniqueAirlines = [...new Set(flightData.map(f => f.airline))].sort();
-          setAvailableAirlines(uniqueAirlines);
-          setSelectedAirlines(uniqueAirlines);
           
           const uniqueStops = [...new Set(flightData.map(f => f.transfers))].sort((a,b) => a - b);
           setSelectedStops(uniqueStops);
@@ -141,7 +151,7 @@ function SearchResultsContent() {
   
 
   useEffect(() => {
-    if (flights.length > 0 && allOtas.length > 0) {
+    if (allOtas.length > 0) {
       const gatePrices: { [key: string]: number } = {};
       flights.forEach(flight => {
           const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
@@ -151,13 +161,16 @@ function SearchResultsContent() {
       });
 
       const activeOtaInfo = allOtas
-          .filter(ota => gatePrices[ota.code])
           .map(ota => ({
               id: ota.code,
               name: ota.name,
-              price: Math.round(gatePrices[ota.code])
+              price: gatePrices[ota.code] ? Math.round(gatePrices[ota.code]) : null
           }))
-          .sort((a, b) => a.price - b.price);
+          .sort((a, b) => {
+            if (a.price === null) return 1;
+            if (b.price === null) return -1;
+            return a.price - b.price;
+          });
               
       setOtaOptions(activeOtaInfo);
       setSelectedOtas(activeOtaInfo.map(ota => ota.id));
@@ -200,7 +213,7 @@ function SearchResultsContent() {
   };
   
   const handleSelectAllAirlines = (checked: boolean) => {
-    setSelectedAirlines(checked ? availableAirlines : []);
+    setSelectedAirlines(checked ? allAirlines.map(a => a.name) : []);
   }
 
   const handleStopSelection = (stopCount: number) => {
@@ -231,7 +244,7 @@ function SearchResultsContent() {
 
   const handleResetFilters = () => {
     setFilters(initialFilterState);
-    setSelectedAirlines(availableAirlines);
+    setSelectedAirlines(allAirlines.map(a => a.name));
     const allStops = stopOptions.map(opt => opt.value);
     setSelectedStops(allStops);
     setBaggageFilter('all');
@@ -522,24 +535,24 @@ function SearchResultsContent() {
                      <p className="p-2 text-sm text-muted-foreground">Connecting airports filter is not available with this API.</p>
                   </FilterSection>
 
-                  <FilterSection title="Airlines" disabled={availableAirlines.length === 0}>
+                  <FilterSection title="Airlines" disabled={allAirlines.length === 0}>
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                           <div className="flex items-center space-x-2">
                               <Checkbox 
                                   id="select-all-airlines"
-                                  checked={selectedAirlines.length === availableAirlines.length}
+                                  checked={selectedAirlines.length === allAirlines.map(a => a.name).length}
                                   onCheckedChange={(checked) => handleSelectAllAirlines(!!checked)}
                               />
                               <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
                           </div>
-                          {availableAirlines.map((airline, index) => (
-                               <div key={`${airline}-${index}`} className="flex items-center space-x-2">
+                          {allAirlines.sort((a,b) => a.name.localeCompare(b.name)).map((airline, index) => (
+                               <div key={`${airline.code}-${index}`} className="flex items-center space-x-2">
                                   <Checkbox
-                                      id={`airline-${airline}`}
-                                      checked={selectedAirlines.includes(airline)}
-                                      onCheckedChange={() => handleAirlineSelection(airline)}
+                                      id={`airline-${airline.name}`}
+                                      checked={selectedAirlines.includes(airline.name)}
+                                      onCheckedChange={() => handleAirlineSelection(airline.name)}
                                   />
-                                  <Label htmlFor={`airline-${airline}`}>{airline}</Label>
+                                  <Label htmlFor={`airline-${airline.name}`}>{airline.name}</Label>
                               </div>
                           ))}
                       </div>
@@ -571,7 +584,7 @@ function SearchResultsContent() {
                                       />
                                       <Label htmlFor={`ota-${ota.id}`}>{ota.name}</Label>
                                   </div>
-                                  <span className="text-sm text-muted-foreground">${ota.price}</span>
+                                   {ota.price !== null && <span className="text-sm text-muted-foreground">${ota.price}</span>}
                               </div>
                             ))}
                         </div>
