@@ -122,8 +122,8 @@ class TravelpayoutsApiService {
 
     const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
       try {
-        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress', 'User-Agent': 'NomadNavigator/1.0', 'Accept': 'application/json' } });
-        // A successful request (200 OK) is considered a success, even with empty data for some endpoints.
+        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
+        // A successful request (200 OK) is considered a success.
         results[endpoint] = response.status === 200;
       } catch (error) {
         console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
@@ -371,9 +371,7 @@ class TravelpayoutsApiService {
       const response = await axios.get(ENDPOINTS.gates, { 
         timeout: 10000, 
         headers: {
-          'Accept-Encoding': 'gzip, deflate, compress',
-          'User-Agent': 'NomadNavigator/1.0',
-          'Accept': 'application/json'
+          'Accept-Encoding': 'gzip, deflate, compress'
         } 
       });
       return response.data || [];
