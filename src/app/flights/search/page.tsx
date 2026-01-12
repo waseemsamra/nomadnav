@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Slider } from '@/components/ui/slider';
-import GroupedFlightResults from '@/components/flights/GroupedFlightResults';
+import FlightCard from '@/components/flights/FlightCard';
 
 
 type FilterState = {
@@ -249,6 +249,30 @@ function SearchResultsContent() {
         selectedDepartureTime,
     });
   }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime]);
+  
+  const flightGroups = useMemo(() => {
+    const groups: { [key: string]: Flight[] } = {};
+    sortedFlights.forEach(flight => {
+        // A simple way to group flights by their core route, ignoring the OTA
+        const groupId = `${flight.airline_code}-${flight.flight_number}-${flight.departure_at}`;
+        if (!groups[groupId]) {
+            groups[groupId] = [];
+        }
+        groups[groupId].push(flight);
+    });
+
+    return Object.values(groups).map(group => {
+        const bestFlight = group.reduce((best, current) => 
+            travelpayoutsApi.getFlightDisplayPrice(current, baggageFilter) < travelpayoutsApi.getFlightDisplayPrice(best, baggageFilter) ? current : best
+        );
+        const otherOffers = group
+            .filter(f => f.id !== bestFlight.id)
+            .sort((a,b) => travelpayoutsApi.getFlightDisplayPrice(a, baggageFilter) - travelpayoutsApi.getFlightDisplayPrice(b, baggageFilter));
+        
+        return { bestFlight, otherOffers };
+    });
+  }, [sortedFlights, baggageFilter]);
+
 
   if (loading) {
     return (
@@ -451,7 +475,7 @@ function SearchResultsContent() {
                               />
                               <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
                           </div>
-                          {availableAirlines.map((airline) => (
+                          {availableAirlines.map(airline => (
                                <div key={`airline-${airline}`} className="flex items-center space-x-2">
                                   <Checkbox
                                       id={`airline-${airline}`}
@@ -566,7 +590,7 @@ function SearchResultsContent() {
           <div className="lg:col-span-3">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                Available Flights ({sortedFlights.length})
+                Available Flights ({flightGroups.length})
               </h2>
               <p className="text-gray-600">
                 Best prices from multiple airlines & travel agencies
@@ -586,7 +610,7 @@ function SearchResultsContent() {
                   Try a New Search
                 </Button>
               </div>
-            ) : sortedFlights.length === 0 ? (
+            ) : flightGroups.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -600,19 +624,25 @@ function SearchResultsContent() {
                 </Button>
               </div>
             ) : (
-                <GroupedFlightResults 
-                    flights={sortedFlights} 
+              <div className="space-y-4">
+                {flightGroups.map(({ bestFlight, otherOffers }) => (
+                  <FlightCard 
+                    key={bestFlight.id} 
+                    bestFlight={bestFlight} 
+                    otherOffers={otherOffers} 
                     onBookFlight={handleBookFlight} 
-                    baggageFilter={baggageFilter}
-                />
+                    baggageFilter={baggageFilter} 
+                  />
+                ))}
+              </div>
             )}
 
             {/* Footer */}
-            {sortedFlights.length > 0 && (
+            {flightGroups.length > 0 && (
               <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
                 <div className="text-center">
                   <p className="text-gray-600 mb-4">
-                    Showing {Math.min(sortedFlights.length, 30)} of {sortedFlights.length} flights
+                    Showing {Math.min(flightGroups.length, 30)} of {flightGroups.length} unique flight routes
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
