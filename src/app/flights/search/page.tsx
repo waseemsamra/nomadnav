@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { Suspense, useEffect, useState, useMemo } from 'react';
@@ -24,6 +23,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import { Slider } from '@/components/ui/slider';
 import FlightCard from '@/components/flights/FlightCard';
 import { OTA_DATA } from '@/lib/ota-data';
+import { ALLIANCE_DATA } from '@/lib/alliance-data';
 
 
 type FilterState = {
@@ -44,28 +44,77 @@ function SearchResultsContent() {
   
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  const [allAirlines, setAllAirlines] = useState<{ code: string; name: string }[]>([]);
+  // All filter states are managed here
+  const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
-  
   const [baggageFilter, setBaggageFilter] = useState<BaggageFilterType>('all');
-  
   const [durationRange, setDurationRange] = useState({ min: 0, max: 0 });
   const [selectedDuration, setSelectedDuration] = useState([0, 0]);
-
   const [priceRange, setPriceRange] = useState({ min: 0, max: 0 });
   const [selectedPrice, setSelectedPrice] = useState([0, 0]);
-
   const [departureTimeRange, setDepartureTimeRange] = useState({ min: 0, max: 1440 });
   const [selectedDepartureTime, setSelectedDepartureTime] = useState([0, 1440]);
-  
-  const [allOtas] = useState<Gate[]>(OTA_DATA);
-  const [otaOptions, setOtaOptions] = useState<{ id: string; name: string; price: number | null; }[]>([]);
   const [selectedOtas, setSelectedOtas] = useState<string[]>([]);
+
+  // Memoized options derived from flight data
+  const airlineOptions = useMemo(() => {
+      const uniqueAirlines = [...new Map(flights.map(f => [f.airline, { code: f.airline_code, name: f.airline }])).values()];
+      return uniqueAirlines.sort((a,b) => a.name.localeCompare(b.name));
+  }, [flights]);
+
+  const stopOptions = useMemo(() => {
+    if (flights.length === 0) return [];
+    const stopsMap = new Map<number, number>();
+    flights.forEach(flight => {
+        const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
+        const currentMinPrice = stopsMap.get(flight.transfers);
+        if (currentMinPrice === undefined || price < currentMinPrice) {
+            stopsMap.set(flight.transfers, price);
+        }
+    });
+    return Array.from(stopsMap.entries())
+        .map(([value, price]) => ({
+            value: value,
+            label: value === 0 ? 'Direct' : `${value} stop${value > 1 ? 's' : ''}`,
+            price: Math.round(price),
+        }))
+        .sort((a,b) => a.value - b.value);
+  }, [flights, baggageFilter]);
   
+  const otaOptions = useMemo(() => {
+      const gatePrices: { [key: string]: number } = {};
+      flights.forEach(flight => {
+          const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
+          if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
+              gatePrices[flight.gate] = price;
+          }
+      });
+      return OTA_DATA
+          .map(ota => ({
+              id: ota.code,
+              name: ota.name,
+              price: gatePrices[ota.code] ? Math.round(gatePrices[ota.code]) : null
+          }))
+          .sort((a, b) => {
+            if (a.price === null) return 1;
+            if (b.price === null) return -1;
+            return a.price - b.price;
+          });
+  }, [flights]);
+
+  const baggagePriceOptions = useMemo(() => {
+      if (flights.length === 0) return { without: null, with: null };
+      const minWithout = Math.min(...flights.map(f => f.price));
+      const minWith = Math.min(...flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'with')));
+      return {
+          without: isFinite(minWithout) ? Math.round(minWithout) : null,
+          with: isFinite(minWith) ? Math.round(minWith) : null,
+      };
+  }, [flights]);
+
 
   // Extract search parameters
   const origin = searchParams.get('origin') || '';
@@ -75,79 +124,32 @@ function SearchResultsContent() {
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
 
-  // Fetch flights and initialize all filters once
+  // **EFFECT 1: Fetch flights on initial load**
   useEffect(() => {
-    async function fetchAndInitialize() {
-      if (!origin || !destination || !depart_date) {
+    async function fetchFlights() {
+      if (!origin || !destination) {
         router.push('/');
         return;
       }
-
       setLoading(true);
-
       try {
-        const airlinesData = await travelpayoutsApi.getAirlines();
-        const formattedAirlines = airlinesData.map((a: any) => ({ code: a.code, name: a.name }));
-        setAllAirlines(formattedAirlines);
-        
         const flightData = await travelpayoutsApi.searchFlights({
             origin,
             destination,
-            depart_date,
+            depart_date: depart_date,
             return_date: return_date || undefined,
             passengers: parseInt(passengers),
             currency: 'USD',
-            limit: 50,
+            limit: 100,
         });
         
-        console.log('Fetched flights:', flightData.length);
+        console.log(`Fetched ${flightData.length} flights`);
         setFlights(flightData);
 
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
-
-          // ----- CONSOLIDATED FILTER INITIALIZATION -----
-          const uniqueAirlines = [...new Set(flightData.map(f => f.airline))];
-          setSelectedAirlines(uniqueAirlines);
-
-          const uniqueStops = [...new Set(flightData.map(f => f.transfers))].sort((a, b) => a - b);
-          setSelectedStops(uniqueStops);
-
-          const durations = flightData.map(f => f.duration).filter(d => d > 0);
-          const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
-          const maxDuration = durations.length > 0 ? Math.max(...durations) : 1440;
-          setDurationRange({ min: minDuration, max: maxDuration });
-          setSelectedDuration([minDuration, maxDuration]);
-          
-          const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
-          const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
-          const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 0;
-          setPriceRange({ min: minPrice, max: maxPrice });
-          setSelectedPrice([minPrice, maxPrice]);
-
-          const gatePrices: { [key: string]: number } = {};
-          flightData.forEach(flight => {
-              const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
-              if (!gatePrices[flight.gate] || price < gatePrices[flight.gate]) {
-                  gatePrices[flight.gate] = price;
-              }
-          });
-    
-          const activeOtaInfo = allOtas
-              .map(ota => ({
-                  id: ota.code,
-                  name: ota.name,
-                  price: gatePrices[ota.code] ? Math.round(gatePrices[ota.code]) : null
-              }))
-              .sort((a, b) => {
-                if (a.price === null) return 1;
-                if (b.price === null) return -1;
-                return a.price - b.price;
-              });
-          setOtaOptions(activeOtaInfo);
-          const activeOtaIds = activeOtaInfo.filter(o => o.price !== null).map(ota => ota.id);
-          setSelectedOtas(activeOtaIds);
-
+        } else {
+          toast.error(`No flights found for ${origin} to ${destination}.`);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -157,14 +159,54 @@ function SearchResultsContent() {
         setLoading(false);
       }
     }
-
-    fetchAndInitialize();
+    fetchFlights();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin, destination, depart_date, return_date, passengers, router]);
+  }, [origin, destination, depart_date, return_date, passengers, cabin_class]);
   
+  // **EFFECT 2: Initialize all filters once flight data is available**
+  useEffect(() => {
+      if (flights.length > 0) {
+          console.log("Initializing filters based on flight data...");
+          // Price
+          const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
+          const minPrice = Math.floor(Math.min(...prices));
+          const maxPrice = Math.ceil(Math.max(...prices));
+          setPriceRange({ min: minPrice, max: maxPrice });
+          setSelectedPrice([minPrice, maxPrice]);
 
-  // This effect correctly depends on flights and baggageFilter
-  // to recalculate price ranges when either changes.
+          // Duration
+          const durations = flights.map(f => f.duration);
+          const minDuration = Math.min(...durations);
+          const maxDuration = Math.max(...durations);
+          setDurationRange({ min: minDuration, max: maxDuration });
+          setSelectedDuration([minDuration, maxDuration]);
+
+          // Airlines
+          const uniqueAirlines = [...new Set(flights.map(f => f.airline))];
+          setSelectedAirlines(uniqueAirlines);
+          
+          // Stops
+          const uniqueStops = [...new Set(flights.map(f => f.transfers))];
+          setSelectedStops(uniqueStops);
+
+          // OTAs
+          const activeOtaIds = [...new Set(flights.map(f => f.gate))];
+          setSelectedOtas(activeOtaIds);
+
+          console.log("Filters initialized:", {
+              selectedPrice: [minPrice, maxPrice],
+              selectedDuration: [minDuration, maxDuration],
+              selectedAirlines: uniqueAirlines,
+              selectedStops: uniqueStops,
+              selectedOtas: activeOtaIds,
+          });
+      }
+  // This hook should ONLY run when the core flight data changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flights]);
+
+
+  // This effect correctly depends on baggageFilter to recalculate price ranges when it changes.
   useEffect(() => {
     if (flights.length > 0) {
         const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter));
@@ -173,7 +215,8 @@ function SearchResultsContent() {
         setPriceRange({ min: minPrice, max: maxPrice });
         setSelectedPrice([minPrice, maxPrice]);
     }
-  }, [flights, baggageFilter]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baggageFilter]);
   
 
   const handleBookFlight = (flight: Flight) => {
@@ -198,7 +241,7 @@ function SearchResultsContent() {
   };
   
   const handleSelectAllAirlines = (checked: boolean) => {
-    setSelectedAirlines(checked ? allAirlines.map(a => a.name) : []);
+    setSelectedAirlines(checked ? airlineOptions.map(a => a.name) : []);
   }
 
   const handleStopSelection = (stopCount: number) => {
@@ -229,14 +272,15 @@ function SearchResultsContent() {
 
   const handleResetFilters = () => {
     setFilters(initialFilterState);
-    setSelectedAirlines(allAirlines.map(a => a.name));
-    const allStops = [...new Set(flights.map(f => f.transfers))];
-    setSelectedStops(allStops);
+    if (flights.length > 0) {
+        setSelectedAirlines([...new Set(flights.map(f => f.airline))]);
+        setSelectedStops([...new Set(flights.map(f => f.transfers))]);
+        setSelectedOtas([...new Set(flights.map(f => f.gate))]);
+        setSelectedDuration([durationRange.min, durationRange.max]);
+        setSelectedPrice([priceRange.min, priceRange.max]);
+        setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
+    }
     setBaggageFilter('all');
-    setSelectedDuration([durationRange.min, durationRange.max]);
-    setSelectedPrice([priceRange.min, priceRange.max]);
-    setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
-    setSelectedOtas(otaOptions.map(ota => ota.id));
   };
 
   const formatDuration = (minutes: number) => {
@@ -253,52 +297,15 @@ function SearchResultsContent() {
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'MMM dd, yyyy');
+      if (!dateString) return '';
+      // Create date object assuming UTC to avoid timezone shifts
+      const date = new Date(dateString + 'T00:00:00Z');
+      return format(date, 'MMM dd, yyyy');
     } catch {
       return dateString;
     }
   };
-
   
-  const stopOptions = useMemo(() => {
-    if (flights.length === 0) return [];
-    const stopsMap = new Map<number, number>();
-    flights.forEach(flight => {
-        const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
-        const currentMinPrice = stopsMap.get(flight.transfers);
-        if (currentMinPrice === undefined || price < currentMinPrice) {
-            stopsMap.set(flight.transfers, price);
-        }
-    });
-    return Array.from(stopsMap.entries())
-        .map(([value, price]) => ({
-            value: value,
-            label: value === 0 ? 'Direct' : `${value} stop${value > 1 ? 's' : ''}`,
-            price: Math.round(price),
-        }))
-        .sort((a,b) => a.value - b.value);
-  }, [flights, baggageFilter]);
-
-  const baggagePriceOptions = useMemo(() => {
-      if (flights.length === 0) return { without: null, with: null };
-
-      // 'without' is just the base price of the cheapest flight
-      const minWithout = Math.min(...flights.map(f => f.price));
-
-      // 'with' is the price of the cheapest flight including estimated baggage
-      const minWith = Math.min(...flights.map(f => {
-          let price = f.price;
-          if (!f.baggage.hand.has_baggage) price += f.baggage.hand.price;
-          if (!f.baggage.checked.has_baggage) price += f.baggage.checked.price;
-          return price;
-      }));
-
-      return {
-          without: isFinite(minWithout) ? Math.round(minWithout) : null,
-          with: isFinite(minWith) ? Math.round(minWith) : null,
-      };
-  }, [flights]);
-
   const sortedFlights = useMemo(() => {
     return travelpayoutsApi.filterAndSortFlights({
         flights,
@@ -316,7 +323,6 @@ function SearchResultsContent() {
   const flightGroups = useMemo(() => {
     const groups: { [key: string]: Flight[] } = {};
     sortedFlights.forEach(flight => {
-        // Group by airline, origin, destination, and departure time (ignoring seconds)
         const groupId = `${flight.airline_code}-${flight.flight_number}-${flight.origin}-${flight.destination}-${flight.departure_at.slice(0, 16)}`;
         if (!groups[groupId]) {
             groups[groupId] = [];
@@ -369,13 +375,18 @@ function SearchResultsContent() {
     return (
       <Card className="lg:sticky lg:top-24">
           <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold">Filters</h3>
+                   <Button variant="link" size="sm" onClick={handleResetFilters}>Clear all</Button>
+              </div>
+
               <div className="space-y-4">
-                  <RadioGroup defaultValue="all-tickets" className="space-y-2">
-                      <div className="flex items-center space-x-2">
+                  <RadioGroup defaultValue="all-tickets" className="space-y-2" disabled>
+                      <div className="flex items-center space-x-2 opacity-50">
                         <RadioGroupItem value="all-tickets" id="all-tickets" />
                         <Label htmlFor="all-tickets">All tickets</Label>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 opacity-50">
                         <RadioGroupItem value="best-tickets" id="best-tickets" />
                         <Label htmlFor="best-tickets">Best tickets</Label>
                       </div>
@@ -520,17 +531,17 @@ function SearchResultsContent() {
                      <p className="p-2 text-sm text-muted-foreground">Connecting airports filter is not available with this API.</p>
                   </FilterSection>
 
-                  <FilterSection title="Airlines" disabled={allAirlines.length === 0}>
+                  <FilterSection title="Airlines" disabled={airlineOptions.length === 0}>
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                           <div className="flex items-center space-x-2">
                               <Checkbox 
                                   id="select-all-airlines"
-                                  checked={selectedAirlines.length === allAirlines.length}
+                                  checked={selectedAirlines.length === airlineOptions.length}
                                   onCheckedChange={(checked) => handleSelectAllAirlines(!!checked)}
                               />
                               <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
                           </div>
-                          {allAirlines.sort((a,b) => a.name.localeCompare(b.name)).map((airline) => (
+                          {airlineOptions.map((airline) => (
                                <div key={`${airline.code}-${airline.name}`} className="flex items-center space-x-2">
                                   <Checkbox
                                       id={`airline-${airline.name}`}
@@ -667,7 +678,7 @@ function SearchResultsContent() {
                   No flights match your search
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  We couldn't find any flights for the selected route and dates.
+                  We couldn't find any flights for the selected route and dates. Try a different search.
                 </p>
                 <Button onClick={() => router.push('/')}>
                   Try a New Search
@@ -744,5 +755,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    

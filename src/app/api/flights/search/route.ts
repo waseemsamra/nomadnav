@@ -4,12 +4,21 @@ import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
-const LATEST_PRICES_ENDPOINT = 'https://api.travelpayouts.com/v2/prices/latest';
+const API_BASE_URL = 'https://api.travelpayouts.com';
 const AIRLINES_ENDPOINT = 'https://api.travelpayouts.com/data/en/airlines.json';
 
 let airlinesCache: { [key: string]: string } | null = null;
 let airlinesCacheTimestamp = 0;
 const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
+
+const airportAlternatives: { [key: string]: string[] } = {
+    'DXB': ['DXB', 'SHJ', 'AUH', 'DWC'],
+    'MOW': ['SVO', 'DME', 'VKO', 'ZIA'],
+    'LON': ['LHR', 'LGW', 'STN', 'LTN', 'LCY'],
+    'NYC': ['JFK', 'LGA', 'EWR'],
+    'TYO': ['HND', 'NRT'],
+    'PAR': ['CDG', 'ORY'],
+};
 
 async function getAirlinesData() {
     const now = Date.now();
@@ -37,18 +46,17 @@ async function getAirlinesData() {
     return {};
 }
 
-// Function to add estimated baggage prices
 function addEstimatedBaggagePrices(flight: any): Flight {
   const basePrice = flight.price;
-  const CARRY_ON_PRICE = 25; // Estimated cost for carry-on
-  const CHECKED_BAGGAGE_PRICE = 50; // Estimated cost for checked baggage
+  const CARRY_ON_PRICE = 25;
+  const CHECKED_BAGGAGE_PRICE = 50;
 
   return {
     ...flight,
     baggage: {
         hand: {
             price: CARRY_ON_PRICE,
-            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline), 
+            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline_code), 
         },
         checked: {
             price: CHECKED_BAGGAGE_PRICE,
@@ -59,13 +67,78 @@ function addEstimatedBaggagePrices(flight: any): Flight {
   };
 }
 
-async function fetchFlightsFromApi(params: URLSearchParams) {
-    const url = `${LATEST_PRICES_ENDPOINT}?${params.toString()}`;
+async function fetchWithEndpoint(endpoint: string, params: URLSearchParams) {
+    const url = `${API_BASE_URL}${endpoint}?${params.toString()}`;
     const response = await axios.get(url, {
         timeout: 15000,
         headers: { 'X-Access-Token': API_TOKEN, 'Accept-Encoding': 'gzip, deflate, compress' },
     });
     return response.data;
+}
+
+async function searchWithStrategy(params: URLSearchParams) {
+    let apiResponse = null;
+
+    // Strategy 1: Try v3 prices_for_dates (best for specific dates)
+    try {
+        console.log('Attempting search with aviasales/v3/prices_for_dates...');
+        const v3Params = new URLSearchParams(params);
+        v3Params.set('departure_at', params.get('depart_date')!);
+        if (params.has('return_date')) {
+            v3Params.set('return_at', params.get('return_date')!);
+        }
+        v3Params.delete('depart_date');
+        v3Params.delete('return_date');
+
+        apiResponse = await fetchWithEndpoint('/aviasales/v3/prices_for_dates', v3Params);
+        if (apiResponse.success && apiResponse.data.length > 0) {
+            console.log(`✓ Success with v3/prices_for_dates. Found ${apiResponse.data.length} flights.`);
+            return apiResponse;
+        }
+        console.log('No results from v3/prices_for_dates, trying next strategy.');
+    } catch (e: any) {
+        console.warn('v3/prices_for_dates failed:', e.message);
+    }
+
+    // Strategy 2: Fallback to v2/prices/latest
+    try {
+        console.log('Falling back to v2/prices/latest...');
+        params.set('sorting', 'price');
+        apiResponse = await fetchWithEndpoint('/v2/prices/latest', params);
+        if (apiResponse.success && apiResponse.data.length > 0) {
+            console.log(`✓ Success with v2/prices/latest. Found ${apiResponse.data.length} flights.`);
+            return apiResponse;
+        }
+        console.log('No results from v2/prices/latest.');
+    } catch (e: any) {
+        console.warn('v2/prices/latest failed:', e.message);
+    }
+
+    return apiResponse || { success: false, data: [] }; // Return last result or empty
+}
+
+function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
+    return flights.map((flight: any) => {
+        const airlineCode = flight.airline;
+        const airlineName = airlines[airlineCode] || airlineCode;
+        const enrichedFlight = {
+            id: flight.link || `${airlineCode}-${flight.flight_number}-${flight.departure_at}`, 
+            price: flight.price,
+            airline: airlineName,
+            airline_code: airlineCode,
+            flight_number: flight.flight_number,
+            departure_at: flight.departure_at,
+            return_at: flight.return_at,
+            origin: flight.origin,
+            destination: flight.destination,
+            transfers: flight.transfers,
+            duration: flight.duration,
+            link: `https://www.travelpayouts.com${flight.link}`,
+            currency: currency,
+            gate: flight.gate || 'Direct',
+        };
+        return addEstimatedBaggagePrices(enrichedFlight);
+    });
 }
 
 
@@ -74,60 +147,65 @@ export async function GET(req: NextRequest) {
 
     const origin = searchParams.get('origin');
     const destination = searchParams.get('destination');
-    const depart_date = searchParams.get('depart_date'); 
-    const return_date = searchParams.get('return_date');
+    const depart_date = searchParams.get('depart_date');
 
     if (!origin || !destination) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
     }
-
     if (!API_TOKEN) {
       return NextResponse.json({ message: 'API token is not configured' }, { status: 500 });
     }
+    
+    const currency = searchParams.get('currency') || 'USD';
+    const baseApiParams = new URLSearchParams({
+        origin: origin,
+        destination: destination,
+        currency: currency,
+        limit: searchParams.get('limit') || '30',
+        show_to_affiliates: 'true',
+        trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
+    });
+    
+    if (depart_date) baseApiParams.set('depart_date', depart_date);
+    const return_date = searchParams.get('return_date');
+    if (return_date) baseApiParams.set('return_date', return_date);
 
     try {
-        const apiParams = new URLSearchParams({
-            origin: origin,
-            destination: destination,
-            currency: searchParams.get('currency') || 'USD',
-            limit: searchParams.get('limit') || '30',
-            sorting: 'price',
-            trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
-            show_to_affiliates: 'true',
-        });
-        
-        if (depart_date) {
-            apiParams.set('depart_date', depart_date);
+        let apiResponse = await searchWithStrategy(new URLSearchParams(baseApiParams));
+        let allFlights: any[] = apiResponse.data || [];
+
+        // If no flights, try alternative airports
+        if (allFlights.length === 0) {
+            console.log('No flights on direct route, trying alternatives...');
+            const originAlts = airportAlternatives[origin] || [origin];
+            const destAlts = airportAlternatives[destination] || [destination];
+            
+            if (originAlts.length > 1 || destAlts.length > 1) {
+                const alternativeSearches = [];
+                for (const altOrigin of originAlts) {
+                    for (const altDest of destAlts) {
+                        if (altOrigin === origin && altDest === destination) continue;
+                        
+                        const altParams = new URLSearchParams(baseApiParams);
+                        altParams.set('origin', altOrigin);
+                        altParams.set('destination', altDest);
+                        alternativeSearches.push(searchWithStrategy(altParams));
+                    }
+                }
+                const results = await Promise.allSettled(alternativeSearches);
+                results.forEach(result => {
+                    if (result.status === 'fulfilled' && result.value.success) {
+                        allFlights.push(...result.value.data);
+                    }
+                });
+                console.log(`Found ${allFlights.length} flights via alternative routes.`);
+            }
         }
-        if (return_date) {
-            apiParams.set('return_date', return_date);
-        }
-        
-        const apiResponse = await fetchFlightsFromApi(apiParams);
 
         const airlines = await getAirlinesData();
         
-        if (apiResponse.success && apiResponse.data.length > 0) {
-            const flightsWithDetails = apiResponse.data.map((flight: any) => {
-                const airlineName = airlines[flight.airline] || flight.airline;
-                const enrichedFlight = {
-                    id: flight.link || `${flight.airline}-${flight.flight_number}-${flight.departure_at}`, 
-                    price: flight.price,
-                    airline: airlineName,
-                    airline_code: flight.airline,
-                    flight_number: flight.flight_number,
-                    departure_at: flight.departure_at,
-                    return_at: flight.return_at,
-                    origin: flight.origin,
-                    destination: flight.destination,
-                    transfers: flight.transfers,
-                    duration: flight.duration,
-                    link: `https://www.travelpayouts.com${flight.link}`,
-                    currency: apiParams.get('currency') || 'USD',
-                    gate: flight.gate || 'Direct',
-                };
-                return addEstimatedBaggagePrices(enrichedFlight);
-            });
+        if (allFlights.length > 0) {
+            const flightsWithDetails = processFlights(allFlights, airlines, currency);
             return NextResponse.json(flightsWithDetails);
         } else {
             return NextResponse.json([]);
@@ -141,5 +219,3 @@ export async function GET(req: NextRequest) {
         );
     }
 }
-
-    
