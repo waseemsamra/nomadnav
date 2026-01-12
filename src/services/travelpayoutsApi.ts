@@ -368,14 +368,15 @@ class TravelpayoutsApiService {
   
   async getGates(): Promise<Gate[]> {
     try {
-        const response = await axios.get(ENDPOINTS.gates, {
-            timeout: 10000,
-            headers: { 'Accept-Encoding': 'gzip, deflate, compress' },
-        });
-        return response.data || [];
+      const response = await fetch(ENDPOINTS.gates);
+      if (!response.ok) {
+        throw new Error(`Request failed with status code ${response.status}`);
+      }
+      const data = await response.json();
+      return data || [];
     } catch (error: any) {
-        console.error('Error fetching gates:', error.message);
-        return [];
+      console.error('Error fetching gates:', error.message);
+      throw error;
     }
   }
 
