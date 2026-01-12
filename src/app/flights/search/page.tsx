@@ -9,7 +9,6 @@ import {
   Clock, 
   Calendar,
   Users,
-  ArrowRight,
   Wind,
   Filter,
   X
@@ -21,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 type FilterState = {
   sortBy: 'price' | 'duration' | 'departure';
@@ -39,6 +40,8 @@ function SearchResultsContent() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [availableAirlines, setAvailableAirlines] = useState<string[]>([]);
+  const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
 
   // Extract search parameters
   const origin = searchParams.get('origin') || '';
@@ -71,6 +74,10 @@ function SearchResultsContent() {
         
         console.log('Fetched flights:', flightData.length);
         setFlights(flightData);
+
+        const uniqueAirlines = [...new Set(flightData.map(f => f.airline))].sort();
+        setAvailableAirlines(uniqueAirlines);
+        setSelectedAirlines(uniqueAirlines);
         
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
@@ -100,9 +107,22 @@ function SearchResultsContent() {
   const handleFilterChange = (key: keyof FilterState, value: any) => {
     setFilters(prev => ({...prev, [key]: value}));
   };
+
+  const handleAirlineSelection = (airline: string) => {
+    setSelectedAirlines(prev => 
+      prev.includes(airline)
+        ? prev.filter(a => a !== airline)
+        : [...prev, airline]
+    );
+  };
   
+  const handleSelectAllAirlines = (checked: boolean) => {
+    setSelectedAirlines(checked ? availableAirlines : []);
+  }
+
   const handleResetFilters = () => {
     setFilters(initialFilterState);
+    setSelectedAirlines(availableAirlines);
   };
 
   const formatDuration = (minutes: number) => {
@@ -120,21 +140,21 @@ function SearchResultsContent() {
   };
   
   const sortedFlights = useMemo(() => {
-    let sorted = [...flights];
+    let filtered = [...flights].filter(flight => selectedAirlines.includes(flight.airline));
 
     switch (filters.sortBy) {
         case 'price':
-            sorted.sort((a,b) => a.price - b.price);
+            filtered.sort((a,b) => a.price - b.price);
             break;
         case 'duration':
-            sorted.sort((a,b) => (a.duration || 9999) - (b.duration || 9999));
+            filtered.sort((a,b) => (a.duration || 9999) - (b.duration || 9999));
             break;
         case 'departure':
-            sorted.sort((a,b) => new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime());
+            filtered.sort((a,b) => new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime());
             break;
     }
-    return sorted;
-  }, [flights, filters]);
+    return filtered;
+  }, [flights, filters, selectedAirlines]);
 
   if (loading) {
     return (
@@ -174,6 +194,33 @@ function SearchResultsContent() {
                     </SelectContent>
                 </Select>
             </div>
+
+            {/* Airlines Filter */}
+            {availableAirlines.length > 1 && (
+                 <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Airlines</h4>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox 
+                                id="select-all-airlines"
+                                checked={selectedAirlines.length === availableAirlines.length}
+                                onCheckedChange={(checked) => handleSelectAllAirlines(!!checked)}
+                            />
+                            <Label htmlFor="select-all-airlines" className="font-medium">Select All</Label>
+                        </div>
+                        {availableAirlines.map(airline => (
+                             <div key={airline} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`airline-${airline}`}
+                                    checked={selectedAirlines.includes(airline)}
+                                    onCheckedChange={() => handleAirlineSelection(airline)}
+                                />
+                                <Label htmlFor={`airline-${airline}`}>{airline}</Label>
+                            </div>
+                        ))}
+                    </div>
+                 </div>
+            )}
         </CardContent>
     </Card>
   )
@@ -257,7 +304,7 @@ function SearchResultsContent() {
               </p>
             </div>
 
-            {sortedFlights.length === 0 ? (
+            {flights.length === 0 ? (
               <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -268,6 +315,19 @@ function SearchResultsContent() {
                 </p>
                 <Button onClick={() => router.push('/')}>
                   Try a New Search
+                </Button>
+              </div>
+            ) : sortedFlights.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+                <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No flights match your filters
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Try adjusting your filters to see more results.
+                </p>
+                <Button onClick={handleResetFilters}>
+                  Clear All Filters
                 </Button>
               </div>
             ) : (
@@ -337,7 +397,7 @@ function SearchResultsContent() {
                             className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                             disabled={!flight.link}
                           >
-                            <ArrowRight className="w-5 h-5 mr-2" />
+                            <Plane className="w-5 h-5 mr-2" />
                             Book Now
                           </Button>
                       </div>
