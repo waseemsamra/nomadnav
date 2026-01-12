@@ -18,7 +18,7 @@ import {
   Paperclip,
   Book,
 } from 'lucide-react';
-import { travelpayoutsApi, type Flight } from '@/services/travelpayoutsApi';
+import { travelpayoutsApi, type Flight, type Gate } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
 
 type ApiStatus = {
@@ -44,6 +44,8 @@ export default function ApiTestPage() {
   const [testFlights, setTestFlights] = useState<Flight[]>([]);
   const [flightLoading, setFlightLoading] = useState(false);
   const [envToken, setEnvToken] = useState('');
+  const [allOtas, setAllOtas] = useState<Gate[]>([]);
+  const [otasLoading, setOtasLoading] = useState(true);
 
   useEffect(() => {
     // Client-side access to env var
@@ -54,9 +56,12 @@ export default function ApiTestPage() {
   // Client-side test for OTAs
   useEffect(() => {
     async function testOtaEndpoint() {
+        setOtasLoading(true);
         try {
             const response = await fetch('https://api.travelpayouts.com/data/en/gates.json');
             if (response.ok) {
+                const data = await response.json();
+                setAllOtas(data);
                 setApiStatus(prevStatus => {
                     if (!prevStatus) return null;
                     const updatedEndpoints = { ...prevStatus.endpoints, otas: true };
@@ -82,6 +87,8 @@ export default function ApiTestPage() {
                   if (!prevStatus) return null;
                   return { ...prevStatus, endpoints: {...prevStatus.endpoints, otas: false} };
               });
+        } finally {
+            setOtasLoading(false);
         }
     }
     
@@ -287,9 +294,40 @@ export default function ApiTestPage() {
           </div>
         </div>
 
+        {/* OTA (Gates) Data */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mt-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <Users className="w-5 h-5 mr-2" />
+              Online Travel Agencies (Gates)
+            </h2>
+            {otasLoading ? (
+              <div className="text-center py-8 text-gray-500">
+                  <RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2" />
+                  Fetching OTA data...
+              </div>
+            ) : allOtas.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto space-y-2 pr-4">
+                  <p className="text-sm text-gray-600 mb-4">Successfully fetched {allOtas.length} OTAs.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {allOtas.map(ota => (
+                      <div key={ota.code} className="p-3 border rounded-lg bg-gray-50">
+                        <p className="font-bold text-gray-800">{ota.name}</p>
+                        <p className="text-sm text-gray-500 font-mono">{ota.code}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+            ) : (
+              <div className="text-center py-8 text-red-500">
+                Failed to fetch OTA data. The endpoint might be down or blocking requests.
+              </div>
+            )}
+        </div>
+
+
         {/* Flight Search Results */}
         {(flightLoading || testFlights.length > 0) && (
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className="bg-white rounded-2xl shadow-lg p-8 mt-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
               <Plane className="w-5 h-5 mr-2" />
               Flight Search Results
