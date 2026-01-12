@@ -122,9 +122,10 @@ class TravelpayoutsApiService {
 
     const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
       try {
-        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
-        if (endpoint === 'otas') {
-          results[endpoint] = response.status === 200 && Array.isArray(response.data) && response.data.length > 0;
+        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress', 'User-Agent': 'NomadNavigator/1.0' } });
+        if (endpoint === 'otas' || endpoint === 'alliances') {
+           // For OTAs and Alliances, an empty array is a valid success response
+          results[endpoint] = response.status === 200 && Array.isArray(response.data);
         } else {
           results[endpoint] = response.status === 200 && response.data !== null;
         }
@@ -371,7 +372,13 @@ class TravelpayoutsApiService {
   
   async getGates(): Promise<Gate[]> {
     try {
-      const response = await axios.get(ENDPOINTS.gates, { timeout: 10000, headers: {'Accept-Encoding': 'gzip, deflate, compress'} });
+      const response = await axios.get(ENDPOINTS.gates, { 
+        timeout: 10000, 
+        headers: {
+          'Accept-Encoding': 'gzip, deflate, compress',
+          'User-Agent': 'NomadNavigator/1.0'
+        } 
+      });
       return response.data || [];
     } catch (error: any) {
       console.error('Error fetching gates:', error.message);
