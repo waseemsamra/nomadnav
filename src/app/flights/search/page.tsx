@@ -44,8 +44,10 @@ function SearchResultsContent() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
   const [availableAirlines, setAvailableAirlines] = useState<string[]>([]);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
+  const [selectedStops, setSelectedStops] = useState<number[]>([]);
 
   // Extract search parameters
   const origin = searchParams.get('origin') || '';
@@ -83,6 +85,9 @@ function SearchResultsContent() {
         setAvailableAirlines(uniqueAirlines);
         setSelectedAirlines(uniqueAirlines);
         
+        const uniqueStops = [...new Set(flightData.map(f => f.transfers))];
+        setSelectedStops(uniqueStops);
+
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
         }
@@ -124,9 +129,24 @@ function SearchResultsContent() {
     setSelectedAirlines(checked ? availableAirlines : []);
   }
 
+  const handleStopSelection = (stopCount: number) => {
+    setSelectedStops(prev => 
+        prev.includes(stopCount)
+            ? prev.filter(s => s !== stopCount)
+            : [...prev, stopCount]
+    );
+  };
+
+  const handleSelectAllStops = (checked: boolean) => {
+      const allStops = stopOptions.map(opt => opt.value);
+      setSelectedStops(checked ? allStops : []);
+  }
+
   const handleResetFilters = () => {
     setFilters(initialFilterState);
     setSelectedAirlines(availableAirlines);
+    const allStops = stopOptions.map(opt => opt.value);
+    setSelectedStops(allStops);
   };
 
   const formatDuration = (minutes: number) => {
@@ -143,8 +163,28 @@ function SearchResultsContent() {
     }
   };
   
+  const stopOptions = useMemo(() => {
+    const stopsMap = new Map<number, number>();
+    flights.forEach(flight => {
+        const currentMinPrice = stopsMap.get(flight.transfers);
+        if (!currentMinPrice || flight.price < currentMinPrice) {
+            stopsMap.set(flight.transfers, flight.price);
+        }
+    });
+    return Array.from(stopsMap.entries())
+        .map(([value, price]) => ({
+            value: value,
+            label: value === 0 ? 'Direct' : `${value} stop${value > 1 ? 's' : ''}`,
+            price: price,
+        }))
+        .sort((a,b) => a.value - b.value);
+  }, [flights]);
+
   const sortedFlights = useMemo(() => {
-    let filtered = [...flights].filter(flight => selectedAirlines.includes(flight.airline));
+    let filtered = [...flights]
+        .filter(flight => selectedAirlines.includes(flight.airline))
+        .filter(flight => selectedStops.includes(flight.transfers));
+
 
     switch (filters.sortBy) {
         case 'price':
@@ -158,7 +198,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines]);
+  }, [flights, filters, selectedAirlines, selectedStops]);
 
   if (loading) {
     return (
@@ -219,9 +259,33 @@ function SearchResultsContent() {
                   </div>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4">
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Airlines']}>
                   <FilterSection title="Numbers of stops">
-                      <p>Stops filter content</p>
+                      <div className="space-y-2 pr-2">
+                           <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="select-all-stops"
+                                    checked={selectedStops.length === stopOptions.length}
+                                    onCheckedChange={(checked) => handleSelectAllStops(!!checked)}
+                                />
+                                <Label htmlFor="select-all-stops" className="font-medium">All</Label>
+                              </div>
+                          </div>
+                          {stopOptions.map(opt => (
+                               <div key={opt.value} className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`stop-${opt.value}`}
+                                        checked={selectedStops.includes(opt.value)}
+                                        onCheckedChange={() => handleStopSelection(opt.value)}
+                                    />
+                                    <Label htmlFor={`stop-${opt.value}`}>{opt.label}</Label>
+                                  </div>
+                                  <span className="text-sm text-muted-foreground">${opt.price}</span>
+                              </div>
+                          ))}
+                      </div>
                   </FilterSection>
                   <FilterSection title="Baggage" disabled>
                      <p>Baggage filter content</p>
