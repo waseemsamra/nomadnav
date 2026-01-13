@@ -521,7 +521,7 @@ function SearchResultsContent() {
 
                   <FilterSection title="Online travel agencies" disabled={otaOptions.length === 0}>
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                             <div className="flex items-center justify-between">
+                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center space-x-2">
                                     <Checkbox 
                                       id="select-all-otas" 
@@ -717,4 +717,5 @@ export default function SearchResultsPage() {
   );
 }
 
+    
     
