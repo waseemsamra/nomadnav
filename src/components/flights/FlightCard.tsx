@@ -34,9 +34,13 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
     
     const actualBaggagePref = baggageFilter === 'all' ? localBaggagePref : baggageFilter;
 
-    // All offers in the group are for the same flight, so we can use the first one for details
-    const cheapestOffer = offers[0];
-    const otherOffers = offers.slice(1);
+    const cheapestOffer = useMemo(() => {
+        return [...offers].sort((a, b) => travelpayoutsApi.getFlightDisplayPrice(a, actualBaggagePref) - travelpayoutsApi.getFlightDisplayPrice(b, actualBaggagePref))[0];
+    }, [offers, actualBaggagePref]);
+    
+    const otherOffers = useMemo(() => {
+        return offers.filter(o => o.id !== cheapestOffer.id).sort((a,b) => travelpayoutsApi.getFlightDisplayPrice(a, actualBaggagePref) - travelpayoutsApi.getFlightDisplayPrice(b, actualBaggagePref));
+    }, [offers, cheapestOffer, actualBaggagePref]);
 
     const displayPrice = (flight: Flight): number => {
         let price = flight.price;
@@ -48,9 +52,23 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
 
     const formatTime = (dateString: string | Date | undefined) => {
         if (!dateString) return 'N/A';
-        const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-        if (!isValid(date)) return 'N/A';
-        return format(date, 'HH:mm');
+        // Directly extract time from string to avoid timezone conversion
+        if (typeof dateString === 'string' && dateString.includes('T')) {
+            try {
+                const timePart = dateString.split('T')[1];
+                return timePart.substring(0, 5); // HH:mm
+            } catch {
+                // Fallback for unexpected formats
+            }
+        }
+        // Fallback to original method
+        try {
+            const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+            if (!isValid(date)) return 'N/A';
+            return format(date, 'HH:mm');
+        } catch {
+            return 'N/A';
+        }
     }
     const formatDate = (dateString: string | Date | undefined) => {
         if (!dateString) return 'N/A';
@@ -221,3 +239,5 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
 };
 
 export default FlightCard;
+
+      
