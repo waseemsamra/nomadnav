@@ -157,7 +157,6 @@ function SearchResultsContent() {
         });
         
         console.log(`Fetched ${flightData.length} flights`);
-        setFlights(flightData);
         
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
@@ -175,8 +174,13 @@ function SearchResultsContent() {
           setSelectedPrice([minPrice, maxPrice]);
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
+          
+          // Set flights LAST to trigger render after filters are ready
+          setFlights(flightData);
+
         } else {
           toast.error(`No flights found for ${origin} to ${destination}.`);
+          setFlights([]);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -281,15 +285,10 @@ function SearchResultsContent() {
   };
   
   const sortedFlights = useMemo(() => {
-    if (flights.length === 0) {
-        return [];
-    }
-
-    // If filter states are null, it means they haven't been touched yet.
-    // Default to selecting all available options from the raw flight data.
-    const currentAirlines = selectedAirlines ?? [...new Set(flights.map(f => f.airline_code))];
-    const currentStops = selectedStops ?? [...new Set(flights.map(f => f.transfers))];
-    const currentOtas = selectedOtas ?? [...new Set(flights.map(f => f.gate).filter(Boolean))];
+    // If a filter state is null, it means "select all". So, don't filter.
+    const currentAirlines = selectedAirlines ?? airlineOptions.map(a => a.code);
+    const currentStops = selectedStops ?? stopOptions.map(s => s.value);
+    const currentOtas = selectedOtas ?? otaOptions.map(o => o.id);
 
     return travelpayoutsApi.filterAndSortFlights({
         flights,
@@ -302,7 +301,7 @@ function SearchResultsContent() {
         selectedDepartureTime,
         selectedOtas: currentOtas,
     });
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
+  }, [flights, filters, selectedAirlines, airlineOptions, selectedStops, stopOptions, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas, otaOptions]);
   
   const flightGroupsByOta = useMemo(() => {
     if (sortedFlights.length === 0) return [];
@@ -734,4 +733,5 @@ export default function SearchResultsPage() {
   );
 }
 
+    
     
