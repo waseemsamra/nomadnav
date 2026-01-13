@@ -31,7 +31,6 @@ type FilterState = {
 };
 
 type BaggageFilterType = 'all' | 'without' | 'with';
-type TicketFilterType = 'all-tickets' | 'best-tickets';
 
 
 const initialFilterState: FilterState = {
@@ -49,7 +48,6 @@ function SearchResultsContent() {
   
   // All filter states are managed here
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
-  const [ticketFilter, setTicketFilter] = useState<TicketFilterType>('all-tickets');
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
   const [baggageFilter, setBaggageFilter] = useState<BaggageFilterType>('all');
@@ -191,7 +189,6 @@ function SearchResultsContent() {
       setSelectedStops(uniqueStops);
       setSelectedOtas(uniqueOtas);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flights]);
   
 
@@ -256,7 +253,6 @@ function SearchResultsContent() {
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
     }
     setBaggageFilter('all');
-    setTicketFilter('all-tickets');
   };
 
   const formatDuration = (minutes: number) => {
@@ -286,7 +282,6 @@ function SearchResultsContent() {
     return travelpayoutsApi.filterAndSortFlights({
         flights,
         filters,
-        ticketFilter,
         selectedAirlines,
         selectedStops,
         baggageFilter,
@@ -295,7 +290,7 @@ function SearchResultsContent() {
         selectedDepartureTime,
         selectedOtas,
     });
-  }, [flights, filters, ticketFilter, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
 
   const flightGroups = useMemo(() => {
     if (sortedFlights.length === 0) return [];
@@ -358,17 +353,6 @@ function SearchResultsContent() {
               </div>
 
               <div className="space-y-4">
-                  <RadioGroup value={ticketFilter} onValueChange={(v) => setTicketFilter(v as TicketFilterType)} className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="all-tickets" id="all-tickets" />
-                        <Label htmlFor="all-tickets">All tickets</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="best-tickets" id="best-tickets" />
-                        <Label htmlFor="best-tickets">Best tickets</Label>
-                      </div>
-                  </RadioGroup>
-
                   <div className="space-y-2 border-t pt-4">
                       <label className="font-semibold text-sm text-muted-foreground">SORT</label>
                       <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value as 'price' | 'duration' | 'departure')}>
@@ -731,5 +715,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
