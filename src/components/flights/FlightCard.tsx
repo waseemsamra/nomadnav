@@ -288,15 +288,27 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
                                         <Briefcase className="w-5 h-5 mt-1 text-muted-foreground" />
                                         <div>
                                             <p className="font-semibold">Carry-on: 1 item</p>
-                                            <p className="text-sm text-muted-foreground">Dimensions not exceeding 40x20x55 cm.</p>
+                                            {cheapestOffer.baggage.hand.has_baggage ? (
+                                                <p className="text-sm text-muted-foreground">Carry-on baggage is included in the ticket price.</p>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">Carry-on must be purchased separately for ${cheapestOffer.baggage.hand.price}.</p>
+                                            )}
                                         </div>
                                     </div>
                                     <Separator />
                                      <div className="flex items-start gap-4">
                                         <Briefcase className="w-5 h-5 mt-1 text-muted-foreground" />
                                         <div>
-                                            <p className="font-semibold">Baggage</p>
-                                            <p className="text-sm text-muted-foreground">Baggage allowances may vary according to route, cabin class or fare family.</p>
+                                            <p className="font-semibold">Checked Baggage</p>
+                                            {actualBaggagePref === 'with' ? (
+                                                <p className="text-sm text-muted-foreground">Checked baggage is included in your selected fare.</p>
+                                            ) : cheapestOffer.baggage.checked.has_baggage ? (
+                                                <p className="text-sm text-muted-foreground">Checked baggage is included in the base ticket price.</p>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">
+                                                    Checked baggage is not included. You can add it for an additional fee of ${cheapestOffer.baggage.checked.price}.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -310,5 +322,3 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
 };
 
 export default FlightCard;
-
-    
