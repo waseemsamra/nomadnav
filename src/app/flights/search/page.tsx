@@ -302,29 +302,6 @@ function SearchResultsContent() {
         selectedOtas,
     });
   }, [flights, filters, ticketFilter, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
-  
-  const flightGroups = useMemo(() => {
-    const groups: { [key: string]: Flight[] } = {};
-    sortedFlights.forEach(flight => {
-        // Group by a more stable identifier (airline, flight number, times)
-        const groupId = `${flight.airline_code}-${flight.flight_number}-${flight.origin}-${flight.destination}-${flight.departure_at.slice(0, 16)}`;
-        if (!groups[groupId]) {
-            groups[groupId] = [];
-        }
-        groups[groupId].push(flight);
-    });
-
-    return Object.values(groups).map(group => {
-        const bestFlight = group.reduce((best, current) => 
-            travelpayoutsApi.getFlightDisplayPrice(current, baggageFilter) < travelpayoutsApi.getFlightDisplayPrice(best, baggageFilter) ? current : best
-        );
-        const otherOffers = group
-            .filter(f => f.id !== bestFlight.id)
-            .sort((a,b) => travelpayoutsApi.getFlightDisplayPrice(a, baggageFilter) - travelpayoutsApi.getFlightDisplayPrice(b, baggageFilter));
-        
-        return { bestFlight, otherOffers };
-    });
-  }, [sortedFlights, baggageFilter]);
 
 
   if (loading) {
@@ -648,14 +625,14 @@ function SearchResultsContent() {
           <div className="lg:col-span-3">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                Available Flights ({flightGroups.length})
+                Available Flights ({sortedFlights.length})
               </h2>
               <p className="text-gray-600">
                 Best prices from multiple airlines & travel agencies
               </p>
             </div>
 
-            {flights.length > 0 && flightGroups.length === 0 ? (
+            {flights.length > 0 && sortedFlights.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                   <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -683,11 +660,10 @@ function SearchResultsContent() {
                 </div>
             ) : (
               <div className="space-y-4">
-                {flightGroups.map(({ bestFlight, otherOffers }) => (
+                {sortedFlights.map((flight) => (
                   <FlightCard 
-                    key={bestFlight.id} 
-                    bestFlight={bestFlight} 
-                    otherOffers={otherOffers} 
+                    key={flight.id} 
+                    flight={flight}
                     onBookFlight={handleBookFlight} 
                     baggageFilter={baggageFilter} 
                   />
@@ -696,11 +672,11 @@ function SearchResultsContent() {
             )}
 
             {/* Footer */}
-            {flightGroups.length > 0 && (
+            {sortedFlights.length > 0 && (
               <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
                 <div className="text-center">
                   <p className="text-gray-600 mb-4">
-                    Showing {Math.min(flightGroups.length, 30)} of {flightGroups.length} unique flight routes
+                    Showing {Math.min(sortedFlights.length, 30)} of {sortedFlights.length} unique flight routes
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
@@ -739,7 +715,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
-
-    
