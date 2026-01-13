@@ -13,6 +13,7 @@ import { OTA_DATA } from '@/lib/ota-data';
 import { Input } from '../ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '../ui/separator';
+import { Label } from '../ui/label';
 
 interface FlightCardProps {
   offers: Flight[];
@@ -308,5 +309,3 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
 };
 
 export default FlightCard;
-
-    
