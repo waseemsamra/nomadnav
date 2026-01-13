@@ -72,10 +72,14 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
     }, [allOffers, actualBaggagePref, bestFlight]);
 
     const arrivalTime = useMemo(() => {
-        // For one-way, return_at is the arrival. For round-trip, it's the return departure.
-        // We'll calculate arrival based on duration for simplicity, as the API structure varies.
-        const departure = parseISO(cheapestOffer.departure_at);
-        return addMinutes(departure, cheapestOffer.duration);
+        if (!cheapestOffer.departure_at || !cheapestOffer.duration) return undefined;
+        try {
+            const departure = parseISO(cheapestOffer.departure_at);
+            if(!isValid(departure)) return undefined;
+            return addMinutes(departure, cheapestOffer.duration);
+        } catch {
+            return undefined;
+        }
     }, [cheapestOffer.departure_at, cheapestOffer.duration]);
 
     const sortedOtherOffers = useMemo(() => {
@@ -203,8 +207,8 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
 
                         {/* Arrival */}
                         <div className="text-right w-28">
-                           <p className="text-3xl font-bold">{formatTime(cheapestOffer.return_at)}</p>
-                           <p className="text-sm text-gray-500">{formatDate(cheapestOffer.return_at)}</p>
+                           <p className="text-3xl font-bold">{formatTime(arrivalTime)}</p>
+                           <p className="text-sm text-gray-500">{formatDate(arrivalTime)}</p>
                            <p className="text-sm font-semibold">{cheapestOffer.destination}</p>
                         </div>
                     </div>
@@ -216,3 +220,5 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
 };
 
 export default FlightCard;
+
+    
