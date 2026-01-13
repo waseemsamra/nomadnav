@@ -34,6 +34,7 @@ export interface Flight {
   flight_number: string;
   departure_at: string;
   return_at: string;
+  arrival_at?: string;
   origin: string;
   destination: string;
   transfers: number;

@@ -84,10 +84,9 @@ async function searchWithStrategy(params: URLSearchParams) {
         try {
             console.log('Attempting search with aviasales/v3/prices_for_dates...');
             const v3Params = new URLSearchParams(params);
-            v3Params.set('departure_at', params.get('depart_date')!);
-            if (params.has('return_date')) {
-                v3Params.set('return_at', params.get('return_date')!);
-            }
+            if (params.has('depart_date')) v3Params.set('departure_at', params.get('depart_date')!);
+            if (params.has('return_date')) v3Params.set('return_at', params.get('return_date')!);
+            
             v3Params.delete('depart_date');
             v3Params.delete('return_date');
 
@@ -122,19 +121,13 @@ async function searchWithStrategy(params: URLSearchParams) {
 
 function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
     if (!Array.isArray(flights)) return [];
-    const seen = new Set();
+    
     return flights.map((flight: any) => {
         const airlineCode = flight.airline;
         const airlineName = airlines[airlineCode] || airlineCode;
         
-        // Ensure a unique ID for every flight offer, especially when the API returns duplicates.
-        // A combination of link, gate, and price usually guarantees uniqueness.
+        // A combination of link, gate, and price usually guarantees uniqueness. Add random to be certain.
         const uniqueId = `${flight.link || ''}-${flight.gate || ''}-${flight.price}-${Math.random()}`;
-        if(seen.has(uniqueId)) {
-            console.warn('Duplicate flight key detected, skipping:', uniqueId);
-            return null;
-        }
-        seen.add(uniqueId);
 
         const enrichedFlight = {
             id: uniqueId,
@@ -144,6 +137,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             flight_number: flight.flight_number,
             departure_at: flight.departure_at,
             return_at: flight.return_at,
+            arrival_at: flight.arrival_at, // Pass arrival_at if it exists
             origin: flight.origin,
             destination: flight.destination,
             transfers: flight.transfers,
@@ -203,7 +197,7 @@ export async function GET(req: NextRequest) {
                         
                         const altParams = new URLSearchParams(baseApiParams);
                         altParams.set('origin', altOrigin);
-                        altParams.set('destination', altDest);
+altParams.set('destination', altDest);
                         alternativeSearches.push(searchWithStrategy(altParams));
                     }
                 }
