@@ -1,11 +1,10 @@
-
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { format, parseISO, addMinutes, isValid } from 'date-fns';
-import { Briefcase, ChevronDown, ChevronUp, Copy, ExternalLink, XIcon } from 'lucide-react';
+import { Briefcase, ChevronDown, Copy, ExternalLink, XIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
@@ -34,25 +33,26 @@ const getOtaName = (code: string) => {
 
 const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFilter }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [localBaggagePref, setLocalBaggagePref] = useState<'without' | 'with'>('without');
+    const [localBaggagePref, setLocalBaggagePref] = useState<'without' | 'with'>(baggageFilter === 'with' ? 'with' : 'without');
     const { toast } = useToast();
-    
+
+    // Determine the active baggage preference
     const actualBaggagePref = baggageFilter === 'all' ? localBaggagePref : baggageFilter;
 
-    const cheapestOffer = useMemo(() => {
-        return [...offers].sort((a, b) => travelpayoutsApi.getFlightDisplayPrice(a, actualBaggagePref) - travelpayoutsApi.getFlightDisplayPrice(b, actualBaggagePref))[0];
+    // This is the core logic change: Sort ALL offers based on the current baggage preference.
+    const sortedOffers = useMemo(() => {
+        return [...offers].sort((a, b) => 
+            travelpayoutsApi.getFlightDisplayPrice(a, actualBaggagePref) - travelpayoutsApi.getFlightDisplayPrice(b, actualBaggagePref)
+        );
     }, [offers, actualBaggagePref]);
-    
-    const otherOffers = useMemo(() => {
-        return offers.filter(o => o.id !== cheapestOffer.id).sort((a,b) => travelpayoutsApi.getFlightDisplayPrice(a, actualBaggagePref) - travelpayoutsApi.getFlightDisplayPrice(b, actualBaggagePref));
-    }, [offers, cheapestOffer, actualBaggagePref]);
+
+    // The cheapest offer is now always the first in the sorted list.
+    const cheapestOffer = sortedOffers[0];
+    // Other offers are the rest of the list.
+    const otherOffers = sortedOffers.slice(1);
 
     const displayPrice = (flight: Flight): number => {
-        let price = flight.price;
-        if (actualBaggagePref === 'with' && flight.baggage?.checked?.price) {
-            price += flight.baggage.checked.price;
-        }
-        return Math.round(price);
+        return Math.round(travelpayoutsApi.getFlightDisplayPrice(flight, actualBaggagePref));
     };
 
     const formatTime = (dateString: string | Date | undefined) => {
@@ -122,6 +122,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
                                         "flex-1 p-2 text-center rounded-l-md",
                                         actualBaggagePref === 'without' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
                                     )}
+                                    disabled={baggageFilter !== 'all'}
                                 >
                                     <div className="relative inline-block">
                                         <Briefcase className="w-4 h-4 mx-auto text-gray-500" />
@@ -135,6 +136,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
                                         "flex-1 p-2 text-center rounded-r-md border-l",
                                         actualBaggagePref === 'with' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
                                     )}
+                                     disabled={baggageFilter !== 'all'}
                                 >
                                     <Briefcase className="w-4 h-4 mx-auto text-gray-500" />
                                     <p className="text-xs mt-1 font-semibold">+ ${cheapestOffer.baggage.checked.price}</p>
