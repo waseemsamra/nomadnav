@@ -86,14 +86,19 @@ function SearchResultsContent() {
   }, [flights, baggageFilter]);
   
   const otaOptions = useMemo(() => {
+      const allOtasFromFlights = [...new Set(flights.map(f => f.gate).filter(Boolean))];
       const gatePrices: { [key: string]: number } = {};
+      
       flights.forEach(flight => {
           const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
           if (flight.gate && (!gatePrices[flight.gate] || price < gatePrices[flight.gate])) {
               gatePrices[flight.gate] = price;
           }
       });
-      return OTA_DATA
+      
+      const otaInfoFromData = OTA_DATA.filter(ota => allOtasFromFlights.includes(ota.code));
+      
+      return otaInfoFromData
           .map(ota => ({
               id: ota.code,
               name: ota.name,
@@ -102,9 +107,11 @@ function SearchResultsContent() {
           .sort((a, b) => {
             if (a.price === null) return 1;
             if (b.price === null) return -1;
-            return a.price - b.price;
+            if (a.price !== b.price) return a.price - b.price;
+            return a.name.localeCompare(b.name);
           });
   }, [flights]);
+
 
   const baggagePriceOptions = useMemo(() => {
       if (flights.length === 0) return { without: null, with: null };
@@ -234,7 +241,7 @@ function SearchResultsContent() {
   };
 
   const handleSelectAllOtas = (checked: boolean) => {
-    setSelectedOtas(checked ? otaOptions.filter(o => o.price !== null).map(ota => ota.id) : []);
+    setSelectedOtas(checked ? otaOptions.map(ota => ota.id) : []);
   };
 
 
@@ -525,7 +532,7 @@ function SearchResultsContent() {
                                 <div className="flex items-center space-x-2">
                                     <Checkbox 
                                       id="select-all-otas" 
-                                      checked={selectedOtas.length === otaOptions.filter(o => o.price !== null).length}
+                                      checked={selectedOtas.length === otaOptions.length}
                                       onCheckedChange={(checked) => handleSelectAllOtas(!!checked)}
                                     />
                                     <Label htmlFor="select-all-otas" className="font-medium">Select All</Label>
@@ -718,4 +725,6 @@ export default function SearchResultsPage() {
 }
 
     
+    
+
     
