@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
         origin: origin,
         destination: destination,
         currency: currency,
-        limit: searchParams.get('limit') || '30',
+        limit: searchParams.get('limit') || '100',
         trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
     });
     
