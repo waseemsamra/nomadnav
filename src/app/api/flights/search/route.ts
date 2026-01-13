@@ -197,7 +197,7 @@ export async function GET(req: NextRequest) {
                         
                         const altParams = new URLSearchParams(baseApiParams);
                         altParams.set('origin', altOrigin);
-altParams.set('destination', altDest);
+                        altParams.set('destination', altDest);
                         alternativeSearches.push(searchWithStrategy(altParams));
                     }
                 }
