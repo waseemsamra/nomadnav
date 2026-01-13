@@ -149,7 +149,7 @@ class TravelpayoutsApiService {
           depart_date: '2025-08-01',
           limit: 1,
         };
-        const flights = await this.searchFlights(flightParams);
+        await this.searchFlights(flightParams);
         // The test is successful if the API call doesn't throw and returns an array (even an empty one)
         results.flights = true;
       } catch (flightError: any) {

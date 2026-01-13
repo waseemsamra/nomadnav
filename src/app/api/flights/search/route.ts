@@ -143,7 +143,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
     }
     if (!API_TOKEN) {
-      return NextResponse.json({ message: 'API token is not configured' }, { status: 500 });
+      return NextResponse.json({ message: 'API token is not configured. Please add NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN to your .env file.' }, { status: 500 });
     }
     
     const currency = searchParams.get('currency') || 'USD';
