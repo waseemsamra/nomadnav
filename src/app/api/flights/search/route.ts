@@ -79,33 +79,13 @@ async function fetchWithEndpoint(endpoint: string, params: URLSearchParams) {
 async function searchWithStrategy(params: URLSearchParams) {
     let apiResponse = null;
 
-    // Strategy 1: Try v3 prices_for_dates (best for specific dates)
-    if (params.get('depart_date')) {
-        try {
-            console.log('Attempting search with aviasales/v3/prices_for_dates...');
-            const v3Params = new URLSearchParams(params);
-            if (params.has('depart_date')) v3Params.set('departure_at', params.get('depart_date')!);
-            if (params.has('return_date')) v3Params.set('return_at', params.get('return_date')!);
-            
-            v3Params.delete('depart_date');
-            v3Params.delete('return_date');
-
-            apiResponse = await fetchWithEndpoint('/aviasales/v3/prices_for_dates', v3Params);
-            if (apiResponse.success && apiResponse.data.length > 0) {
-                console.log(`✓ Success with v3/prices_for_dates. Found ${apiResponse.data.length} flights.`);
-                return apiResponse;
-            }
-            console.log('No results from v3/prices_for_dates, trying next strategy.');
-        } catch (e: any) {
-            console.warn('v3/prices_for_dates failed:', e.message);
-        }
-    }
-
-    // Strategy 2: Fallback to v2/prices/latest
+    // STRATEGY: Use v2/prices/latest as it gives a broad range of offers from different gates.
     try {
-        console.log('Falling back to v2/prices/latest...');
+        console.log('Attempting search with v2/prices/latest...');
         const v2Params = new URLSearchParams(params);
         v2Params.set('sorting', 'price');
+        v2Params.set('show_to_affiliates', 'false'); // Get all public offers
+        
         apiResponse = await fetchWithEndpoint('/v2/prices/latest', v2Params);
         if (apiResponse.success && apiResponse.data.length > 0) {
             console.log(`✓ Success with v2/prices/latest. Found ${apiResponse.data.length} flights.`);
@@ -115,7 +95,7 @@ async function searchWithStrategy(params: URLSearchParams) {
     } catch (e: any) {
         console.warn('v2/prices/latest failed:', e.message);
     }
-
+    
     return apiResponse || { success: false, data: [] }; // Return last result or empty
 }
 
@@ -171,7 +151,6 @@ export async function GET(req: NextRequest) {
         destination: destination,
         currency: currency,
         limit: searchParams.get('limit') || '30',
-        show_to_affiliates: 'true',
         trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
     });
     
