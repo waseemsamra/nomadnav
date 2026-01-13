@@ -171,11 +171,9 @@ function SearchResultsContent() {
   // It initializes ALL filter states at once to prevent race conditions and disappearing flights.
   useEffect(() => {
     if (flights.length > 0) {
-      console.log("Initializing all filters atomically based on new flight data...");
-      
       const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
-      const minPrice = Math.floor(Math.min(...prices));
-      const maxPrice = Math.ceil(Math.max(...prices));
+      const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
+      const maxPrice = Math.ceil(Math.max(...prices.filter(p => isFinite(p))));
       
       const durations = flights.map(f => f.duration);
       const minDuration = Math.min(...durations);
@@ -183,9 +181,8 @@ function SearchResultsContent() {
 
       const uniqueAirlineCodes = [...new Set(flights.map(f => f.airline_code))];
       const uniqueStops = [...new Set(flights.map(f => f.transfers))];
-      const uniqueOtas = [...new Set(flights.map(f => f.gate))].filter(Boolean);
+      const uniqueOtas = [...new Set(flights.map(f => f.gate).filter(Boolean))];
 
-      // ATOMIC UPDATE: Set all filter states in a single render cycle.
       setPriceRange({ min: minPrice, max: maxPrice });
       setSelectedPrice([minPrice, maxPrice]);
       setDurationRange({ min: minDuration, max: maxDuration });
@@ -193,10 +190,7 @@ function SearchResultsContent() {
       setSelectedAirlines(uniqueAirlineCodes);
       setSelectedStops(uniqueStops);
       setSelectedOtas(uniqueOtas);
-      
-      console.log("All filters initialized successfully.");
     }
-  // This dependency array is critical. It ensures this only runs when `flights` reference changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flights]);
   
@@ -737,3 +731,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
