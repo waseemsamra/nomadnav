@@ -115,33 +115,32 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
                     {/* Left Column - Booking */}
                     <div className="w-full md:w-[280px] p-4 border-b md:border-b-0 md:border-r flex flex-col justify-between bg-gray-50/50">
                          <div>
-                            <div className="grid grid-cols-2 gap-2 mb-4">
-                                <div 
-                                    className={cn(
-                                        "p-2 border rounded-md text-center cursor-pointer",
-                                        actualBaggagePref === 'without' ? 'border-primary ring-1 ring-primary bg-blue-50' : 'border-gray-200 bg-white'
-                                    )}
+                            <div className="flex rounded-md border border-gray-200 bg-white mb-4">
+                                <button
                                     onClick={() => setLocalBaggagePref('without')}
+                                    className={cn(
+                                        "flex-1 p-2 text-center rounded-l-md",
+                                        actualBaggagePref === 'without' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
+                                    )}
                                 >
                                     <div className="relative inline-block">
-                                        <Briefcase className="w-5 h-5 text-gray-500 mx-auto" />
-                                        <XIcon className="w-4 h-4 text-red-500 absolute -top-1 -right-1" strokeWidth={3} />
+                                        <Briefcase className="w-4 h-4 mx-auto text-gray-500" />
+                                        <XIcon className="w-3 h-3 text-red-500 absolute -top-1 -right-1" strokeWidth={3} />
                                     </div>
-                                    <p className="text-xs mt-1 text-gray-600">Without baggage</p>
-                                </div>
-                                <div 
-                                    className={cn(
-                                        "p-2 border rounded-md text-center cursor-pointer",
-                                        actualBaggagePref === 'with' ? 'border-primary ring-1 ring-primary bg-blue-50' : 'border-gray-200 bg-white'
-                                    )}
+                                    <p className="text-xs mt-1">Without baggage</p>
+                                </button>
+                                <button
                                     onClick={() => setLocalBaggagePref('with')}
+                                    className={cn(
+                                        "flex-1 p-2 text-center rounded-r-md border-l",
+                                        actualBaggagePref === 'with' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
+                                    )}
                                 >
-                                <div className='flex justify-center items-center gap-1'>
-                                    <Briefcase className="w-5 h-5 text-gray-500" />
-                                </div>
-                                    <p className="text-xs mt-1 text-gray-600">+{cheapestOffer.baggage.checked.price} $</p>
-                                </div>
+                                    <Briefcase className="w-4 h-4 mx-auto text-gray-500" />
+                                    <p className="text-xs mt-1 font-semibold">+ ${cheapestOffer.baggage.checked.price}</p>
+                                </button>
                             </div>
+
 
                             <Button 
                                 className="w-full h-auto py-2 px-3 text-center bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-lg mb-1"
@@ -309,3 +308,5 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
 };
 
 export default FlightCard;
+
+    
