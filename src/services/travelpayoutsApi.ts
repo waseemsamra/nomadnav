@@ -242,7 +242,7 @@ class TravelpayoutsApiService {
         let filtered = [...flights]
             .filter(flight => selectedAirlines.includes(flight.airline_code))
             .filter(flight => selectedStops.includes(flight.transfers))
-            .filter(flight => selectedOtas.includes(flight.gate))
+            .filter(flight => !flight.gate || selectedOtas.includes(flight.gate))
             .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
             .filter(flight => {
                 const price = this.getFlightDisplayPrice(flight, baggageFilter);
