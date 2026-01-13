@@ -84,7 +84,7 @@ async function searchWithStrategy(params: URLSearchParams) {
         console.log('Attempting search with v2/prices/latest...');
         const v2Params = new URLSearchParams(params);
         v2Params.set('sorting', 'price');
-        v2Params.set('show_to_affiliates', 'false'); // Get all public offers
+        v2Params.set('show_to_affiliates', 'true'); // Get all public and affiliate offers
         
         apiResponse = await fetchWithEndpoint('/v2/prices/latest', v2Params);
         if (apiResponse.success && apiResponse.data.length > 0) {
