@@ -1,10 +1,10 @@
 'use client';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { format, parseISO, addMinutes, isValid } from 'date-fns';
-import { Briefcase, ChevronDown, Copy, ExternalLink, XIcon } from 'lucide-react';
+import { Briefcase, ChevronDown, Copy, ExternalLink, XIcon, Building } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import { Separator } from '../ui/separator';
 import { Label } from '../ui/label';
 
 interface FlightCardProps {
+  otaName: string;
   offers: Flight[];
   onBookFlight: (flight: Flight) => void;
   baggageFilter: 'all' | 'without' | 'with';
@@ -26,18 +27,20 @@ const AirArabiaLogo = () => (
     </div>
 );
 
-const getOtaName = (code: string) => {
+const getOtaInfo = (code: string) => {
     const ota = OTA_DATA.find(o => o.code === code);
-    return ota ? ota.name : code;
+    return ota ? { name: ota.name, code: ota.code } : { name: code, code };
 }
 
-const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFilter }) => {
+const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, baggageFilter }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [localBaggagePref, setLocalBaggagePref] = useState<'without' | 'with'>(baggageFilter === 'with' ? 'with' : 'without');
     const { toast } = useToast();
 
     // Determine the active baggage preference
     const actualBaggagePref = baggageFilter === 'all' ? localBaggagePref : baggageFilter;
+    
+    const otaInfo = getOtaInfo(otaName);
 
     // This is the core logic change: Sort ALL offers based on the current baggage preference.
     const sortedOffers = useMemo(() => {
@@ -107,50 +110,59 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
             description: "The booking link has been copied to your clipboard.",
         });
     };
+    
+    // Group other offers by flight details to avoid repetition in the UI
+    const groupedOtherOffers = useMemo(() => {
+        const groups = new Map<string, Flight[]>();
+        const getKey = (f: Flight) => `${f.airline_code}-${f.flight_number}-${f.duration}-${f.transfers}`;
+
+        otherOffers.forEach(offer => {
+            const key = getKey(offer);
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+            groups.get(key)!.push(offer);
+        });
+
+        return Array.from(groups.values()).map(group => group[0]); // Just take the first one from each group
+    }, [otherOffers]);
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
             <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
                 <div className="flex flex-col md:flex-row">
-                    {/* Left Column - Booking */}
+                    {/* Left Column - OTA & Booking */}
                     <div className="w-full md:w-[280px] p-4 border-b md:border-b-0 md:border-r flex flex-col justify-between bg-gray-50/50">
                          <div>
-                            <div className="flex rounded-md border border-gray-200 bg-white mb-4">
-                                <button
-                                    onClick={() => setLocalBaggagePref('without')}
-                                    className={cn(
-                                        "flex-1 p-2 text-center rounded-l-md",
-                                        actualBaggagePref === 'without' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
-                                    )}
-                                    disabled={baggageFilter !== 'all'}
-                                >
-                                    <div className="relative inline-block">
-                                        <Briefcase className="w-4 h-4 mx-auto text-gray-500" />
-                                        <XIcon className="w-3 h-3 text-red-500 absolute -top-1 -right-1" strokeWidth={3} />
-                                    </div>
-                                    <p className="text-xs mt-1">Without baggage</p>
-                                </button>
-                                <button
-                                    onClick={() => setLocalBaggagePref('with')}
-                                    className={cn(
-                                        "flex-1 p-2 text-center rounded-r-md border-l",
-                                        actualBaggagePref === 'with' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
-                                    )}
-                                     disabled={baggageFilter !== 'all'}
-                                >
-                                    <Briefcase className="w-4 h-4 mx-auto text-gray-500" />
-                                    <p className="text-xs mt-1 font-semibold">+ ${cheapestOffer.baggage.checked.price}</p>
-                                </button>
+                            <div className='flex items-center gap-3 mb-4'>
+                                <Image 
+                                    src={`https://pics.avs.io/100/50/${otaInfo.code}.png`}
+                                    alt={otaInfo.name}
+                                    width={50}
+                                    height={50}
+                                    className='rounded-md border bg-white'
+                                    unoptimized
+                                />
+                                <div className='flex-1'>
+                                    <p className='font-bold text-lg'>{otaInfo.name}</p>
+                                    <p className='text-sm text-muted-foreground'>Best Price</p>
+                                </div>
                             </div>
-
-
+                            
                             <Button 
-                                className="w-full h-auto py-2 px-3 text-center bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-lg mb-1"
+                                className="w-full h-auto py-3 px-3 text-center bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-2xl mb-1"
                                 onClick={() => onBookFlight(cheapestOffer)}
                             >
-                                Book ${displayPrice(cheapestOffer)}
+                                ${displayPrice(cheapestOffer)}
                             </Button>
-                            <p className="text-center text-sm text-gray-500">{getOtaName(cheapestOffer.gate)}</p>
+                            <div className='text-center'>
+                                <CollapsibleTrigger asChild>
+                                    <Button variant="link" size="sm" className='text-xs h-auto p-1'>
+                                        View Flight Details
+                                        <ChevronDown className={cn("ml-1 h-3 w-3 transition-transform", isOpen && "rotate-180")} />
+                                    </Button>
+                                </CollapsibleTrigger>
+                            </div>
                         </div>
                     </div>
 
@@ -219,14 +231,18 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
 
                 <CollapsibleContent>
                     <div className="p-4 md:p-6 bg-gray-50/70 border-t grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Other Offers & Copy Link */}
+                        {/* Other Offers */}
                         <div className="md:col-span-1 space-y-4">
-                            <h4 className="font-semibold text-muted-foreground">Other offers</h4>
+                            <h4 className="font-semibold text-muted-foreground flex items-center gap-2">
+                                <Building className='h-4 w-4' />
+                                More offers from {otaInfo.name}
+                            </h4>
                             <div className="space-y-2">
-                                {otherOffers.map((offer) => (
+                                {groupedOtherOffers.map((offer) => (
                                     <div key={offer.id} className="flex justify-between items-center bg-white p-3 rounded-md border hover:border-primary">
                                         <div>
-                                            <p className="font-semibold">{getOtaName(offer.gate)}</p>
+                                            <p className="font-semibold">{formatDuration(offer.duration)}</p>
+                                            <p className="text-xs text-muted-foreground">{offer.transfers === 0 ? 'Direct' : `${offer.transfers} stop(s)`}</p>
                                         </div>
                                         <Button 
                                             variant="ghost"
@@ -238,24 +254,44 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
                                         </Button>
                                     </div>
                                 ))}
-                                {otherOffers.length === 0 && <p className='text-sm text-muted-foreground'>No other offers from our partners for this flight.</p>}
-                            </div>
-                            
-                            <Separator />
-
-                            <div>
-                                <Label htmlFor={`copy-link-${cheapestOffer.id}`} className='text-muted-foreground'>Copy link</Label>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <Input id={`copy-link-${cheapestOffer.id}`} value={cheapestOffer.link} readOnly className="text-xs" />
-                                    <Button size="icon" variant="outline" onClick={handleCopyLink}>
-                                        <Copy className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                                {groupedOtherOffers.length === 0 && <p className='text-sm text-muted-foreground'>No other flight routes from this partner.</p>}
                             </div>
                         </div>
 
                         {/* Flight & Baggage Details */}
                         <div className="md:col-span-2 space-y-6">
+                            {/* Baggage selector */}
+                            <div>
+                                <h4 className="font-semibold text-muted-foreground mb-2">Baggage Options</h4>
+                                 <div className="flex rounded-md border border-gray-200 bg-white mb-4">
+                                    <button
+                                        onClick={() => setLocalBaggagePref('without')}
+                                        className={cn(
+                                            "flex-1 p-3 text-center rounded-l-md",
+                                            actualBaggagePref === 'without' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
+                                        )}
+                                        disabled={baggageFilter !== 'all'}
+                                    >
+                                        <div className="relative inline-block">
+                                            <Briefcase className="w-5 h-5 mx-auto text-gray-500" />
+                                            <XIcon className="w-3 h-3 text-red-500 absolute -top-1 -right-1" strokeWidth={3} />
+                                        </div>
+                                        <p className="text-sm mt-1">Without checked baggage</p>
+                                    </button>
+                                    <button
+                                        onClick={() => setLocalBaggagePref('with')}
+                                        className={cn(
+                                            "flex-1 p-3 text-center rounded-r-md border-l",
+                                            actualBaggagePref === 'with' ? 'bg-blue-100 text-primary font-bold ring-1 ring-primary' : 'hover:bg-gray-100'
+                                        )}
+                                        disabled={baggageFilter !== 'all'}
+                                    >
+                                        <Briefcase className="w-5 h-5 mx-auto text-gray-500" />
+                                        <p className="text-sm mt-1 font-semibold">With checked baggage (+${cheapestOffer.baggage.checked.price})</p>
+                                    </button>
+                                </div>
+                            </div>
+                        
                             <div>
                                 <h4 className="font-semibold text-muted-foreground mb-2">Flight details</h4>
                                 <div className="border rounded-lg p-4 bg-white">
@@ -274,45 +310,25 @@ const FlightCard: React.FC<FlightCardProps> = ({ offers, onBookFlight, baggageFi
                                         )}
                                         <div>
                                             <p className="font-bold">{formatTime(cheapestOffer.departure_at)} - {formatTime(arrivalTime)} ({formatDuration(cheapestOffer.duration)})</p>
-                                            <p className="text-sm">{cheapestOffer.origin} Jinnah Intl → {cheapestOffer.destination} Sharjah Intl</p>
+                                            <p className="text-sm">{cheapestOffer.origin} → {cheapestOffer.destination}</p>
                                             <p className="text-xs text-muted-foreground">{cheapestOffer.flight_number} · {cheapestOffer.airline} · Airbus A320</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            
+                             <Separator />
 
                             <div>
-                                <h4 className="font-semibold text-muted-foreground mb-2">Baggage</h4>
-                                <div className="border rounded-lg p-4 bg-white space-y-4">
-                                    <div className="flex items-start gap-4">
-                                        <Briefcase className="w-5 h-5 mt-1 text-muted-foreground" />
-                                        <div>
-                                            <p className="font-semibold">Carry-on: 1 item</p>
-                                            {cheapestOffer.baggage.hand.has_baggage ? (
-                                                <p className="text-sm text-muted-foreground">Carry-on baggage is included in the ticket price.</p>
-                                            ) : (
-                                                <p className="text-sm text-muted-foreground">Carry-on must be purchased separately for ${cheapestOffer.baggage.hand.price}.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <Separator />
-                                     <div className="flex items-start gap-4">
-                                        <Briefcase className="w-5 h-5 mt-1 text-muted-foreground" />
-                                        <div>
-                                            <p className="font-semibold">Checked Baggage</p>
-                                            {actualBaggagePref === 'with' ? (
-                                                <p className="text-sm text-muted-foreground">Checked baggage is included in your selected fare.</p>
-                                            ) : cheapestOffer.baggage.checked.has_baggage ? (
-                                                <p className="text-sm text-muted-foreground">Checked baggage is included in the base ticket price.</p>
-                                            ) : (
-                                                <p className="text-sm text-muted-foreground">
-                                                    Checked baggage is not included. You can add it for an additional fee of ${cheapestOffer.baggage.checked.price}.
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
+                                <Label htmlFor={`copy-link-${cheapestOffer.id}`} className='text-muted-foreground'>Copy link</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Input id={`copy-link-${cheapestOffer.id}`} value={cheapestOffer.link} readOnly className="text-xs" />
+                                    <Button size="icon" variant="outline" onClick={handleCopyLink}>
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </CollapsibleContent>

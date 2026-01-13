@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { Suspense, useEffect, useState, useMemo } from 'react';
@@ -291,27 +290,29 @@ function SearchResultsContent() {
         selectedOtas,
     });
   }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
-
-  const flightGroups = useMemo(() => {
+  
+  const flightGroupsByOta = useMemo(() => {
     if (sortedFlights.length === 0) return [];
-  
-    const getFlightKey = (f: Flight) =>
-      `${f.airline_code}-${f.flight_number}-${f.departure_at}-${f.duration}-${f.transfers}`;
-  
+
     const groups = new Map<string, Flight[]>();
-  
+    
     for (const flight of sortedFlights) {
-      const key = getFlightKey(flight);
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(flight);
+        if (!flight.gate) continue;
+        if (!groups.has(flight.gate)) {
+            groups.set(flight.gate, []);
+        }
+        groups.get(flight.gate)!.push(flight);
     }
-  
+    
     return Array.from(groups.values()).map(group => {
-      group.sort((a, b) => travelpayoutsApi.getFlightDisplayPrice(a, baggageFilter) - travelpayoutsApi.getFlightDisplayPrice(b, baggageFilter));
-      return group;
-    });
+        const minPrice = Math.min(...group.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter)));
+        return {
+            ota: group[0].gate,
+            flights: group,
+            minPrice: minPrice,
+        };
+    }).sort((a, b) => a.minPrice - b.minPrice);
+
   }, [sortedFlights, baggageFilter]);
 
 
@@ -623,14 +624,14 @@ function SearchResultsContent() {
           <div className="lg:col-span-3">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                Available Flights ({flightGroups.length})
+                Available Flights ({flightGroupsByOta.length})
               </h2>
               <p className="text-gray-600">
                 Best prices from multiple airlines & travel agencies
               </p>
             </div>
 
-            {flights.length > 0 && flightGroups.length === 0 ? (
+            {flights.length > 0 && flightGroupsByOta.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                   <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -658,10 +659,11 @@ function SearchResultsContent() {
                 </div>
             ) : (
               <div className="space-y-4">
-                {flightGroups.map((group, index) => (
+                {flightGroupsByOta.map((group) => (
                   <FlightCard 
-                    key={`${group[0].id}-${index}`}
-                    offers={group}
+                    key={group.ota}
+                    otaName={group.ota}
+                    offers={group.flights}
                     onBookFlight={handleBookFlight} 
                     baggageFilter={baggageFilter} 
                   />
@@ -670,11 +672,11 @@ function SearchResultsContent() {
             )}
 
             {/* Footer */}
-            {flightGroups.length > 0 && (
+            {flightGroupsByOta.length > 0 && (
               <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
                 <div className="text-center">
                   <p className="text-gray-600 mb-4">
-                    Showing {Math.min(flightGroups.length, 30)} of {flightGroups.length} unique flight routes
+                    Showing {Math.min(flightGroupsByOta.length, 30)} of {flightGroupsByOta.length} unique flight routes
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
@@ -713,5 +715,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
