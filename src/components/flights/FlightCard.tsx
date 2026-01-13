@@ -104,6 +104,10 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
     }, [cheapestOffer.arrival_at, cheapestOffer.departure_at, cheapestOffer.duration]);
 
     const handleCopyLink = () => {
+        if (cheapestOffer.is_mock) {
+            toast({ variant: 'destructive', title: "Demo Link", description: "This is a mock offer and does not have a real booking link." });
+            return;
+        }
         navigator.clipboard.writeText(cheapestOffer.link);
         toast({
             title: "Link Copied!",
@@ -126,6 +130,18 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
 
         return Array.from(groups.values()).map(group => group[0]); // Just take the first one from each group
     }, [otherOffers]);
+    
+    const handleBookFlight = (flight: Flight) => {
+        if (flight.is_mock) {
+            toast({
+                variant: 'destructive',
+                title: "Demo Offer",
+                description: "This is a mock offer for demonstration purposes and cannot be booked.",
+            });
+            return;
+        }
+        onBookFlight(flight);
+    }
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
@@ -134,7 +150,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                     {/* Left Column - OTA & Booking */}
                     <div className="w-full md:w-[280px] p-4 border-b md:border-b-0 md:border-r flex flex-col justify-between bg-gray-50/50">
                          <div>
-                            <div className='flex items-center gap-3 mb-4'>
+                            <div className='flex items-start gap-3 mb-4'>
                                 <Image 
                                     src={`https://pics.avs.io/100/50/${otaInfo.code}.png`}
                                     alt={otaInfo.name}
@@ -147,11 +163,12 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                                     <p className='font-bold text-lg'>{otaInfo.name}</p>
                                     <p className='text-sm text-muted-foreground'>Best Price</p>
                                 </div>
+                                {cheapestOffer.is_mock && <Badge variant="destructive">Demo</Badge>}
                             </div>
                             
                             <Button 
                                 className="w-full h-auto py-3 px-3 text-center bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-2xl mb-1"
-                                onClick={() => onBookFlight(cheapestOffer)}
+                                onClick={() => handleBookFlight(cheapestOffer)}
                             >
                                 ${displayPrice(cheapestOffer)}
                             </Button>
@@ -248,7 +265,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                                             variant="ghost"
                                             size="sm"
                                             className="font-bold text-primary"
-                                            onClick={() => onBookFlight(offer)}
+                                            onClick={() => handleBookFlight(offer)}
                                         >
                                             ${displayPrice(offer)} <ExternalLink className='w-3 h-3 ml-2'/>
                                         </Button>

@@ -46,6 +46,7 @@ export interface Flight {
     checked: BaggageInfo;
   };
   gate: string; // This will be the OTA code
+  is_mock?: boolean;
 }
 
 export interface FlightSearchParams {

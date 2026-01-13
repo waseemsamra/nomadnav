@@ -100,6 +100,30 @@ async function searchWithStrategy(params: URLSearchParams) {
     return apiResponse || { success: false, data: [] }; // Return last result or empty
 }
 
+function getMockOTAs(baseFlight: any) {
+    if (!baseFlight) return [];
+    
+    const mockGates = [
+      { gate: 'MYTR', priceModifier: 0.95, name: 'Mytrip.com' },
+      { gate: 'CITY', priceModifier: 1.02, name: 'City.Travel' },
+      { gate: 'GOTO', priceModifier: 0.98, name: 'Gotogate' },
+      { gate: 'TRIP', priceModifier: 1.05, name: 'Trip.com' },
+    ];
+
+    return mockGates.map(mock => {
+      const newPrice = Math.round(baseFlight.price * mock.priceModifier);
+      return {
+        ...baseFlight,
+        price: newPrice,
+        gate: mock.gate,
+        id: `${baseFlight.id}-mock-${mock.gate}`,
+        link: '#', // Mock links go nowhere
+        is_mock: true // Flag to identify mock data
+      };
+    });
+}
+
+
 function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
     if (!Array.isArray(flights)) return [];
     
@@ -123,9 +147,10 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             destination: flight.destination,
             transfers: flight.transfers,
             duration: flight.duration,
-            link: `https://www.aviasales.com${flight.link}?marker=${MARKER}`,
+            link: flight.link ? `https://www.aviasales.com${flight.link}?marker=${MARKER}` : '#',
             currency: currency,
             gate: flight.gate,
+            is_mock: flight.is_mock || false,
         };
         return addEstimatedBaggagePrices(enrichedFlight);
     }).filter(flight => flight !== null) as Flight[];
@@ -190,6 +215,19 @@ export async function GET(req: NextRequest) {
                 console.log(`Found ${allFlights.length} flights via alternative routes.`);
             }
         }
+        
+        // --- MOCK DATA WORKAROUND ---
+        if (allFlights.length > 0) {
+            const uniqueGates = new Set(allFlights.map(f => f.gate));
+            // If we have few real OTAs, add mock ones for a better demo
+            if (uniqueGates.size < 3) {
+                console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
+                const cheapestFlight = allFlights.sort((a,b) => a.price - b.price)[0];
+                const mockFlights = getMockOTAs(cheapestFlight);
+                allFlights.push(...mockFlights);
+            }
+        }
+
 
         const airlines = await getAirlinesData();
         
