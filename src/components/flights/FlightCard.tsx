@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { type Flight } from '@/services/travelpayoutsApi';
-import { format, parseISO, addMinutes } from 'date-fns';
+import { format, parseISO, addMinutes, isValid } from 'date-fns';
 import { Briefcase, ChevronDown, ChevronUp, XIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '../ui/badge';
@@ -36,12 +36,16 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
     
     const actualBaggagePref = baggageFilter === 'all' ? localBaggagePref : baggageFilter;
 
-    const formatTime = (dateString: string | Date) => {
+    const formatTime = (dateString: string | Date | undefined) => {
+        if (!dateString) return 'N/A';
         const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+        if (!isValid(date)) return 'N/A';
         return format(date, 'HH:mm');
     }
-    const formatDate = (dateString: string | Date) => {
+    const formatDate = (dateString: string | Date | undefined) => {
+        if (!dateString) return 'N/A';
         const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+        if (!isValid(date)) return 'N/A';
         return format(date, 'd MMM').toUpperCase();
     }
     const formatDuration = (minutes: number) => {
@@ -212,5 +216,3 @@ const FlightCard: React.FC<FlightCardProps> = ({ bestFlight, otherOffers, onBook
 };
 
 export default FlightCard;
-
-    
