@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { Suspense, useEffect, useState, useMemo } from 'react';
@@ -275,7 +276,7 @@ function SearchResultsContent() {
   
   const sortedFlights = useMemo(() => {
     // Prevent filtering if flights or filters are not ready
-    if (flights.length === 0 || selectedAirlines.length === 0) {
+    if (flights.length === 0) {
         return [];
     }
     return travelpayoutsApi.filterAndSortFlights({
@@ -715,3 +716,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
