@@ -153,9 +153,6 @@ function SearchResultsContent() {
         
         console.log(`Fetched ${flightData.length} flights`);
         
-        // **ATOMIC UPDATE**: Set flights and filters at the same time
-        setFlights(flightData);
-        
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
 
@@ -172,6 +169,8 @@ function SearchResultsContent() {
           const uniqueStops = [...new Set(flightData.map(f => f.transfers))];
           const uniqueOtas = [...new Set(flightData.map(f => f.gate).filter(Boolean))];
 
+          // **ATOMIC UPDATE**: Set flights and filters at the same time
+          setFlights(flightData);
           setPriceRange({ min: minPrice, max: maxPrice });
           setSelectedPrice([minPrice, maxPrice]);
           setDurationRange({ min: minDuration, max: maxDuration });
@@ -181,6 +180,7 @@ function SearchResultsContent() {
           setSelectedOtas(uniqueOtas);
         } else {
           toast.error(`No flights found for ${origin} to ${destination}.`);
+          setFlights([]);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
@@ -250,7 +250,7 @@ function SearchResultsContent() {
     if (flights.length > 0) {
         setSelectedAirlines([...new Set(flights.map(f => f.airline_code))]);
         setSelectedStops([...new Set(flights.map(f => f.transfers))]);
-        setSelectedOtas([...new Set(flights.map(f => f.gate))].filter(Boolean));
+        setSelectedOtas([...new Set(flights.map(f => f.gate).filter(Boolean))]);
         setSelectedDuration([durationRange.min, durationRange.max]);
         setSelectedPrice([priceRange.min, priceRange.max]);
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
@@ -723,8 +723,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
-    
-
-    
