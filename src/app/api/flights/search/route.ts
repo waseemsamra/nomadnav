@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
 
-const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
+const API_TOKEN = '7783bdd07dade9d7dec9ac4b6a88fe51';
+const MARKER = '513526'; // IMPORTANT: Replace with your Travelpayouts marker
 const API_BASE_URL = 'https://api.travelpayouts.com';
 const AIRLINES_ENDPOINT = 'https://api.travelpayouts.com/data/en/airlines.json';
 
@@ -122,7 +123,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             destination: flight.destination,
             transfers: flight.transfers,
             duration: flight.duration,
-            link: `https://www.travelpayouts.com${flight.link}`,
+            link: `https://www.aviasales.com${flight.link}?marker=${MARKER}`,
             currency: currency,
             gate: flight.gate,
         };
