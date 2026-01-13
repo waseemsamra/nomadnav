@@ -60,7 +60,7 @@ export interface FlightSearchParams {
 }
 
 // Configuration
-const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '7783bdd07dade9d7dec9ac4b6a88fe51';
+const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN;
 
 // REAL WORKING ENDPOINTS
 const ENDPOINTS = {
