@@ -78,26 +78,42 @@ async function fetchWithEndpoint(endpoint: string, params: URLSearchParams) {
 }
 
 async function searchWithStrategy(params: URLSearchParams) {
-    let apiResponse = null;
+    const endpoints = [
+        '/v2/prices/latest',
+        '/v2/prices/month-matrix',
+        '/v2/prices/week-matrix',
+    ];
+    
+    for (const endpoint of endpoints) {
+        try {
+            console.log(`Attempting search with ${endpoint}...`);
+            const currentParams = new URLSearchParams(params);
+            
+            // Endpoint-specific adjustments
+            if (endpoint === '/v2/prices/latest') {
+                currentParams.set('sorting', 'price');
+                currentParams.set('show_to_affiliates', 'true');
+            } else if (endpoint.includes('matrix')) {
+                // Matrix endpoints use depart_date differently (YYYY-MM) and don't need sorting
+                const departDate = currentParams.get('depart_date');
+                if (departDate) {
+                    currentParams.set('depart_date', departDate.substring(0, 7));
+                }
+            }
 
-    // STRATEGY: Use v2/prices/latest as it gives a broad range of offers from different gates.
-    try {
-        console.log('Attempting search with v2/prices/latest...');
-        const v2Params = new URLSearchParams(params);
-        v2Params.set('sorting', 'price');
-        v2Params.set('show_to_affiliates', 'true'); // Get all public and affiliate offers
-        
-        apiResponse = await fetchWithEndpoint('/v2/prices/latest', v2Params);
-        if (apiResponse.success && apiResponse.data.length > 0) {
-            console.log(`✓ Success with v2/prices/latest. Found ${apiResponse.data.length} flights.`);
-            return apiResponse;
+            const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
+            
+            if (apiResponse.success && apiResponse.data.length > 0) {
+                console.log(`✓ Success with ${endpoint}. Found ${apiResponse.data.length} flights.`);
+                return apiResponse;
+            }
+            console.log(`No results from ${endpoint}.`);
+        } catch (e: any) {
+            console.warn(`${endpoint} failed:`, e.message);
         }
-        console.log('No results from v2/prices/latest.');
-    } catch (e: any) {
-        console.warn('v2/prices/latest failed:', e.message);
     }
     
-    return apiResponse || { success: false, data: [] }; // Return last result or empty
+    return { success: false, data: [] }; // Return empty if all strategies fail
 }
 
 function getMockOTAs(baseFlight: any) {
@@ -131,8 +147,8 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
         const airlineCode = flight.airline;
         const airlineName = airlines[airlineCode] || airlineCode;
         
-        // A combination of link, gate, and price usually guarantees uniqueness. Add random to be certain.
-        const uniqueId = `${flight.link || ''}-${flight.gate || ''}-${flight.price}-${Math.random()}`;
+        // A combination of gate, price, and flight details usually guarantees uniqueness.
+        const uniqueId = `${flight.gate || ''}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
 
         const enrichedFlight = {
             id: uniqueId,
@@ -178,6 +194,8 @@ export async function GET(req: NextRequest) {
         currency: currency,
         limit: searchParams.get('limit') || '100',
         trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
+        show_to_affiliates: 'true',
+        sorting: 'price',
     });
     
     if (depart_date) baseApiParams.set('depart_date', depart_date);
@@ -202,7 +220,7 @@ export async function GET(req: NextRequest) {
                         
                         const altParams = new URLSearchParams(baseApiParams);
                         altParams.set('origin', altOrigin);
-                        altParams.set('destination', altDest);
+altParams.set('destination', altDest);
                         alternativeSearches.push(searchWithStrategy(altParams));
                     }
                 }
@@ -246,3 +264,5 @@ export async function GET(req: NextRequest) {
         );
     }
 }
+
+    

@@ -249,9 +249,13 @@ class TravelpayoutsApiService {
                 return price >= selectedPrice[0] && price <= selectedPrice[1];
             })
             .filter(flight => {
-                const departureDate = new Date(flight.departure_at);
-                const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
-                return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
+                try {
+                    const departureDate = new Date(flight.departure_at);
+                    const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
+                    return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
+                } catch (e) {
+                    return true; // Don't filter if date is invalid
+                }
             });
 
         switch (filters.sortBy) {
@@ -262,7 +266,13 @@ class TravelpayoutsApiService {
                 filtered.sort((a, b) => (a.duration || 9999) - (b.duration || 9999));
                 break;
             case 'departure':
-                filtered.sort((a, b) => new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime());
+                filtered.sort((a, b) => {
+                    try {
+                        return new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime();
+                    } catch(e) {
+                        return 0;
+                    }
+                });
                 break;
         }
         return filtered;
@@ -372,3 +382,5 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams, Gate };
+
+    
