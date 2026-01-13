@@ -140,10 +140,8 @@ function SearchResultsContent() {
         return;
       }
       setLoading(true);
-      // Reset filter states on new search
-      setSelectedAirlines(null);
-      setSelectedStops(null);
-      setSelectedOtas(null);
+      // **FIX**: Reset all filter states on new search to ensure defaults are applied
+      handleResetFilters(false); // Do not reset flights data here
       
       try {
         const flightData = await travelpayoutsApi.searchFlights({
@@ -161,7 +159,7 @@ function SearchResultsContent() {
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
 
-          // Initialize filters based on the new data
+          // Initialize range filters based on the new data
           const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
           const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
           const maxPrice = Math.ceil(Math.max(...prices.filter(p => isFinite(p))));
@@ -248,16 +246,23 @@ function SearchResultsContent() {
   };
 
 
-  const handleResetFilters = () => {
+  const handleResetFilters = (resetFlights = true) => {
     setFilters(initialFilterState);
     setSelectedAirlines(null);
     setSelectedStops(null);
     setSelectedOtas(null);
-    if (flights.length > 0) {
+    
+    if (resetFlights && flights.length > 0) {
         setSelectedDuration([durationRange.min, durationRange.max]);
         setSelectedPrice([priceRange.min, priceRange.max]);
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
+    } else if (!resetFlights) {
+        // Reset to initial values without depending on flight data
+        setSelectedDuration([0, 0]);
+        setSelectedPrice([0, 0]);
+        setSelectedDepartureTime([0, 1440]);
     }
+
     setBaggageFilter('all');
   };
 
@@ -285,7 +290,7 @@ function SearchResultsContent() {
   };
   
   const sortedFlights = useMemo(() => {
-    // If a filter state is null, it means "select all". So, don't filter.
+    // **FIX**: If a filter state is null, it means "select all". So, don't filter.
     const currentAirlines = selectedAirlines ?? airlineOptions.map(a => a.code);
     const currentStops = selectedStops ?? stopOptions.map(s => s.value);
     const currentOtas = selectedOtas ?? otaOptions.map(o => o.id);
@@ -367,7 +372,7 @@ function SearchResultsContent() {
           <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold">Filters</h3>
-                   <Button variant="link" size="sm" onClick={handleResetFilters}>Clear all</Button>
+                   <Button variant="link" size="sm" onClick={() => handleResetFilters()}>Clear all</Button>
               </div>
 
               <div className="space-y-2 border-t pt-4">
@@ -657,7 +662,7 @@ function SearchResultsContent() {
                   <p className="text-gray-600 mb-4">
                     Try adjusting your filters to see more results.
                   </p>
-                  <Button onClick={handleResetFilters}>
+                  <Button onClick={() => handleResetFilters()}>
                     Clear All Filters
                   </Button>
                 </div>
@@ -732,6 +737,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
-    
