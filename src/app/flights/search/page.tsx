@@ -125,9 +125,9 @@ function SearchResultsContent() {
   const passengers = searchParams.get('passengers') || '1';
   const cabin_class = searchParams.get('cabin_class') || 'economy';
 
-  // **EFFECT 1: Fetch flights on initial load**
+  // **EFFECT: Fetch flights and initialize filters atomically**
   useEffect(() => {
-    async function fetchFlights() {
+    async function fetchAndInitialize() {
       if (!origin || !destination) {
         router.push('/');
         return;
@@ -145,10 +145,33 @@ function SearchResultsContent() {
         });
         
         console.log(`Fetched ${flightData.length} flights`);
+        
+        // **ATOMIC UPDATE**: Set flights and filters at the same time
         setFlights(flightData);
-
+        
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
+
+          // Initialize filters based on the new data
+          const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
+          const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
+          const maxPrice = Math.ceil(Math.max(...prices.filter(p => isFinite(p))));
+          
+          const durations = flightData.map(f => f.duration);
+          const minDuration = Math.min(...durations);
+          const maxDuration = Math.max(...durations);
+
+          const uniqueAirlineCodes = [...new Set(flightData.map(f => f.airline_code))];
+          const uniqueStops = [...new Set(flightData.map(f => f.transfers))];
+          const uniqueOtas = [...new Set(flightData.map(f => f.gate).filter(Boolean))];
+
+          setPriceRange({ min: minPrice, max: maxPrice });
+          setSelectedPrice([minPrice, maxPrice]);
+          setDurationRange({ min: minDuration, max: maxDuration });
+          setSelectedDuration([minDuration, maxDuration]);
+          setSelectedAirlines(uniqueAirlineCodes);
+          setSelectedStops(uniqueStops);
+          setSelectedOtas(uniqueOtas);
         } else {
           toast.error(`No flights found for ${origin} to ${destination}.`);
         }
@@ -160,36 +183,9 @@ function SearchResultsContent() {
         setLoading(false);
       }
     }
-    fetchFlights();
+    fetchAndInitialize();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin, destination, depart_date, return_date, passengers, cabin_class]);
-  
-  // **EFFECT 2: ATOMIC FILTER INITIALIZATION**
-  // This single effect runs ONLY when the initial flight data is loaded.
-  // It initializes ALL filter states at once to prevent race conditions and disappearing flights.
-  useEffect(() => {
-    if (flights.length > 0) {
-      const prices = flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
-      const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
-      const maxPrice = Math.ceil(Math.max(...prices.filter(p => isFinite(p))));
-      
-      const durations = flights.map(f => f.duration);
-      const minDuration = Math.min(...durations);
-      const maxDuration = Math.max(...durations);
-
-      const uniqueAirlineCodes = [...new Set(flights.map(f => f.airline_code))];
-      const uniqueStops = [...new Set(flights.map(f => f.transfers))];
-      const uniqueOtas = [...new Set(flights.map(f => f.gate).filter(Boolean))];
-
-      setPriceRange({ min: minPrice, max: maxPrice });
-      setSelectedPrice([minPrice, maxPrice]);
-      setDurationRange({ min: minDuration, max: maxDuration });
-      setSelectedDuration([minDuration, maxDuration]);
-      setSelectedAirlines(uniqueAirlineCodes);
-      setSelectedStops(uniqueStops);
-      setSelectedOtas(uniqueOtas);
-    }
-  }, [flights]);
+  }, [origin, destination, depart_date, return_date, passengers, cabin_class, router]);
   
 
   const handleBookFlight = (flight: Flight) => {
@@ -279,6 +275,10 @@ function SearchResultsContent() {
   };
   
   const sortedFlights = useMemo(() => {
+    // Prevent filtering if flights or filters are not ready
+    if (flights.length === 0 || selectedAirlines.length === 0) {
+        return [];
+    }
     return travelpayoutsApi.filterAndSortFlights({
         flights,
         filters,
@@ -352,20 +352,18 @@ function SearchResultsContent() {
                    <Button variant="link" size="sm" onClick={handleResetFilters}>Clear all</Button>
               </div>
 
-              <div className="space-y-4">
-                  <div className="space-y-2 border-t pt-4">
-                      <label className="font-semibold text-sm text-muted-foreground">SORT</label>
-                      <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value as 'price' | 'duration' | 'departure')}>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Sort by..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="price">by price</SelectItem>
-                              <SelectItem value="duration">by duration</SelectItem>
-                              <SelectItem value="departure">by departure</SelectItem>
-                          </SelectContent>
-                      </Select>
-                  </div>
+              <div className="space-y-2 border-t pt-4">
+                  <label className="font-semibold text-sm text-muted-foreground">SORT</label>
+                  <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value as 'price' | 'duration' | 'departure')}>
+                      <SelectTrigger>
+                          <SelectValue placeholder="Sort by..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="price">by price</SelectItem>
+                          <SelectItem value="duration">by duration</SelectItem>
+                          <SelectItem value="departure">by departure</SelectItem>
+                      </SelectContent>
+                  </Select>
               </div>
 
               <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Departure/Arrival times', 'Airlines', 'Online travel agencies']}>
@@ -715,3 +713,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
