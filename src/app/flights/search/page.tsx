@@ -284,19 +284,19 @@ function SearchResultsContent() {
   
   const sortedAndFilteredFlights = useMemo(() => {
     let filtered = allFlights;
+    
+    // Checkbox filters
+    if (selectedAirlines && selectedAirlines.length < airlineOptions.length) {
+        filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
+    }
+    if (selectedStops && selectedStops.length < stopOptions.length) {
+        filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
+    }
+    if (selectedOtas && selectedOtas.length < otaOptions.length) {
+        filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
+    }
 
-    // Apply filters only if a selection has been made (is not null)
-    if (selectedAirlines !== null) {
-      filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
-    }
-    if (selectedStops !== null) {
-      filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
-    }
-    if (selectedOtas !== null) {
-      filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
-    }
-
-    // Apply range filters
+    // Range filters
     if (durationRange.max > 0) {
       filtered = filtered.filter(flight => typeof flight.duration === 'number' && flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
     }
@@ -327,7 +327,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas, durationRange, priceRange]);
+  }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas, durationRange, priceRange, airlineOptions, stopOptions, otaOptions]);
   
 
   if (loading) {
@@ -681,5 +681,7 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
 
     
