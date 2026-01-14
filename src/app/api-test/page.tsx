@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { 
   CheckCircle, 
   XCircle, 
@@ -48,17 +49,6 @@ export default function ApiTestPage() {
   const [envToken, setEnvToken] = useState('');
   const [allOtas] = useState<Gate[]>(OTA_DATA);
   const [alliances] = useState(ALLIANCE_DATA);
-
-  useEffect(() => {
-    // Client-side access to env var
-    setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
-    testConnection(); // Auto-test on page load
-
-    // Make the tracking function available globally for the diagnostic script
-    (window as any).trackFlightClick = (flightId: string) => {
-        console.log(`Flight ${flightId} clicked`);
-    };
-  }, []);
 
   /**
    * GUARANTEED WORKING FLIGHT DISPLAY FUNCTION
@@ -295,6 +285,82 @@ export default function ApiTestPage() {
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  const testFlightDisplay = () => {
+    console.log('🧪 Testing flight display...');
+    
+    const testFlights = [
+      {
+        id: 'test1',
+        price: 163,
+        airline: 'Flydubai',
+        airline_code: 'FZ',
+        flight_number: '334',
+        gate: 'MYTR',
+        origin: 'KHI',
+        destination: 'DXB',
+        departure_at: '2024-12-20T03:00:00Z',
+        duration: 145,
+        transfers: 0,
+        link: '#',
+        return_at: '',
+        baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: false, price: 50}},
+        currency: 'USD',
+      },
+      {
+        id: 'test2',
+        price: 187,
+        airline: 'Flydubai',
+        airline_code: 'FZ',
+        flight_number: '330',
+        gate: 'CITY',
+        origin: 'KHI',
+        destination: 'DXB',
+        departure_at: '2024-12-20T08:30:00Z',
+        duration: 135,
+        transfers: 0,
+        link: '#',
+        return_at: '',
+        baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: false, price: 50}},
+        currency: 'USD',
+      },
+      {
+        id: 'test3',
+        price: 210,
+        airline: 'Qatar Airways',
+        airline_code: 'QR',
+        flight_number: '611',
+        gate: 'WING',
+        origin: 'KHI',
+        destination: 'DXB',
+        departure_at: '2024-12-20T14:15:00Z',
+        duration: 165,
+        transfers: 1,
+        link: '#',
+        return_at: '',
+        baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: true, price: 0}},
+        currency: 'USD',
+      }
+    ];
+
+    if (typeof displayFlightsGuaranteed === 'function') {
+      displayFlightsGuaranteed(testFlights);
+      toast.success('Test flights displayed! Check the page.');
+    } else {
+      toast.error('displayFlightsGuaranteed not found. Copy Step 1 again.');
+    }
+  }
+
+  useEffect(() => {
+    // Client-side access to env var
+    setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
+    testConnection(); // Auto-test on page load
+
+    // Make the tracking function available globally for the diagnostic script
+    (window as any).trackFlightClick = (flightId: string) => {
+        console.log(`Flight ${flightId} clicked`);
+    };
+  }, []);
+
   async function searchFlights() {
     console.log('🔍 Starting flight search...');
     
@@ -342,24 +408,23 @@ export default function ApiTestPage() {
     } catch (error: any) {
       console.error('Search failed:', error);
       
-      // showErrorMessage is part of displayFlightsGuaranteed now.
       // We need a standalone error message function.
-       const container = document.getElementById('flight-results') || document.body;
-        container.innerHTML = `
-            <div style="
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            margin: 20px;
-            ">
-            <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
-            <h3 style="margin: 0 0 10px 0;">Error Loading Flights</h3>
-            <p>${error.message}</p>
-            </div>
-        `;
+      const container = document.getElementById('flight-results') || document.body;
+      container.innerHTML = `
+          <div style="
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
+          padding: 20px;
+          border-radius: 8px;
+          text-align: center;
+          margin: 20px;
+          ">
+          <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+          <h3 style="margin: 0 0 10px 0;">Error Loading Flights</h3>
+          <p>${error.message}</p>
+          </div>
+      `;
       
       setTimeout(() => {
         console.log('Showing sample data for debugging...');
@@ -485,6 +550,13 @@ export default function ApiTestPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+       <button 
+        onClick={testFlightDisplay}
+        className="fixed bottom-5 right-5 bg-[#4CAF50] text-white border-none py-4 px-6 rounded-full text-base font-bold cursor-pointer z-50 shadow-lg"
+      >
+        🚀 TEST FLIGHTS
+      </button>
+
       <div className="max-w-4xl mx-auto px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -742,5 +814,3 @@ export default function ApiTestPage() {
     </div>
   );
 }
-
-    
