@@ -141,7 +141,6 @@ function SearchResultsContent() {
         return;
       }
       setLoading(true);
-      setFlights([]); // Clear previous results
       
       try {
         const flightData = await travelpayoutsApi.searchFlights({
@@ -300,13 +299,13 @@ function SearchResultsContent() {
     let filtered = [...flights];
 
     // Apply filters only if a selection has been made (is not null)
-    if (selectedAirlines) {
+    if (selectedAirlines !== null) {
         filtered = filtered.filter(flight => selectedAirlines.includes(flight.airline_code));
     }
-    if (selectedStops) {
+    if (selectedStops !== null) {
         filtered = filtered.filter(flight => selectedStops.includes(flight.transfers));
     }
-    if (selectedOtas) {
+    if (selectedOtas !== null) {
         filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
     }
 
