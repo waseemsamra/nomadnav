@@ -293,7 +293,7 @@ export default function ApiTestPage() {
     }
 
     async function performSearch() {
-        flightDisplay.showLoading();
+        showLoading();
         try {
             const flights = await travelpayoutsApi.searchFlights({
                 origin: 'JFK',
@@ -308,7 +308,7 @@ export default function ApiTestPage() {
             showErrorMessage(error.message || 'Failed to search flights');
         }
     }
-    const flightDisplay = { showLoading };
+    
     function showLoading() {
       let container = document.getElementById('flight-results');
       if (!container) {
@@ -649,7 +649,3 @@ export default function ApiTestPage() {
     </div>
   );
 }
-
-    
-
-    
