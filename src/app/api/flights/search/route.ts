@@ -129,7 +129,7 @@ function getMockOTAs(baseFlight: any) {
     return mockGates.map(mock => {
       const newPrice = Math.round(baseFlight.price * mock.priceModifier);
       return {
-        ...baseFlight,
+        ...baseFlight, // Correctly copy all properties from the base flight
         price: newPrice,
         gate: mock.gate,
         id: `${baseFlight.id}-mock-${mock.gate}`,
@@ -143,33 +143,35 @@ function getMockOTAs(baseFlight: any) {
 function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
     if (!Array.isArray(flights)) return [];
     
-    return flights.map((flight: any) => {
-        const airlineCode = flight.airline_code || flight.airline;
-        const airlineName = airlines[airlineCode] || airlineCode;
-        const gate = flight.gate || flight.ota_code || 'unknown';
-        
-        const uniqueId = `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
+    return flights
+        .filter(flight => flight && typeof flight.price === 'number') // Filter out flights with invalid price
+        .map((flight: any) => {
+            const airlineCode = flight.airline_code || flight.airline;
+            const airlineName = airlines[airlineCode] || airlineCode;
+            const gate = flight.gate || flight.ota_code || 'unknown';
+            
+            const uniqueId = `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
 
-        const enrichedFlight = {
-            id: uniqueId,
-            price: flight.price,
-            airline: airlineName,
-            airline_code: airlineCode,
-            flight_number: flight.flight_number,
-            departure_at: flight.departure_at,
-            return_at: flight.return_at,
-            arrival_at: flight.arrival_at,
-            origin: flight.origin,
-            destination: flight.destination,
-            transfers: flight.transfers,
-            duration: flight.duration,
-            link: flight.link ? `https://www.aviasales.com${flight.link}?marker=${MARKER}` : '#',
-            currency: currency,
-            gate: gate,
-            is_mock: flight.is_mock || false,
-        };
-        return addEstimatedBaggagePrices(enrichedFlight);
-    }).filter(flight => flight !== null) as Flight[];
+            const enrichedFlight = {
+                id: uniqueId,
+                price: flight.price,
+                airline: airlineName,
+                airline_code: airlineCode,
+                flight_number: flight.flight_number,
+                departure_at: flight.departure_at,
+                return_at: flight.return_at,
+                arrival_at: flight.arrival_at,
+                origin: flight.origin,
+                destination: flight.destination,
+                transfers: flight.transfers,
+                duration: flight.duration,
+                link: flight.link ? `https://www.aviasales.com${flight.link}?marker=${MARKER}` : '#',
+                currency: currency,
+                gate: gate,
+                is_mock: flight.is_mock || false,
+            };
+            return addEstimatedBaggagePrices(enrichedFlight);
+        }).filter(flight => flight !== null) as Flight[];
 }
 
 
