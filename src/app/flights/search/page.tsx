@@ -10,7 +10,7 @@ import {
   X,
   Calendar,
 } from 'lucide-react';
-import { format, getHours, getMinutes } from 'date-fns';
+import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,7 @@ function SearchResultsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  const [flights, setFlights] = useState<Flight[]>([]);
+  const [allFlights, setAllFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
@@ -61,15 +61,15 @@ function SearchResultsContent() {
 
   // Memoized options derived from flight data
   const airlineOptions = useMemo(() => {
-      if (!flights || flights.length === 0) return [];
-      const uniqueAirlines = [...new Map(flights.map(f => [f.airline_code, { code: f.airline_code, name: f.airline }])).values()];
+      if (!allFlights || allFlights.length === 0) return [];
+      const uniqueAirlines = [...new Map(allFlights.map(f => [f.airline_code, { code: f.airline_code, name: f.airline }])).values()];
       return uniqueAirlines.sort((a,b) => a.name.localeCompare(b.name));
-  }, [flights]);
+  }, [allFlights]);
 
   const stopOptions = useMemo(() => {
-    if (!flights || flights.length === 0) return [];
+    if (!allFlights || allFlights.length === 0) return [];
     const stopsMap = new Map<number, number>();
-    flights.forEach(flight => {
+    allFlights.forEach(flight => {
         const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
         if (typeof flight.transfers !== 'number') return;
         const currentMinPrice = stopsMap.get(flight.transfers);
@@ -84,14 +84,14 @@ function SearchResultsContent() {
             price: Math.round(price),
         }))
         .sort((a,b) => a.value - b.value);
-  }, [flights, baggageFilter]);
+  }, [allFlights, baggageFilter]);
   
   const otaOptions = useMemo(() => {
-      if (!flights || flights.length === 0) return [];
-      const allOtasFromFlights = [...new Set(flights.map(f => f.gate).filter(Boolean))];
+      if (!allFlights || allFlights.length === 0) return [];
+      const allOtasFromFlights = [...new Set(allFlights.map(f => f.gate).filter(Boolean))];
       const gatePrices: { [key: string]: number } = {};
       
-      flights.forEach(flight => {
+      allFlights.forEach(flight => {
           const price = travelpayoutsApi.getFlightDisplayPrice(flight, 'all');
           if (flight.gate && (!gatePrices[flight.gate] || price < gatePrices[flight.gate])) {
               gatePrices[flight.gate] = price;
@@ -112,18 +112,18 @@ function SearchResultsContent() {
             if (a.price !== b.price) return a.price - b.price;
             return a.name.localeCompare(b.name);
           });
-  }, [flights]);
+  }, [allFlights]);
 
 
   const baggagePriceOptions = useMemo(() => {
-      if (!flights || flights.length === 0) return { without: null, with: null };
-      const minWithout = Math.min(...flights.map(f => f.price));
-      const minWith = Math.min(...flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'with')));
+      if (!allFlights || allFlights.length === 0) return { without: null, with: null };
+      const minWithout = Math.min(...allFlights.map(f => f.price));
+      const minWith = Math.min(...allFlights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'with')));
       return {
           without: isFinite(minWithout) ? Math.round(minWithout) : null,
           with: isFinite(minWith) ? Math.round(minWith) : null,
       };
-  }, [flights]);
+  }, [allFlights]);
 
 
   // Extract search parameters
@@ -170,28 +170,24 @@ function SearchResultsContent() {
           const maxDuration = Math.max(...durations);
           
           // Set all state related to the new data in one go
-          setFilters(initialFilterState);
-          setBaggageFilter('all');
-          setSelectedAirlines(null);
-          setSelectedStops(null);
-          setSelectedOtas(null);
+          handleResetFilters();
+          
           setPriceRange({ min: minPrice, max: maxPrice });
           setSelectedPrice([minPrice, maxPrice]);
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
-          setSelectedDepartureTime([0, 1440]);
           
           // Set flights LAST to trigger render after all filters are ready
-          setFlights(flightData);
+          setAllFlights(flightData);
 
         } else {
           toast.error(`No flights found for ${origin} to ${destination}.`);
-          setFlights([]);
+          setAllFlights([]);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
         toast.error(error.message || 'Failed to load flight data.');
-        setFlights([]);
+        setAllFlights([]);
       } finally {
         setLoading(false);
       }
@@ -261,7 +257,7 @@ function SearchResultsContent() {
     setSelectedOtas(null);
     setBaggageFilter('all');
     
-    if (flights && flights.length > 0) {
+    if (allFlights && allFlights.length > 0) {
         setSelectedDuration([durationRange.min, durationRange.max]);
         setSelectedPrice([priceRange.min, priceRange.max]);
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
@@ -298,8 +294,7 @@ function SearchResultsContent() {
   };
   
   const sortedAndFilteredFlights = useMemo(() => {
-    if (!flights) return [];
-    let filtered = [...flights];
+    let filtered = allFlights;
 
     // Apply filters only if a selection has been made (is not null)
     if (selectedAirlines !== null) {
@@ -322,16 +317,6 @@ function SearchResultsContent() {
           return price >= selectedPrice[0] && price <= selectedPrice[1];
       });
     }
-    filtered = filtered.filter(flight => {
-        try {
-            if (!flight.departure_at) return true;
-            const departureDate = new Date(flight.departure_at);
-            const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
-            return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
-        } catch (e) {
-            return true; // Don't filter if date is invalid
-        }
-    });
 
     // Apply sorting
     switch (filters.sortBy) {
@@ -353,43 +338,18 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas, durationRange, priceRange]);
+  }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas, durationRange, priceRange]);
   
-  const flightGroupsByOta = useMemo(() => {
-    if (!sortedAndFilteredFlights || sortedAndFilteredFlights.length === 0) return [];
-
-    const groups = new Map<string, Flight[]>();
-    
-    for (const flight of sortedAndFilteredFlights) {
-        if (!flight.gate) continue;
-        if (!groups.has(flight.gate)) {
-            groups.set(flight.gate, []);
-        }
-        groups.get(flight.gate)!.push(flight);
-    }
-    
-    return Array.from(groups.values()).map(group => {
-        const minPrice = Math.min(...group.map(f => travelpayoutsApi.getFlightDisplayPrice(f, baggageFilter)));
-        return {
-            ota: group[0].gate,
-            flights: group,
-            minPrice: minPrice,
-        };
-    }).sort((a, b) => a.minPrice - b.minPrice);
-
-  }, [sortedAndFilteredFlights, baggageFilter]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-            <p className="mt-4 text-gray-600">Searching for the best flights...</p>
-            <p className="text-sm text-gray-500 mt-2">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="loading-state">
+          <div className="spinner"></div>
+          <p>Searching for flights...</p>
+          <p className="text-sm text-gray-500 mt-2">
               Searching {origin} → {destination} on {formatDate(depart_date)}
-            </p>
-          </div>
+          </p>
         </div>
       </div>
     );
@@ -525,35 +485,8 @@ function SearchResultsContent() {
                         />
                       </div>
                   </FilterSection>
-                  <FilterSection title="Departure/Arrival times">
-                     <div className="p-2 space-y-4">
-                        <div>
-                          <p className="text-sm text-center mb-2 text-muted-foreground">
-                              Departure time: {formatTime(selectedDepartureTime[0])} - {formatTime(selectedDepartureTime[1])}
-                          </p>
-                          <Slider
-                              min={departureTimeRange.min}
-                              max={departureTimeRange.max}
-                              step={15}
-                              value={selectedDepartureTime}
-                              onValueChange={setSelectedDepartureTime}
-                              minStepsBetweenThumbs={1}
-                          />
-                        </div>
-                         <div className="opacity-50">
-                          <p className="text-sm text-center mb-2 text-muted-foreground">
-                              Arrival time: 00:00 - 23:59
-                          </p>
-                          <Slider
-                              defaultValue={[0, 1440]}
-                              min={0}
-                              max={1440}
-                              step={15}
-                              minStepsBetweenThumbs={1}
-                              disabled
-                          />
-                        </div>
-                      </div>
+                  <FilterSection title="Departure/Arrival times" disabled>
+                     <p className="p-2 text-sm text-muted-foreground">This filter is currently disabled.</p>
                   </FilterSection>
                   
                    <FilterSection title="Connecting airports" disabled>
@@ -620,6 +553,48 @@ function SearchResultsContent() {
       </Card>
     );
   }
+
+  const renderContent = () => {
+    if (allFlights.length > 0 && sortedAndFilteredFlights.length === 0) {
+      return (
+        <div className="no-results">
+          <div className="empty-icon">✈️</div>
+          <h3>No flights match your filters</h3>
+          <p>Try adjusting your search criteria or clearing some filters.</p>
+          <Button onClick={handleResetFilters} className="mt-4">Clear All Filters</Button>
+        </div>
+      );
+    }
+
+    if (allFlights.length === 0) {
+      return (
+        <div className="no-results">
+          <div className="empty-icon">✈️</div>
+          <h3>No flights found</h3>
+          <p>We couldn't find any flights for the selected route and dates.</p>
+          <Button onClick={() => router.push('/')} className="mt-4">Try a New Search</Button>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="results-header">
+            <h3>Found {sortedAndFilteredFlights.length} flights</h3>
+        </div>
+        <div className="flights-grid">
+            {sortedAndFilteredFlights.map((flight) => (
+                <FlightCard 
+                    key={flight.id}
+                    flight={flight}
+                    onBookFlight={handleBookFlight} 
+                />
+            ))}
+        </div>
+      </>
+    );
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -691,78 +666,7 @@ function SearchResultsContent() {
 
           {/* Flights List */}
           <div className="lg:col-span-3">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Available Flights ({flightGroupsByOta.length})
-              </h2>
-              <p className="text-gray-600">
-                Best prices from multiple airlines & travel agencies
-              </p>
-            </div>
-
-            {flights.length > 0 && flightGroupsByOta.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                  <Filter className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    No flights match your filters
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Try adjusting your filters to see more results.
-                  </p>
-                  <Button onClick={handleResetFilters}>
-                    Clear All Filters
-                  </Button>
-                </div>
-            ) : flights.length === 0 && !loading ? (
-                <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                  <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    No flights match your search
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    We couldn't find any flights for the selected route and dates. Try a different search.
-                  </p>
-                  <Button onClick={() => router.push('/')}>
-                    Try a New Search
-                  </Button>
-                </div>
-            ) : (
-              <div className="space-y-4">
-                {flightGroupsByOta.map((group) => (
-                  <FlightCard 
-                    key={group.ota}
-                    otaName={group.ota}
-                    offers={group.flights}
-                    onBookFlight={handleBookFlight} 
-                    baggageFilter={baggageFilter} 
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Footer */}
-            {flightGroupsByOta.length > 0 && (
-              <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-                <div className="text-center">
-                  <p className="text-gray-600 mb-4">
-                    Showing {Math.min(flightGroupsByOta.length, 30)} of {flightGroupsByOta.length} unique flight routes
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button
-                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    >
-                      Back to Top
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push('/')}
-                    >
-                      New Search
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+             {renderContent()}
           </div>
         </div>
       </div>
@@ -774,9 +678,9 @@ export default function SearchResultsPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading search results...</p>
+        <div className="loading-state">
+          <div className="spinner"></div>
+          <p>Loading search results...</p>
         </div>
       </div>
     }>
