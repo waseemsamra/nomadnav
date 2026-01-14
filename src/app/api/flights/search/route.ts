@@ -80,41 +80,28 @@ async function fetchWithEndpoint(endpoint: string, params: URLSearchParams) {
 }
 
 async function searchWithStrategy(params: URLSearchParams) {
-    const endpoints = [
-        '/v2/prices/latest',
-        '/v2/prices/month-matrix',
-        '/v2/prices/week-matrix',
-    ];
+    const endpoint = '/v2/prices/latest';
     
-    for (const endpoint of endpoints) {
-        try {
-            console.log(`Attempting search with ${endpoint}...`);
-            const currentParams = new URLSearchParams(params);
-            
-            if (endpoint === '/v2/prices/latest') {
-                currentParams.set('sorting', 'price');
-                currentParams.set('show_to_affiliates', 'true');
-            } else if (endpoint.includes('matrix')) {
-                const departDate = currentParams.get('depart_date');
-                if (departDate) {
-                    currentParams.set('depart_date', departDate.substring(0, 7));
-                }
-            }
-
-            const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
-            
-            if (apiResponse.success && apiResponse.data.length > 0) {
-                console.log(`✓ Success with ${endpoint}. Found ${apiResponse.data.length} flights.`);
-                return apiResponse;
-            }
-            console.log(`No results from ${endpoint}.`);
-        } catch (e: any) {
-            console.warn(`${endpoint} failed:`, e.message);
+    try {
+        console.log(`Attempting search with ${endpoint}...`);
+        const currentParams = new URLSearchParams(params);
+        currentParams.set('sorting', 'price');
+        currentParams.set('show_to_affiliates', 'true');
+        
+        const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
+        
+        if (apiResponse.success && Array.isArray(apiResponse.data) && apiResponse.data.length > 0) {
+            console.log(`✓ Success with ${endpoint}. Found ${apiResponse.data.length} flights.`);
+            return apiResponse.data;
         }
+        console.log(`No results from ${endpoint}.`);
+    } catch (e: any) {
+        console.warn(`${endpoint} failed:`, e.message);
     }
     
-    return { success: false, data: [] };
+    return []; // Return empty array if strategy fails
 }
+
 
 function getMockOTAs(baseFlight: any) {
     if (!baseFlight || typeof baseFlight.price !== 'number') return [];
@@ -128,13 +115,13 @@ function getMockOTAs(baseFlight: any) {
 
     return mockGates.map(mock => {
       const newPrice = Math.round(baseFlight.price * mock.priceModifier);
-      // ** THE FIX **
-      // Correctly copy all properties from the base flight and override what's needed.
+      const uniqueId = `${baseFlight.id}-mock-${mock.gate}`;
+      
       return {
-        ...baseFlight, 
+        ...baseFlight,
         price: newPrice,
         gate: mock.gate,
-        id: `${baseFlight.id}-mock-${mock.gate}`, // Create a unique ID for the mock
+        id: uniqueId,
         link: '#', 
         is_mock: true
       };
@@ -146,13 +133,12 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
     if (!Array.isArray(flights)) return [];
     
     return flights
-        .filter(flight => flight && typeof flight.price === 'number') // Filter out flights with invalid price
+        .filter(flight => flight && typeof flight.price === 'number')
         .map((flight: any) => {
             const airlineCode = flight.airline_code || flight.airline;
             const airlineName = airlines[airlineCode] || airlineCode;
             const gate = flight.gate || flight.ota_code || 'unknown';
             
-            // Generate a unique ID if one doesn't exist
             const uniqueId = flight.id || `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
 
             const enrichedFlight = {
@@ -174,7 +160,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
                 is_mock: flight.is_mock || false,
             };
             return addEstimatedBaggagePrices(enrichedFlight);
-        }).filter(flight => flight !== null) as Flight[];
+        }).filter((flight): flight is Flight => flight !== null);
 }
 
 
@@ -206,8 +192,7 @@ export async function GET(req: NextRequest) {
     if (return_date) baseApiParams.set('return_date', return_date);
 
     try {
-        let apiResponse = await searchWithStrategy(new URLSearchParams(baseApiParams));
-        let allFlights: any[] = apiResponse.data || [];
+        let allFlights: any[] = await searchWithStrategy(new URLSearchParams(baseApiParams));
 
         if (allFlights.length === 0) {
             console.log('No flights on direct route, trying alternatives...');
@@ -226,10 +211,10 @@ export async function GET(req: NextRequest) {
                         alternativeSearches.push(searchWithStrategy(altParams));
                     }
                 }
-                const results = await Promise.allSettled(alternativeSearches);
+                const results = await Promise.all(alternativeSearches);
                 results.forEach(result => {
-                    if (result.status === 'fulfilled' && result.value.success) {
-                        allFlights.push(...result.value.data);
+                    if (result && result.length > 0) {
+                        allFlights.push(...result);
                     }
                 });
                 console.log(`Found ${allFlights.length} flights via alternative routes.`);
@@ -239,27 +224,24 @@ export async function GET(req: NextRequest) {
         const airlines = await getAirlinesData();
         let flightsWithDetails = processFlights(allFlights, airlines, currency);
         
+        // **CRITICAL FIX**: Only add mock data if there are REAL flights to base them on.
         if (flightsWithDetails.length > 0) {
             const uniqueGates = new Set(flightsWithDetails.map(f => f.gate).filter(Boolean));
             if (uniqueGates.size < 3) {
                 console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
+                // Sort by price and get the actual cheapest flight
                 const cheapestFlight = [...flightsWithDetails].sort((a,b) => a.price - b.price)[0];
                 
+                // **SAFETY CHECK**: Ensure cheapestFlight is not undefined
                 if (cheapestFlight) {
                     const mockRawFlights = getMockOTAs(cheapestFlight);
                     const processedMockFlights = processFlights(mockRawFlights, airlines, currency);
-                    // Add processed mock flights to the main list
                     flightsWithDetails.push(...processedMockFlights);
                 }
             }
         }
 
-
-        if (flightsWithDetails.length > 0) {
-            return NextResponse.json(flightsWithDetails);
-        } else {
-            return NextResponse.json([]);
-        }
+        return NextResponse.json(flightsWithDetails);
 
     } catch (error: any) {
         console.error('Proxy API Error:', error.response?.data || error.message);
