@@ -150,17 +150,18 @@ function SearchResultsContent() {
             depart_date: depart_date,
             return_date: return_date || undefined,
             passengers: parseInt(passengers),
-            currency: 'USD',
+            cabin_class: cabin_class,
             limit: 100,
         });
         
         console.log(`Fetched ${flightData.length} flights`);
         
+        // ** ATOMIC STATE UPDATE **
+        handleResetFilters();
+        
         if (flightData && flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
 
-          // ** ATOMIC STATE UPDATE **
-          // Calculate new ranges from the fresh data
           const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
           const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
           const maxPrice = Math.ceil(Math.max(...prices.filter(p => isFinite(p))));
@@ -169,15 +170,11 @@ function SearchResultsContent() {
           const minDuration = Math.min(...durations);
           const maxDuration = Math.max(...durations);
           
-          // Set all state related to the new data in one go
-          handleResetFilters();
-          
           setPriceRange({ min: minPrice, max: maxPrice });
           setSelectedPrice([minPrice, maxPrice]);
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
           
-          // Set flights LAST to trigger render after all filters are ready
           setAllFlights(flightData);
 
         } else {
@@ -256,17 +253,9 @@ function SearchResultsContent() {
     setSelectedStops(null);
     setSelectedOtas(null);
     setBaggageFilter('all');
-    
-    if (allFlights && allFlights.length > 0) {
-        setSelectedDuration([durationRange.min, durationRange.max]);
-        setSelectedPrice([priceRange.min, priceRange.max]);
-        setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
-    } else {
-        // Reset to initial values without depending on flight data
-        setSelectedDuration([0, 0]);
-        setSelectedPrice([0, 0]);
-        setSelectedDepartureTime([0, 1440]);
-    }
+    setSelectedDuration([durationRange.min, durationRange.max]);
+    setSelectedPrice([priceRange.min, priceRange.max]);
+    setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
   };
 
   const formatDuration = (minutes: number) => {
@@ -692,3 +681,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    

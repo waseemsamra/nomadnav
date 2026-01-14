@@ -56,6 +56,7 @@ export interface FlightSearchParams {
   currency?: string;
   trip_type?: 'oneway' | 'round';
   passengers?: number;
+  cabin_class?: string;
   limit?: number;
 }
 
@@ -182,6 +183,7 @@ class TravelpayoutsApiService {
         depart_date: params.depart_date,
         currency: params.currency || 'USD',
         limit: (params.limit || 50).toString(),
+        cabin_class: params.cabin_class || 'economy',
       });
 
       if (params.return_date) {
@@ -321,3 +323,5 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams, Gate };
+
+    
