@@ -343,11 +343,13 @@ function SearchResultsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Searching for flights...</p>
-          <p className="text-sm text-gray-500 mt-2">
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <div className="text-center p-8">
+          <div
+            className="w-16 h-16 border-4 border-primary border-t-transparent border-solid rounded-full animate-spin mx-auto"
+          ></div>
+          <p className="mt-4 text-lg font-semibold">Searching for the best flights...</p>
+          <p className="text-muted-foreground mt-2">
               Searching {origin} → {destination} on {formatDate(depart_date)}
           </p>
         </div>
@@ -557,10 +559,10 @@ function SearchResultsContent() {
   const renderContent = () => {
     if (allFlights.length > 0 && sortedAndFilteredFlights.length === 0) {
       return (
-        <div className="no-results">
-          <div className="empty-icon">✈️</div>
-          <h3>No flights match your filters</h3>
-          <p>Try adjusting your search criteria or clearing some filters.</p>
+        <div className="text-center p-8 bg-gray-50 rounded-lg">
+          <div className="text-4xl mb-4">✈️</div>
+          <h3 className="text-xl font-semibold">No flights match your filters</h3>
+          <p className="text-muted-foreground">Try adjusting your search criteria or clearing some filters.</p>
           <Button onClick={handleResetFilters} className="mt-4">Clear All Filters</Button>
         </div>
       );
@@ -568,21 +570,21 @@ function SearchResultsContent() {
 
     if (allFlights.length === 0) {
       return (
-        <div className="no-results">
-          <div className="empty-icon">✈️</div>
-          <h3>No flights found</h3>
-          <p>We couldn't find any flights for the selected route and dates.</p>
+        <div className="text-center p-8 bg-gray-50 rounded-lg">
+          <div className="text-4xl mb-4">✈️</div>
+          <h3 className="text-xl font-semibold">No flights found</h3>
+          <p className="text-muted-foreground">We couldn't find any flights for the selected route and dates.</p>
           <Button onClick={() => router.push('/')} className="mt-4">Try a New Search</Button>
         </div>
       );
     }
 
     return (
-      <>
-        <div className="results-header">
-            <h3>Found {sortedAndFilteredFlights.length} flights</h3>
+      <div className='space-y-4'>
+        <div className="p-4 bg-gray-50 rounded-lg text-sm text-muted-foreground">
+            <p>Showing {sortedAndFilteredFlights.length} of {allFlights.length} flights. All prices are in USD and include estimated taxes.</p>
         </div>
-        <div className="flights-grid">
+        <div className="space-y-4">
             {sortedAndFilteredFlights.map((flight) => (
                 <FlightCard 
                     key={flight.id}
@@ -591,7 +593,7 @@ function SearchResultsContent() {
                 />
             ))}
         </div>
-      </>
+      </div>
     );
   };
 
@@ -600,7 +602,7 @@ function SearchResultsContent() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="container py-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">
@@ -657,7 +659,7 @@ function SearchResultsContent() {
 
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Filter Sidebar (Desktop) */}
             <div className="hidden lg:block">
@@ -678,9 +680,11 @@ export default function SearchResultsPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Loading search results...</p>
+        <div className="text-center p-8">
+            <div
+                className="w-16 h-16 border-4 border-primary border-t-transparent border-solid rounded-full animate-spin mx-auto"
+            ></div>
+            <p className="mt-4 text-lg font-semibold">Loading search results...</p>
         </div>
       </div>
     }>

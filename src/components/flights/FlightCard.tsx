@@ -1,9 +1,13 @@
 
 'use client';
 import React from 'react';
+import Image from 'next/image';
 import { type Flight } from '@/services/travelpayoutsApi';
 import { OTA_DATA } from '@/lib/ota-data';
-import { ALLIANCE_DATA } from '@/lib/alliance-data';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Clock, Plane, ShoppingCart, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface FlightCardProps {
   flight: Flight;
@@ -16,29 +20,11 @@ const getOtaInfo = (code: string | undefined) => {
     return ota ? { name: ota.name, code: ota.code } : { name: code, code };
 };
 
-const getAirlineName = (code: string | undefined) => {
-    if (!code) return 'Unknown Airline';
-    
-    // Simple mock data for airline names, can be expanded
-    const MOCK_AIRLINE_NAMES: { [key:string]: string} = {
-        'G9': 'Air Arabia',
-        'EK': 'Emirates',
-        'QR': 'Qatar Airways',
-    };
-    if (MOCK_AIRLINE_NAMES[code]) return MOCK_AIRLINE_NAMES[code];
-    
-    // A real implementation might search a larger local dataset or use the API response's airline name
-    return code;
-}
-
-const formatDateTime = (dateString: string | undefined) => {
+const formatTime = (dateString: string | undefined) => {
     if (!dateString || dateString === 'N/A') return 'N/A';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
     } catch (e) {
       return dateString;
     }
@@ -56,74 +42,99 @@ const formatDuration = (minutes: number | undefined) => {
 
 
 const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
-    const price = flight.price || 'N/A';
-    const airlineCode = flight.airline_code || flight.airline;
-    const airlineName = flight.airline || getAirlineName(airlineCode);
+    const price = flight.price || 0;
+    const airlineCode = flight.airline_code || flight.airline || '??';
+    const airlineName = flight.airline || 'Unknown Airline';
     const ota = getOtaInfo(flight.gate);
     const origin = flight.origin || '???';
     const destination = flight.destination || '???';
     const stops = flight.transfers ?? 0;
-    const departure = flight.departure_at || 'N/A';
-    const duration = flight.duration;
-    const link = flight.link || '#';
+    const departureTime = formatTime(flight.departure_at);
+    const arrivalTime = formatTime(flight.arrival_at);
+    const duration = formatDuration(flight.duration);
+    const flightNumber = `${airlineCode} ${flight.flight_number || ''}`.trim();
+    const isMock = flight.is_mock || false;
 
     return (
-      <div className="flight-card" data-price={price} data-stops={stops} data-duration={duration}>
-        <div className="card-header">
-          <div className="price-section">
-            <span className="price">${price}</span>
-            <span className="per-person">per person</span>
-          </div>
-          <div className="ota-section">
-            <img 
-                 src={`https://pics.avs.io/40/40/${ota.code}.png`} 
-                 alt={ota.name}
-                 className="ota-logo"
-                 onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40/cccccc/666666?text=OTA' }}/>
-            <span className="ota-name">{ota.name}</span>
-          </div>
-        </div>
-        
-        <div className="card-body">
-          <div className="route">
-            <div className="city">{origin}</div>
-            <div className="arrow">→</div>
-            <div className="city">{destination}</div>
-          </div>
-          
-          <div className="details">
-            <div className="detail-item">
-              <span className="label">Airline:</span>
-              <span className="value">{airlineName}</span>
-            </div>
-            <div className="detail-item">
-              <span className="label">Departure:</span>
-              <span className="value">{formatDateTime(departure)}</span>
-            </div>
-            <div className="detail-item">
-              <span className="label">Duration:</span>
-              <span className="value">{formatDuration(duration)}</span>
-            </div>
-            <div className="detail-item">
-              <span className="label">Stops:</span>
-              <span className="value">{stops === 0 ? 'Direct' : `${stops} stop${stops > 1 ? 's' : ''}`}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="card-footer">
-          <a href={link} 
-             target="_blank" 
-             rel="noopener noreferrer"
-             className="book-button"
-             onClick={() => onBookFlight(flight)}>
-            Select Flight
-          </a>
-          <button className="details-button" onClick={() => alert('Flight details feature coming soon!')}>
-            Details
-          </button>
-        </div>
-      </div>
+        <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    {/* Airline Info */}
+                    <div className="md:col-span-3 flex items-center gap-3">
+                        <Image 
+                            src={`https://pics.avs.io/80/40/${airlineCode}.png`}
+                            alt={airlineName}
+                            width={80}
+                            height={40}
+                            className="rounded-md object-contain"
+                            unoptimized
+                        />
+                        <div>
+                            <p className="font-semibold text-sm">{airlineName}</p>
+                            <p className="text-xs text-muted-foreground">{flightNumber}</p>
+                        </div>
+                    </div>
+
+                    {/* Flight Times */}
+                    <div className="md:col-span-4 flex items-center justify-between md:justify-center gap-2">
+                        <div>
+                            <p className="font-bold text-lg">{departureTime}</p>
+                            <p className="text-sm font-medium text-muted-foreground">{origin}</p>
+                        </div>
+                        <div className="flex-grow text-center px-2">
+                            <p className="text-xs text-muted-foreground">{duration}</p>
+                            <div className="w-full bg-gray-200 rounded-full h-1 my-1">
+                                <div className="bg-primary h-1 rounded-full w-full"></div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{stops === 0 ? 'Nonstop' : `${stops} stop${stops > 1 ? 's' : ''}`}</p>
+                        </div>
+                        <div>
+                            <p className="font-bold text-lg text-right">{arrivalTime}</p>
+                            <p className="text-sm font-medium text-muted-foreground text-right">{destination}</p>
+                        </div>
+                    </div>
+
+                    {/* Baggage Info */}
+                    <div className="md:col-span-2 text-center text-xs text-muted-foreground space-y-1">
+                        <p>
+                            <User className="w-3 h-3 inline mr-1" />
+                            {flight.baggage.hand.has_baggage ? 'Carry-on included' : `Carry-on from $${flight.baggage.hand.price}`}
+                        </p>
+                        <p>
+                            <Plane className="w-3 h-3 inline mr-1" />
+                            {flight.baggage.checked.has_baggage ? 'Checked bag included' : `Checked bag from $${flight.baggage.checked.price}`}
+                        </p>
+                    </div>
+
+                    {/* Price and Booking */}
+                    <div className="md:col-span-3 flex flex-col items-end gap-2">
+                        <div className="text-right">
+                            <p className="text-2xl font-bold">${price}</p>
+                            <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                                <Image 
+                                    src={`https://pics.avs.io/20/20/${ota.code}.png`} 
+                                    alt={ota.name}
+                                    width={16} height={16}
+                                    className="rounded-sm"
+                                    unoptimized
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                               <span>Sold by {ota.name}</span>
+                                {isMock && <Badge variant="outline" className="text-xs">Demo</Badge>}
+                            </div>
+                        </div>
+                        <Button 
+                            size="sm"
+                            onClick={() => onBookFlight(flight)}
+                            className="w-full md:w-auto"
+                        >
+                           Select Flight
+                        </Button>
+                    </div>
+
+                </div>
+            </CardContent>
+        </Card>
     );
 };
 
