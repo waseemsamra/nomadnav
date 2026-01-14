@@ -144,7 +144,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
     if (!Array.isArray(flights)) return [];
     
     return flights.map((flight: any) => {
-        const airlineCode = flight.airline;
+        const airlineCode = flight.airline_code;
         const airlineName = airlines[airlineCode] || airlineCode;
         
         // A combination of gate, price, and flight details usually guarantees uniqueness.
@@ -264,5 +264,3 @@ altParams.set('destination', altDest);
         );
     }
 }
-
-    
