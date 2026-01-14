@@ -218,66 +218,6 @@ class TravelpayoutsApiService {
     }
 
 
-    public filterAndSortFlights({
-        flights,
-        filters,
-        selectedAirlines,
-        selectedStops,
-        baggageFilter,
-        selectedDuration,
-        selectedPrice,
-        selectedDepartureTime,
-        selectedOtas,
-    }: {
-        flights: Flight[],
-        filters: { sortBy: 'price' | 'duration' | 'departure' },
-        selectedAirlines: string[] | null,
-        selectedStops: number[] | null,
-        baggageFilter: 'all' | 'without' | 'with',
-        selectedDuration: number[],
-        selectedPrice: number[],
-        selectedDepartureTime: number[],
-        selectedOtas: string[] | null,
-    }): Flight[] {
-        let filtered = [...flights]
-            .filter(flight => selectedAirlines === null || selectedAirlines.includes(flight.airline_code))
-            .filter(flight => selectedStops === null || selectedStops.includes(flight.transfers))
-            .filter(flight => selectedOtas === null || !flight.gate || selectedOtas.includes(flight.gate))
-            .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
-            .filter(flight => {
-                const price = this.getFlightDisplayPrice(flight, baggageFilter === 'all' ? 'without' : baggageFilter);
-                return price >= selectedPrice[0] && price <= selectedPrice[1];
-            })
-            .filter(flight => {
-                try {
-                    const departureDate = new Date(flight.departure_at);
-                    const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
-                    return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
-                } catch (e) {
-                    return true; // Don't filter if date is invalid
-                }
-            });
-
-        switch (filters.sortBy) {
-            case 'price':
-                filtered.sort((a, b) => this.getFlightDisplayPrice(a, baggageFilter) - this.getFlightDisplayPrice(b, baggageFilter));
-                break;
-            case 'duration':
-                filtered.sort((a, b) => (a.duration || 9999) - (b.duration || 9999));
-                break;
-            case 'departure':
-                filtered.sort((a, b) => {
-                    try {
-                        return new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime();
-                    } catch(e) {
-                        return 0;
-                    }
-                });
-                break;
-        }
-        return filtered;
-    }
-
   // ==================== HELPER METHODS ====================
   
   private async getAirlinesData() {

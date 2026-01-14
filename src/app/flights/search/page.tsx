@@ -10,7 +10,7 @@ import {
   X,
   Calendar,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, getHours, getMinutes } from 'date-fns';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -141,6 +141,7 @@ function SearchResultsContent() {
         return;
       }
       setLoading(true);
+      setFlights([]); // Clear previous results
       
       try {
         const flightData = await travelpayoutsApi.searchFlights({
@@ -296,17 +297,54 @@ function SearchResultsContent() {
   };
   
   const sortedAndFilteredFlights = useMemo(() => {
-    return travelpayoutsApi.filterAndSortFlights({
-        flights,
-        filters,
-        selectedAirlines,
-        selectedStops,
-        baggageFilter,
-        selectedDuration,
-        selectedPrice,
-        selectedDepartureTime,
-        selectedOtas,
+    let filtered = [...flights];
+
+    // Apply filters only if a selection has been made (is not null)
+    if (selectedAirlines) {
+        filtered = filtered.filter(flight => selectedAirlines.includes(flight.airline_code));
+    }
+    if (selectedStops) {
+        filtered = filtered.filter(flight => selectedStops.includes(flight.transfers));
+    }
+    if (selectedOtas) {
+        filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
+    }
+
+    // Apply range filters
+    filtered = filtered.filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
+    filtered = filtered.filter(flight => {
+        const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter === 'all' ? 'without' : baggageFilter);
+        return price >= selectedPrice[0] && price <= selectedPrice[1];
     });
+    filtered = filtered.filter(flight => {
+        try {
+            const departureDate = new Date(flight.departure_at);
+            const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
+            return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
+        } catch (e) {
+            return true; // Don't filter if date is invalid
+        }
+    });
+
+    // Apply sorting
+    switch (filters.sortBy) {
+        case 'price':
+            filtered.sort((a, b) => travelpayoutsApi.getFlightDisplayPrice(a, baggageFilter) - travelpayoutsApi.getFlightDisplayPrice(b, baggageFilter));
+            break;
+        case 'duration':
+            filtered.sort((a, b) => (a.duration || 9999) - (b.duration || 9999));
+            break;
+        case 'departure':
+            filtered.sort((a, b) => {
+                try {
+                    return new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime();
+                } catch(e) {
+                    return 0;
+                }
+            });
+            break;
+    }
+    return filtered;
   }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
   
   const flightGroupsByOta = useMemo(() => {
@@ -738,6 +776,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
     
     
