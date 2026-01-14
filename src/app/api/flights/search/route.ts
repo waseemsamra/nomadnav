@@ -146,8 +146,9 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
     return flights.map((flight: any) => {
         const airlineCode = flight.airline_code || flight.airline;
         const airlineName = airlines[airlineCode] || airlineCode;
+        const gate = flight.gate || flight.ota_code || 'unknown';
         
-        const uniqueId = `${flight.gate || ''}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
+        const uniqueId = `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
 
         const enrichedFlight = {
             id: uniqueId,
@@ -164,7 +165,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             duration: flight.duration,
             link: flight.link ? `https://www.aviasales.com${flight.link}?marker=${MARKER}` : '#',
             currency: currency,
-            gate: flight.gate,
+            gate: gate,
             is_mock: flight.is_mock || false,
         };
         return addEstimatedBaggagePrices(enrichedFlight);
@@ -231,12 +232,14 @@ export async function GET(req: NextRequest) {
         }
         
         if (allFlights.length > 0) {
-            const uniqueGates = new Set(allFlights.map(f => f.gate));
+            const uniqueGates = new Set(allFlights.map(f => f.gate).filter(Boolean));
             if (uniqueGates.size < 3) {
                 console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
                 const cheapestFlight = allFlights.sort((a,b) => a.price - b.price)[0];
-                const mockFlights = getMockOTAs(cheapestFlight);
-                allFlights.push(...mockFlights);
+                if (cheapestFlight) {
+                    const mockFlights = getMockOTAs(cheapestFlight);
+                    allFlights.push(...mockFlights);
+                }
             }
         }
 

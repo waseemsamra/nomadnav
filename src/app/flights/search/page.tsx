@@ -61,16 +61,17 @@ function SearchResultsContent() {
 
   // Memoized options derived from flight data
   const airlineOptions = useMemo(() => {
-      if (flights.length === 0) return [];
+      if (!flights || flights.length === 0) return [];
       const uniqueAirlines = [...new Map(flights.map(f => [f.airline_code, { code: f.airline_code, name: f.airline }])).values()];
       return uniqueAirlines.sort((a,b) => a.name.localeCompare(b.name));
   }, [flights]);
 
   const stopOptions = useMemo(() => {
-    if (flights.length === 0) return [];
+    if (!flights || flights.length === 0) return [];
     const stopsMap = new Map<number, number>();
     flights.forEach(flight => {
         const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
+        if (typeof flight.transfers !== 'number') return;
         const currentMinPrice = stopsMap.get(flight.transfers);
         if (currentMinPrice === undefined || price < currentMinPrice) {
             stopsMap.set(flight.transfers, price);
@@ -86,7 +87,7 @@ function SearchResultsContent() {
   }, [flights, baggageFilter]);
   
   const otaOptions = useMemo(() => {
-      if (flights.length === 0) return [];
+      if (!flights || flights.length === 0) return [];
       const allOtasFromFlights = [...new Set(flights.map(f => f.gate).filter(Boolean))];
       const gatePrices: { [key: string]: number } = {};
       
@@ -115,7 +116,7 @@ function SearchResultsContent() {
 
 
   const baggagePriceOptions = useMemo(() => {
-      if (flights.length === 0) return { without: null, with: null };
+      if (!flights || flights.length === 0) return { without: null, with: null };
       const minWithout = Math.min(...flights.map(f => f.price));
       const minWith = Math.min(...flights.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'with')));
       return {
@@ -155,7 +156,7 @@ function SearchResultsContent() {
         
         console.log(`Fetched ${flightData.length} flights`);
         
-        if (flightData.length > 0) {
+        if (flightData && flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
 
           // ** ATOMIC STATE UPDATE **
@@ -164,7 +165,7 @@ function SearchResultsContent() {
           const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
           const maxPrice = Math.ceil(Math.max(...prices.filter(p => isFinite(p))));
           
-          const durations = flightData.map(f => f.duration);
+          const durations = flightData.map(f => f.duration).filter(d => typeof d === 'number');
           const minDuration = Math.min(...durations);
           const maxDuration = Math.max(...durations);
           
@@ -201,7 +202,7 @@ function SearchResultsContent() {
   
 
   const handleBookFlight = (flight: Flight) => {
-    if (flight.link) {
+    if (flight.link && flight.link !== '#') {
       window.open(flight.link, '_blank', 'noopener,noreferrer');
       toast.success('Opening booking page...');
     } else {
@@ -260,7 +261,7 @@ function SearchResultsContent() {
     setSelectedOtas(null);
     setBaggageFilter('all');
     
-    if (flights.length > 0) {
+    if (flights && flights.length > 0) {
         setSelectedDuration([durationRange.min, durationRange.max]);
         setSelectedPrice([priceRange.min, priceRange.max]);
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
@@ -273,6 +274,7 @@ function SearchResultsContent() {
   };
 
   const formatDuration = (minutes: number) => {
+    if (typeof minutes !== 'number' || isNaN(minutes)) return 'N/A';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
@@ -296,27 +298,33 @@ function SearchResultsContent() {
   };
   
   const sortedAndFilteredFlights = useMemo(() => {
+    if (!flights) return [];
     let filtered = [...flights];
 
     // Apply filters only if a selection has been made (is not null)
     if (selectedAirlines !== null) {
-      filtered = filtered.filter(flight => selectedAirlines.includes(flight.airline_code));
+      filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
     }
     if (selectedStops !== null) {
-      filtered = filtered.filter(flight => selectedStops.includes(flight.transfers));
+      filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
     }
     if (selectedOtas !== null) {
       filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
     }
 
     // Apply range filters
-    filtered = filtered.filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
-    filtered = filtered.filter(flight => {
-        const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter === 'all' ? 'without' : baggageFilter);
-        return price >= selectedPrice[0] && price <= selectedPrice[1];
-    });
+    if (durationRange.max > 0) {
+      filtered = filtered.filter(flight => typeof flight.duration === 'number' && flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
+    }
+    if (priceRange.max > 0) {
+      filtered = filtered.filter(flight => {
+          const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
+          return price >= selectedPrice[0] && price <= selectedPrice[1];
+      });
+    }
     filtered = filtered.filter(flight => {
         try {
+            if (!flight.departure_at) return true;
             const departureDate = new Date(flight.departure_at);
             const departureMinutes = getHours(departureDate) * 60 + getMinutes(departureDate);
             return departureMinutes >= selectedDepartureTime[0] && departureMinutes <= selectedDepartureTime[1];
@@ -336,6 +344,7 @@ function SearchResultsContent() {
         case 'departure':
             filtered.sort((a, b) => {
                 try {
+                    if (!a.departure_at || !b.departure_at) return 0;
                     return new Date(a.departure_at).getTime() - new Date(b.departure_at).getTime();
                 } catch(e) {
                     return 0;
@@ -344,10 +353,10 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
+  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas, durationRange, priceRange]);
   
   const flightGroupsByOta = useMemo(() => {
-    if (sortedAndFilteredFlights.length === 0) return [];
+    if (!sortedAndFilteredFlights || sortedAndFilteredFlights.length === 0) return [];
 
     const groups = new Map<string, Flight[]>();
     
@@ -775,8 +784,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-    
-    
-
-    
-

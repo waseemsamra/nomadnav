@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
@@ -44,6 +45,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
 
     // This is the core logic change: Sort ALL offers based on the current baggage preference.
     const sortedOffers = useMemo(() => {
+        if (!offers) return [];
         return [...offers].sort((a, b) => 
             travelpayoutsApi.getFlightDisplayPrice(a, actualBaggagePref) - travelpayoutsApi.getFlightDisplayPrice(b, actualBaggagePref)
         );
@@ -54,20 +56,16 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
     // Other offers are the rest of the list.
     const otherOffers = sortedOffers.slice(1);
 
+    if (!cheapestOffer) {
+        return null; // Don't render anything if there's no offer
+    }
+
     const displayPrice = (flight: Flight): number => {
         return Math.round(travelpayoutsApi.getFlightDisplayPrice(flight, actualBaggagePref));
     };
 
     const formatTime = (dateString: string | Date | undefined) => {
         if (!dateString) return 'N/A';
-        if (typeof dateString === 'string' && dateString.includes('T')) {
-            try {
-                const timePart = dateString.split('T')[1];
-                return timePart.substring(0, 5);
-            } catch {
-                // Fallback for unexpected formats
-            }
-        }
         try {
             const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
             if (!isValid(date)) return 'N/A';
@@ -82,7 +80,8 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
         if (!isValid(date)) return 'N/A';
         return format(date, 'd MMM').toUpperCase();
     }
-    const formatDuration = (minutes: number) => {
+    const formatDuration = (minutes: number | undefined) => {
+        if (typeof minutes !== 'number' || isNaN(minutes)) return 'N/A';
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
         return `${hours}h ${mins}m`;
@@ -90,10 +89,12 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
     
     const arrivalTime = useMemo(() => {
       if (cheapestOffer.arrival_at) {
-        const apiArrival = parseISO(cheapestOffer.arrival_at);
-        if(isValid(apiArrival)) return apiArrival;
+        try {
+          const apiArrival = parseISO(cheapestOffer.arrival_at);
+          if(isValid(apiArrival)) return apiArrival;
+        } catch { /* ignore invalid date */ }
       }
-      if (!cheapestOffer.departure_at || !cheapestOffer.duration) return undefined;
+      if (!cheapestOffer.departure_at || typeof cheapestOffer.duration !== 'number') return undefined;
       try {
           const departure = parseISO(cheapestOffer.departure_at);
           if(!isValid(departure)) return undefined;
@@ -104,7 +105,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
     }, [cheapestOffer.arrival_at, cheapestOffer.departure_at, cheapestOffer.duration]);
 
     const handleCopyLink = () => {
-        if (cheapestOffer.is_mock) {
+        if (cheapestOffer.is_mock || !cheapestOffer.link || cheapestOffer.link === '#') {
             toast({ variant: 'destructive', title: "Demo Link", description: "This is a mock offer and does not have a real booking link." });
             return;
         }
@@ -142,6 +143,9 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
         }
         onBookFlight(flight);
     }
+    
+    const transfers = cheapestOffer.transfers ?? 0;
+    const baggagePrice = cheapestOffer.baggage?.checked?.price ?? 50;
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
@@ -158,6 +162,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                                     height={50}
                                     className='rounded-md border bg-white'
                                     unoptimized
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
                                 <div className='flex-1'>
                                     <p className='font-bold text-lg'>{otaInfo.name}</p>
@@ -191,15 +196,16 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                                     <AirArabiaLogo />
                                 ) : (
                                     <Image
-                                        src={`https://pics.aviasales.com/160/80/${cheapestOffer.airline_code}.png`}
-                                        alt={`${cheapestOffer.airline} logo`}
+                                        src={`https://pics.aviasales.com/160/80/${cheapestOffer.airline_code || ''}.png`}
+                                        alt={`${cheapestOffer.airline || ''} logo`}
                                         width={120}
                                         height={40}
                                         className="object-contain"
                                         unoptimized
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
                                 )}
-                                {cheapestOffer.return_at && new Date(cheapestOffer.return_at).getTime() !== new Date(cheapestOffer.departure_at).getTime() && <Badge variant="secondary" className="ml-auto">Round Trip</Badge>}
+                                {cheapestOffer.return_at && cheapestOffer.return_at !== cheapestOffer.departure_at && <Badge variant="secondary" className="ml-auto">Round Trip</Badge>}
                                 <ChevronDown className={cn("ml-auto h-5 w-5 transition-transform", isOpen && "rotate-180")} />
                             </div>
 
@@ -219,10 +225,10 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                                         <div className="relative flex justify-between items-center">
                                             <span className="block w-2.5 h-2.5 bg-gray-500 rounded-full border-2 border-white"></span>
                                             <div className="text-xs text-gray-500 uppercase absolute left-1/2 -translate-x-1/2 top-2.5">
-                                            {cheapestOffer.transfers === 0 ? 'Direct Flight' : `${cheapestOffer.transfers} stop(s)`}
+                                            {transfers === 0 ? 'Direct Flight' : `${transfers} stop(s)`}
                                             </div>
-                                            {cheapestOffer.transfers > 0 && 
-                                                Array.from({ length: cheapestOffer.transfers }).map((_, i) => (
+                                            {transfers > 0 && 
+                                                Array.from({ length: transfers }).map((_, i) => (
                                                 <span key={i} className="block w-1.5 h-1.5 bg-gray-400 rounded-full border-2 border-white"></span>
                                                 ))
                                             }
@@ -304,7 +310,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                                         disabled={baggageFilter !== 'all'}
                                     >
                                         <Briefcase className="w-5 h-5 mx-auto text-gray-500" />
-                                        <p className="text-sm mt-1 font-semibold">With checked baggage (+${cheapestOffer.baggage.checked.price})</p>
+                                        <p className="text-sm mt-1 font-semibold">With checked baggage (+${baggagePrice})</p>
                                     </button>
                                 </div>
                             </div>
@@ -317,12 +323,13 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                                             <AirArabiaLogo />
                                         ) : (
                                             <Image
-                                                src={`https://pics.aviasales.com/160/80/${cheapestOffer.airline_code}.png`}
-                                                alt={`${cheapestOffer.airline} logo`}
+                                                src={`https://pics.aviasales.com/160/80/${cheapestOffer.airline_code || ''}.png`}
+                                                alt={`${cheapestOffer.airline || ''} logo`}
                                                 width={60}
                                                 height={20}
                                                 className="object-contain"
                                                 unoptimized
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                             />
                                         )}
                                         <div>
@@ -339,7 +346,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ otaName, offers, onBookFlight, 
                             <div>
                                 <Label htmlFor={`copy-link-${cheapestOffer.id}`} className='text-muted-foreground'>Copy link</Label>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <Input id={`copy-link-${cheapestOffer.id}`} value={cheapestOffer.link} readOnly className="text-xs" />
+                                    <Input id={`copy-link-${cheapestOffer.id}`} value={cheapestOffer.link || ''} readOnly className="text-xs" />
                                     <Button size="icon" variant="outline" onClick={handleCopyLink}>
                                         <Copy className="h-4 w-4" />
                                     </Button>
