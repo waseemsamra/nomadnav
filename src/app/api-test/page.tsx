@@ -163,7 +163,7 @@ export default function ApiTestPage() {
 
     const flightsHTML = flights.map((flight, index) => {
         const price = flight.price || 'N/A';
-        const airline = flight.airline_code || flight.airline || 'Unknown';
+        const airlineCode = flight.airline_code || flight.airline || 'Unknown';
         const ota = flight.gate || 'OTA';
         const origin = flight.origin || '???';
         const destination = flight.destination || '???';
@@ -195,7 +195,7 @@ export default function ApiTestPage() {
                 ${ota}
                 </div>
                 <div style="font-size: 14px; color: #666;">
-                ${airline}
+                ${airlineCode}
                 </div>
             </div>
             </div>
@@ -285,10 +285,110 @@ export default function ApiTestPage() {
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // NUCLEAR OPTION - This WILL display flights
+  function nuclearDisplay(flights: Flight[]) {
+    console.log('💥 NUCLEAR DISPLAY ACTIVATED');
+    
+    // Create a completely new container that will definitely show
+    const nuclearContainer = document.createElement('div');
+    nuclearContainer.id = 'nuclear-flight-results-' + Date.now();
+    nuclearContainer.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      border: 3px solid #ff0000;
+      border-radius: 10px;
+      padding: 20px;
+      z-index: 999999;
+      box-shadow: 0 0 30px rgba(255,0,0,0.5);
+      font-family: Arial, sans-serif;
+    `;
+    
+    // Create close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '× CLOSE';
+    closeBtn.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff0000;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: bold;
+    `;
+    closeBtn.onclick = () => nuclearContainer.remove();
+    
+    // Create header
+    const header = document.createElement('div');
+    header.innerHTML = `
+      <h2 style="color: #ff0000; margin: 0 0 20px 0;">
+        🚨 FLIGHTS FOUND (${flights.length})
+      </h2>
+      <p style="color: #666; margin-bottom: 20px;">
+        These flights were found but not displaying properly.
+      </p>
+    `;
+    
+    // Create flights list
+    const flightsList = document.createElement('div');
+    flights.forEach(flight => {
+      const flightDiv = document.createElement('div');
+      flightDiv.style.cssText = `
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #f9f9f9;
+      `;
+      
+      flightDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between;">
+          <div>
+            <span style="font-size: 24px; font-weight: bold; color: #1a73e8;">
+              $${flight.price || 'N/A'}
+            </span>
+            <div style="font-size: 12px; color: #666;">per person</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: bold;">${flight.gate || 'OTA'}</div>
+            <div style="color: #666;">${flight.airline || 'Airline'}</div>
+          </div>
+        </div>
+        <div style="margin: 10px 0; padding: 10px; background: #e8f0fe; border-radius: 5px;">
+          <div style="text-align: center; font-weight: bold;">
+            ${flight.origin || 'FROM'} → ${flight.destination || 'TO'}
+          </div>
+        </div>
+      `;
+      
+      flightsList.appendChild(flightDiv);
+    });
+    
+    // Assemble everything
+    nuclearContainer.appendChild(closeBtn);
+    nuclearContainer.appendChild(header);
+    nuclearContainer.appendChild(flightsList);
+    
+    // Add to page
+    document.body.appendChild(nuclearContainer);
+    
+    console.log('✅ Nuclear display activated!');
+    return nuclearContainer;
+  }
+
   const testFlightDisplay = () => {
     console.log('🧪 Testing flight display...');
     
-    const testFlights = [
+    const testFlightsData: Flight[] = [
       {
         id: 'test1',
         price: 163,
@@ -343,7 +443,7 @@ export default function ApiTestPage() {
     ];
 
     if (typeof displayFlightsGuaranteed === 'function') {
-      displayFlightsGuaranteed(testFlights);
+      displayFlightsGuaranteed(testFlightsData);
       toast.success('Test flights displayed! Check the page.');
     } else {
       toast.error('displayFlightsGuaranteed not found. Copy Step 1 again.');
@@ -404,13 +504,20 @@ export default function ApiTestPage() {
       console.log(`API returned ${flights?.length || 0} flights`);
       
       displayFlightsGuaranteed(flights);
+
+      // NUCLEAR FALLBACK
+      // If the container is still empty after a successful call, something is wrong with the display function
+      const resultsContainer = document.getElementById('flight-results');
+      if (flights && flights.length > 0 && resultsContainer && resultsContainer.children.length <= 1) {
+        console.warn('Regular display seems to have failed. Activating Nuclear Option.');
+        nuclearDisplay(flights);
+      }
       
     } catch (error: any) {
       console.error('Search failed:', error);
       
-      // We need a standalone error message function.
-      const container = document.getElementById('flight-results') || document.body;
-      container.innerHTML = `
+      const errorContainer = document.getElementById('flight-results') || document.body;
+      errorContainer.innerHTML = `
           <div style="
           background: #fef2f2;
           border: 1px solid #fecaca;
@@ -425,64 +532,6 @@ export default function ApiTestPage() {
           <p>${error.message}</p>
           </div>
       `;
-      
-      setTimeout(() => {
-        console.log('Showing sample data for debugging...');
-        const sampleFlights: Flight[] = [
-          {
-            id: 'debug1',
-            price: 163,
-            airline: 'Flydubai',
-            airline_code: 'FZ',
-            flight_number: '334',
-            gate: 'MYTR',
-            origin: 'KHI',
-            destination: 'DXB',
-            departure_at: '2024-12-20T03:00:00Z',
-            duration: 145,
-            transfers: 0,
-            link: '#',
-            return_at: '',
-            baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: false, price: 50}},
-            currency: 'USD',
-          },
-          {
-            id: 'debug2',
-            price: 187,
-            airline: 'Flydubai',
-            airline_code: 'FZ',
-            flight_number: '330',
-            gate: 'CITY',
-            origin: 'KHI',
-            destination: 'DXB',
-            departure_at: '2024-12-20T08:30:00Z',
-            duration: 135,
-            transfers: 0,
-            link: '#',
-            return_at: '',
-            baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: false, price: 50}},
-            currency: 'USD',
-          }
-        ];
-        
-        displayFlightsGuaranteed(sampleFlights);
-        
-        const debugDiv = document.createElement('div');
-        debugDiv.innerHTML = `
-          <div style="
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            padding: 10px;
-            margin-top: 20px;
-            border-radius: 5px;
-            font-size: 12px;
-            color: #856404;
-          ">
-            <strong>Debug Info:</strong> Showing sample data. API returned error: ${error.message}
-          </div>
-        `;
-        container.appendChild(debugDiv);
-      }, 2000);
     }
   }
 
@@ -814,3 +863,5 @@ export default function ApiTestPage() {
     </div>
   );
 }
+
+    
