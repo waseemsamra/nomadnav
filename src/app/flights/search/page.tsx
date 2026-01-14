@@ -257,6 +257,9 @@ function SearchResultsContent() {
         setSelectedDuration([durationRange.min, durationRange.max]);
         setSelectedPrice([priceRange.min, priceRange.max]);
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
+    } else if (!resetFlights) {
+        // Just reset filter states, but not the ranges which will be set by the new data
+        return;
     } else {
         // Reset to initial values without depending on flight data
         setSelectedDuration([0, 0]);
@@ -731,3 +734,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
