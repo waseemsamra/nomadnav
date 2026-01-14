@@ -1,5 +1,4 @@
 
-
 import axios from 'axios';
 import { getHours, getMinutes } from 'date-fns';
 import { OTA_DATA } from '@/lib/ota-data';
