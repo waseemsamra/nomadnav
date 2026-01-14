@@ -117,7 +117,7 @@ async function searchWithStrategy(params: URLSearchParams) {
 }
 
 function getMockOTAs(baseFlight: any) {
-    if (!baseFlight) return [];
+    if (!baseFlight || typeof baseFlight.price !== 'number') return [];
     
     const mockGates = [
       { gate: 'MYTR', priceModifier: 0.95, name: 'Mytrip.com' },
@@ -128,11 +128,13 @@ function getMockOTAs(baseFlight: any) {
 
     return mockGates.map(mock => {
       const newPrice = Math.round(baseFlight.price * mock.priceModifier);
+      // ** THE FIX **
+      // Correctly copy all properties from the base flight and override what's needed.
       return {
-        ...baseFlight, // Correctly copy all properties from the base flight
+        ...baseFlight, 
         price: newPrice,
         gate: mock.gate,
-        id: `${baseFlight.id}-mock-${mock.gate}`,
+        id: `${baseFlight.id}-mock-${mock.gate}`, // Create a unique ID for the mock
         link: '#', 
         is_mock: true
       };
@@ -150,7 +152,8 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             const airlineName = airlines[airlineCode] || airlineCode;
             const gate = flight.gate || flight.ota_code || 'unknown';
             
-            const uniqueId = `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
+            // Generate a unique ID if one doesn't exist
+            const uniqueId = flight.id || `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
 
             const enrichedFlight = {
                 id: uniqueId,
@@ -233,23 +236,26 @@ export async function GET(req: NextRequest) {
             }
         }
         
-        if (allFlights.length > 0) {
-            const uniqueGates = new Set(allFlights.map(f => f.gate).filter(Boolean));
+        const airlines = await getAirlinesData();
+        let flightsWithDetails = processFlights(allFlights, airlines, currency);
+        
+        if (flightsWithDetails.length > 0) {
+            const uniqueGates = new Set(flightsWithDetails.map(f => f.gate).filter(Boolean));
             if (uniqueGates.size < 3) {
                 console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
-                const cheapestFlight = allFlights.sort((a,b) => a.price - b.price)[0];
+                const cheapestFlight = [...flightsWithDetails].sort((a,b) => a.price - b.price)[0];
+                
                 if (cheapestFlight) {
-                    const mockFlights = getMockOTAs(cheapestFlight);
-                    allFlights.push(...mockFlights);
+                    const mockRawFlights = getMockOTAs(cheapestFlight);
+                    const processedMockFlights = processFlights(mockRawFlights, airlines, currency);
+                    // Add processed mock flights to the main list
+                    flightsWithDetails.push(...processedMockFlights);
                 }
             }
         }
 
 
-        const airlines = await getAirlinesData();
-        
-        if (allFlights.length > 0) {
-            const flightsWithDetails = processFlights(allFlights, airlines, currency);
+        if (flightsWithDetails.length > 0) {
             return NextResponse.json(flightsWithDetails);
         } else {
             return NextResponse.json([]);
