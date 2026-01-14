@@ -91,17 +91,14 @@ async function searchWithStrategy(params: URLSearchParams) {
             console.log(`Attempting search with ${endpoint}...`);
             const currentParams = new URLSearchParams(params);
             
-            // Endpoint-specific adjustments
             if (endpoint === '/v2/prices/latest') {
                 currentParams.set('sorting', 'price');
                 currentParams.set('show_to_affiliates', 'true');
             } else if (endpoint.includes('matrix')) {
-                // Matrix endpoints use depart_date differently (YYYY-MM) and don't need sorting
                 const departDate = currentParams.get('depart_date');
                 if (departDate) {
                     currentParams.set('depart_date', departDate.substring(0, 7));
                 }
-                 // Matrix endpoints can use 'airline' property instead of 'airline_code'
             }
 
             const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
@@ -116,7 +113,7 @@ async function searchWithStrategy(params: URLSearchParams) {
         }
     }
     
-    return { success: false, data: [] }; // Return empty if all strategies fail
+    return { success: false, data: [] };
 }
 
 function getMockOTAs(baseFlight: any) {
@@ -136,8 +133,8 @@ function getMockOTAs(baseFlight: any) {
         price: newPrice,
         gate: mock.gate,
         id: `${baseFlight.id}-mock-${mock.gate}`,
-        link: '#', // Mock links go nowhere
-        is_mock: true // Flag to identify mock data
+        link: '#', 
+        is_mock: true
       };
     });
 }
@@ -147,22 +144,20 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
     if (!Array.isArray(flights)) return [];
     
     return flights.map((flight: any) => {
-        // *** FIX: Handle both 'airline_code' and 'airline' properties for the IATA code ***
         const airlineCode = flight.airline_code || flight.airline;
-        const airlineName = airlines[airlineCode] || airlineCode; // Fallback to code if name not found
+        const airlineName = airlines[airlineCode] || airlineCode;
         
-        // A combination of gate, price, and flight details usually guarantees uniqueness.
         const uniqueId = `${flight.gate || ''}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
 
         const enrichedFlight = {
             id: uniqueId,
             price: flight.price,
             airline: airlineName,
-            airline_code: airlineCode, // Standardize to airline_code
+            airline_code: airlineCode,
             flight_number: flight.flight_number,
             departure_at: flight.departure_at,
             return_at: flight.return_at,
-            arrival_at: flight.arrival_at, // Pass arrival_at if it exists
+            arrival_at: flight.arrival_at,
             origin: flight.origin,
             destination: flight.destination,
             transfers: flight.transfers,
@@ -198,8 +193,6 @@ export async function GET(req: NextRequest) {
         currency: currency,
         limit: searchParams.get('limit') || '100',
         trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
-        show_to_affiliates: 'true',
-        sorting: 'price',
     });
     
     if (depart_date) baseApiParams.set('depart_date', depart_date);
@@ -210,7 +203,6 @@ export async function GET(req: NextRequest) {
         let apiResponse = await searchWithStrategy(new URLSearchParams(baseApiParams));
         let allFlights: any[] = apiResponse.data || [];
 
-        // If no flights, try alternative airports
         if (allFlights.length === 0) {
             console.log('No flights on direct route, trying alternatives...');
             const originAlts = airportAlternatives[origin] || [origin];
@@ -224,7 +216,7 @@ export async function GET(req: NextRequest) {
                         
                         const altParams = new URLSearchParams(baseApiParams);
                         altParams.set('origin', altOrigin);
-altParams.set('destination', altDest);
+                        altParams.set('destination', altDest);
                         alternativeSearches.push(searchWithStrategy(altParams));
                     }
                 }
@@ -238,10 +230,8 @@ altParams.set('destination', altDest);
             }
         }
         
-        // --- MOCK DATA WORKAROUND ---
         if (allFlights.length > 0) {
             const uniqueGates = new Set(allFlights.map(f => f.gate));
-            // If we have few real OTAs, add mock ones for a better demo
             if (uniqueGates.size < 3) {
                 console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
                 const cheapestFlight = allFlights.sort((a,b) => a.price - b.price)[0];
