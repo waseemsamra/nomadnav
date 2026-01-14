@@ -51,13 +51,15 @@ function addEstimatedBaggagePrices(flight: any): Flight {
   const basePrice = flight.price;
   const CARRY_ON_PRICE = 25;
   const CHECKED_BAGGAGE_PRICE = 50;
+  const airlineCode = flight.airline_code || flight.airline;
+
 
   return {
     ...flight,
     baggage: {
         hand: {
             price: CARRY_ON_PRICE,
-            has_baggage: !['FR', 'U2', 'W6'].includes(flight.airline_code), 
+            has_baggage: !['FR', 'U2', 'W6'].includes(airlineCode), 
         },
         checked: {
             price: CHECKED_BAGGAGE_PRICE,
@@ -99,6 +101,7 @@ async function searchWithStrategy(params: URLSearchParams) {
                 if (departDate) {
                     currentParams.set('depart_date', departDate.substring(0, 7));
                 }
+                 // Matrix endpoints can use 'airline' property instead of 'airline_code'
             }
 
             const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
@@ -144,8 +147,9 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
     if (!Array.isArray(flights)) return [];
     
     return flights.map((flight: any) => {
-        const airlineCode = flight.airline_code;
-        const airlineName = airlines[airlineCode] || airlineCode;
+        // *** FIX: Handle both 'airline_code' and 'airline' properties for the IATA code ***
+        const airlineCode = flight.airline_code || flight.airline;
+        const airlineName = airlines[airlineCode] || airlineCode; // Fallback to code if name not found
         
         // A combination of gate, price, and flight details usually guarantees uniqueness.
         const uniqueId = `${flight.gate || ''}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
@@ -154,7 +158,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             id: uniqueId,
             price: flight.price,
             airline: airlineName,
-            airline_code: airlineCode,
+            airline_code: airlineCode, // Standardize to airline_code
             flight_number: flight.flight_number,
             departure_at: flight.departure_at,
             return_at: flight.return_at,
