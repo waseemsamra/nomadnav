@@ -245,7 +245,7 @@ class TravelpayoutsApiService {
             .filter(flight => selectedOtas === null || !flight.gate || selectedOtas.includes(flight.gate))
             .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
             .filter(flight => {
-                const price = this.getFlightDisplayPrice(flight, baggageFilter);
+                const price = this.getFlightDisplayPrice(flight, baggageFilter === 'all' ? 'without' : baggageFilter);
                 return price >= selectedPrice[0] && price <= selectedPrice[1];
             })
             .filter(flight => {
