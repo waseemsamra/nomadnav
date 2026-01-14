@@ -86,6 +86,7 @@ function SearchResultsContent() {
   }, [flights, baggageFilter]);
   
   const otaOptions = useMemo(() => {
+      if (flights.length === 0) return [];
       const allOtasFromFlights = [...new Set(flights.map(f => f.gate).filter(Boolean))];
       const gatePrices: { [key: string]: number } = {};
       
@@ -294,24 +295,26 @@ function SearchResultsContent() {
     }
   };
   
-  const sortedFlights = travelpayoutsApi.filterAndSortFlights({
-      flights,
-      filters,
-      selectedAirlines,
-      selectedStops,
-      baggageFilter,
-      selectedDuration,
-      selectedPrice,
-      selectedDepartureTime,
-      selectedOtas,
-  });
+  const sortedAndFilteredFlights = useMemo(() => {
+    return travelpayoutsApi.filterAndSortFlights({
+        flights,
+        filters,
+        selectedAirlines,
+        selectedStops,
+        baggageFilter,
+        selectedDuration,
+        selectedPrice,
+        selectedDepartureTime,
+        selectedOtas,
+    });
+  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
   
   const flightGroupsByOta = useMemo(() => {
-    if (sortedFlights.length === 0) return [];
+    if (sortedAndFilteredFlights.length === 0) return [];
 
     const groups = new Map<string, Flight[]>();
     
-    for (const flight of sortedFlights) {
+    for (const flight of sortedAndFilteredFlights) {
         if (!flight.gate) continue;
         if (!groups.has(flight.gate)) {
             groups.set(flight.gate, []);
@@ -328,7 +331,7 @@ function SearchResultsContent() {
         };
     }).sort((a, b) => a.minPrice - b.minPrice);
 
-  }, [sortedFlights, baggageFilter]);
+  }, [sortedAndFilteredFlights, baggageFilter]);
 
   if (loading) {
     return (
@@ -736,4 +739,5 @@ export default function SearchResultsPage() {
   );
 }
 
+    
     
