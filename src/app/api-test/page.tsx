@@ -16,6 +16,7 @@ import {
   Users,
   Paperclip,
   Book,
+  Search,
 } from 'lucide-react';
 import { travelpayoutsApi, type Flight, type Gate } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,142 @@ export default function ApiTestPage() {
     setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
     testConnection(); // Auto-test on page load
   }, []);
+
+  // Your diagnostic script, adapted for React
+  const runCompleteDiagnostic = async () => {
+    console.log('🚨 === STARTING COMPLETE DIAGNOSTIC === 🚨\n');
+
+    // Test 1: Check page structure
+    console.log('📋 TEST 1: PAGE STRUCTURE');
+    console.log('Document readyState:', document.readyState);
+    console.log('Body exists:', !!document.body);
+    
+    // Test 2: Find all containers
+    console.log('\n📦 TEST 2: FINDING CONTAINERS');
+    const possibleContainers = [
+      'flight-results', 'results', 'flights', 'search-results', 
+      'flightList', 'flightResults', 'result-container'
+    ];
+    
+    let foundContainer = null;
+    possibleContainers.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        console.log(`✓ Found container: #${id}`);
+        foundContainer = el;
+        console.log('  HTML:', el.outerHTML.substring(0, 200));
+      }
+    });
+    
+    if (!foundContainer) {
+      console.log('✗ No container found! Creating one...');
+      foundContainer = document.createElement('div');
+      foundContainer.id = 'flight-results';
+      document.body.appendChild(foundContainer);
+      console.log('✓ Created #flight-results container');
+    }
+    
+    // Test 3: Check your flight data source
+    console.log('\n📊 TEST 3: CHECKING FLIGHT DATA SOURCE');
+    let foundFlights = testFlights; // Use React state
+    
+    // Test 4: Try to get flights from API
+    console.log('\n🌐 TEST 4: TESTING API DIRECTLY');
+    
+    const testApiCall = async () => {
+      try {
+        const flights = await travelpayoutsApi.searchFlights({
+          origin: 'JFK',
+          destination: 'LAX',
+          depart_date: '2025-07-01',
+          currency: 'USD',
+          limit: 5,
+        });
+        return flights;
+      } catch (error) {
+        console.log('API Error:', error);
+        return [];
+      }
+    };
+    
+    const apiFlights = await testApiCall();
+    console.log('API returned:', apiFlights.length, 'flights');
+    
+    const flightsToDisplay = apiFlights.length > 0 ? apiFlights : foundFlights;
+    
+    // Test 5: Try to render
+    console.log('\n🎨 TEST 5: ATTEMPTING TO RENDER');
+    
+    if (!flightsToDisplay || !Array.isArray(flightsToDisplay)) {
+      console.log('✗ No valid flight data found');
+      console.log('  flightsToDisplay:', flightsToDisplay);
+      console.log('  Type:', typeof flightsToDisplay);
+      return;
+    }
+    
+    console.log(`✓ Found ${flightsToDisplay.length} flights to display`);
+    if (flightsToDisplay.length > 0) {
+      console.log('Sample flight:', flightsToDisplay[0]);
+    }
+    
+    const simpleHTML = flightsToDisplay.map(flight => `
+      <div style="border: 2px solid #4CAF50; border-radius: 10px; padding: 15px; margin: 10px 0; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-family: Arial, sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 24px; font-weight: bold; color: #2196F3;">$${flight.price || flight.value || 'N/A'}</span>
+            <span style="font-size: 12px; color: #666; display: block;">per person</span>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-weight: bold; font-size: 16px;">${flight.gate || 'OTA'}</div>
+            <div style="font-size: 12px; color: #666;">${flight.airline || 'Airline'}</div>
+          </div>
+        </div>
+        <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+          <div style="text-align: center; font-size: 18px; font-weight: bold;">
+            ${flight.origin || 'FROM'} → ${flight.destination || 'TO'}
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px;">
+            <span>Departure: ${flight.departure_at || 'N/A'}</span>
+            <span>Stops: ${flight.transfers !== undefined ? flight.transfers : 0}</span>
+            <span>Duration: ${flight.duration || 'N/A'} min</span>
+          </div>
+        </div>
+        <button style="width: 100%; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;" onclick="alert('Booking flight for $${flight.price}')">
+          Book Now
+        </button>
+      </div>
+    `).join('');
+    
+    const existingDebugWindow = document.getElementById('debug-flight-results');
+    if (existingDebugWindow) existingDebugWindow.remove();
+
+    const debugContainer = document.createElement('div');
+    debugContainer.id = 'debug-flight-results';
+    debugContainer.innerHTML = `
+      <div style="position: fixed; top: 20px; right: 20px; width: 400px; max-height: 80vh; overflow-y: auto; background: white; border: 3px solid #FF9800; border-radius: 10px; padding: 20px; z-index: 99999; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h2 style="margin: 0; color: #FF9800; font-family: Arial, sans-serif;">🚀 DEBUG FLIGHTS</h2>
+          <button onclick="document.getElementById('debug-flight-results').remove()" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px;">
+            Close
+          </button>
+        </div>
+        <div style="color: #666; margin-bottom: 15px; font-family: Arial, sans-serif;">
+          Found ${flightsToDisplay.length} flights
+        </div>
+        <div id="debug-flights-list">
+          ${simpleHTML}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(debugContainer);
+    console.log('✅ DEBUG WINDOW INJECTED - Check top-right corner!');
+    
+    console.log('\n🎉 DIAGNOSTIC COMPLETE!');
+    console.log('What do you see?');
+    console.log('1. The orange debug window (top-right)?');
+    console.log('2. Any errors in console?');
+  }
 
 
   const testConnection = async () => {
@@ -225,9 +362,9 @@ export default function ApiTestPage() {
               </div>
 
               {/* Flight Search */}
-              <div>
-                 <h3 className="font-semibold text-gray-800 mb-2">Flight Search Test</h3>
-                 <div className="bg-blue-50 p-3 rounded-lg text-center font-mono text-sm mb-4">
+              <div className="space-y-4">
+                 <h3 className="font-semibold text-gray-800">Flight Search Test</h3>
+                 <div className="bg-blue-50 p-3 rounded-lg text-center font-mono text-sm">
                     <span className="text-blue-600 font-bold">JFK</span>
                     <span className="mx-2">→</span>
                     <span className="text-blue-600 font-bold">LAX</span>
@@ -244,6 +381,15 @@ export default function ApiTestPage() {
                       <Plane className="w-4 h-4 mr-2" />
                     )}
                     Test Flight Search
+                  </Button>
+                  
+                  <Button
+                    onClick={runCompleteDiagnostic}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Complete Diagnostic
                   </Button>
               </div>
 
@@ -365,3 +511,5 @@ export default function ApiTestPage() {
     </div>
   );
 }
+
+    
