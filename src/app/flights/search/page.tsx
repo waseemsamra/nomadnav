@@ -299,13 +299,13 @@ function SearchResultsContent() {
     let filtered = [...flights];
 
     // Apply filters only if a selection has been made (is not null)
-    if (selectedAirlines !== null) {
+    if (selectedAirlines) {
         filtered = filtered.filter(flight => selectedAirlines.includes(flight.airline_code));
     }
-    if (selectedStops !== null) {
+    if (selectedStops) {
         filtered = filtered.filter(flight => selectedStops.includes(flight.transfers));
     }
-    if (selectedOtas !== null) {
+    if (selectedOtas) {
         filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
     }
 
@@ -776,4 +776,6 @@ export default function SearchResultsPage() {
   );
 }
     
+    
+
     
