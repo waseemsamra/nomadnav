@@ -140,8 +140,6 @@ function SearchResultsContent() {
         return;
       }
       setLoading(true);
-      // **FIX**: Reset all filter states on new search to ensure defaults are applied
-      handleResetFilters(false); // Do not reset flights data here
       
       try {
         const flightData = await travelpayoutsApi.searchFlights({
@@ -159,7 +157,8 @@ function SearchResultsContent() {
         if (flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
 
-          // Initialize range filters based on the new data
+          // ** ATOMIC STATE UPDATE **
+          // Calculate new ranges from the fresh data
           const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
           const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
           const maxPrice = Math.ceil(Math.max(...prices.filter(p => isFinite(p))));
@@ -167,13 +166,20 @@ function SearchResultsContent() {
           const durations = flightData.map(f => f.duration);
           const minDuration = Math.min(...durations);
           const maxDuration = Math.max(...durations);
-
+          
+          // Set all state related to the new data in one go
+          setFilters(initialFilterState);
+          setBaggageFilter('all');
+          setSelectedAirlines(null);
+          setSelectedStops(null);
+          setSelectedOtas(null);
           setPriceRange({ min: minPrice, max: maxPrice });
           setSelectedPrice([minPrice, maxPrice]);
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
+          setSelectedDepartureTime([0, 1440]);
           
-          // Set flights LAST to trigger render after filters are ready
+          // Set flights LAST to trigger render after all filters are ready
           setFlights(flightData);
 
         } else {
@@ -246,20 +252,17 @@ function SearchResultsContent() {
   };
 
 
-  const handleResetFilters = (resetFlights = true) => {
+  const handleResetFilters = () => {
     setFilters(initialFilterState);
     setSelectedAirlines(null);
     setSelectedStops(null);
     setSelectedOtas(null);
     setBaggageFilter('all');
     
-    if (resetFlights && flights.length > 0) {
+    if (flights.length > 0) {
         setSelectedDuration([durationRange.min, durationRange.max]);
         setSelectedPrice([priceRange.min, priceRange.max]);
         setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
-    } else if (!resetFlights) {
-        // Just reset filter states, but not the ranges which will be set by the new data
-        return;
     } else {
         // Reset to initial values without depending on flight data
         setSelectedDuration([0, 0]);
@@ -291,19 +294,17 @@ function SearchResultsContent() {
     }
   };
   
-  const sortedFlights = useMemo(() => {
-    return travelpayoutsApi.filterAndSortFlights({
-        flights,
-        filters,
-        selectedAirlines,
-        selectedStops,
-        baggageFilter,
-        selectedDuration,
-        selectedPrice,
-        selectedDepartureTime,
-        selectedOtas,
-    });
-  }, [flights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas]);
+  const sortedFlights = travelpayoutsApi.filterAndSortFlights({
+      flights,
+      filters,
+      selectedAirlines,
+      selectedStops,
+      baggageFilter,
+      selectedDuration,
+      selectedPrice,
+      selectedDepartureTime,
+      selectedOtas,
+  });
   
   const flightGroupsByOta = useMemo(() => {
     if (sortedFlights.length === 0) return [];
@@ -369,7 +370,7 @@ function SearchResultsContent() {
           <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold">Filters</h3>
-                   <Button variant="link" size="sm" onClick={() => handleResetFilters()}>Clear all</Button>
+                   <Button variant="link" size="sm" onClick={handleResetFilters}>Clear all</Button>
               </div>
 
               <div className="space-y-2 border-t pt-4">
@@ -659,7 +660,7 @@ function SearchResultsContent() {
                   <p className="text-gray-600 mb-4">
                     Try adjusting your filters to see more results.
                   </p>
-                  <Button onClick={() => handleResetFilters()}>
+                  <Button onClick={handleResetFilters}>
                     Clear All Filters
                   </Button>
                 </div>
