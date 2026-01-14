@@ -53,142 +53,280 @@ export default function ApiTestPage() {
     // Client-side access to env var
     setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
     testConnection(); // Auto-test on page load
+
+    // Make the tracking function available globally for the diagnostic script
+    (window as any).trackFlightClick = (flightId: string) => {
+        console.log(`Flight ${flightId} clicked`);
+    };
   }, []);
 
-  // Your diagnostic script, adapted for React
-  const runCompleteDiagnostic = async () => {
-    console.log('🚨 === STARTING COMPLETE DIAGNOSTIC === 🚨\n');
+  const runCompleteDiagnostic = () => {
+    
+    function formatDateSimple(dateString: string) {
+        if (!dateString || dateString === 'N/A') return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return dateString;
+        }
+    }
 
-    // Test 1: Check page structure
-    console.log('📋 TEST 1: PAGE STRUCTURE');
-    console.log('Document readyState:', document.readyState);
-    console.log('Body exists:', !!document.body);
-    
-    // Test 2: Find all containers
-    console.log('\n📦 TEST 2: FINDING CONTAINERS');
-    const possibleContainers = [
-      'flight-results', 'results', 'flights', 'search-results', 
-      'flightList', 'flightResults', 'result-container'
-    ];
-    
-    let foundContainer = null;
-    possibleContainers.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        console.log(`✓ Found container: #${id}`);
-        foundContainer = el;
-        console.log('  HTML:', el.outerHTML.substring(0, 200));
-      }
-    });
-    
-    if (!foundContainer) {
-      console.log('✗ No container found! Creating one...');
-      foundContainer = document.createElement('div');
-      foundContainer.id = 'flight-results';
-      document.body.appendChild(foundContainer);
-      console.log('✓ Created #flight-results container');
+    function showErrorMessage(message: string) {
+        let container = document.getElementById('flight-results');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'flight-results';
+          document.body.appendChild(container);
+        }
+        container.innerHTML = `
+            <div style="
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px;
+            ">
+            <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+            <h3 style="margin: 0 0 10px 0;">Error Loading Flights</h3>
+            <p>${message}</p>
+            <button onclick="location.reload()" style="
+                background: #dc2626;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-top: 10px;
+            ">
+                Try Again
+            </button>
+            </div>
+        `;
     }
-    
-    // Test 3: Check your flight data source
-    console.log('\n📊 TEST 3: CHECKING FLIGHT DATA SOURCE');
-    let foundFlights = testFlights; // Use React state
-    
-    // Test 4: Try to get flights from API
-    console.log('\n🌐 TEST 4: TESTING API DIRECTLY');
-    
-    const testApiCall = async () => {
-      try {
-        const flights = await travelpayoutsApi.searchFlights({
-          origin: 'JFK',
-          destination: 'LAX',
-          depart_date: '2025-07-01',
-          currency: 'USD',
-          limit: 5,
-        });
-        return flights;
-      } catch (error) {
-        console.log('API Error:', error);
-        return [];
-      }
-    };
-    
-    const apiFlights = await testApiCall();
-    console.log('API returned:', apiFlights.length, 'flights');
-    
-    const flightsToDisplay = apiFlights.length > 0 ? apiFlights : foundFlights;
-    
-    // Test 5: Try to render
-    console.log('\n🎨 TEST 5: ATTEMPTING TO RENDER');
-    
-    if (!flightsToDisplay || !Array.isArray(flightsToDisplay)) {
-      console.log('✗ No valid flight data found');
-      console.log('  flightsToDisplay:', flightsToDisplay);
-      console.log('  Type:', typeof flightsToDisplay);
-      return;
-    }
-    
-    console.log(`✓ Found ${flightsToDisplay.length} flights to display`);
-    if (flightsToDisplay.length > 0) {
-      console.log('Sample flight:', flightsToDisplay[0]);
-    }
-    
-    const simpleHTML = flightsToDisplay.map(flight => `
-      <div style="border: 2px solid #4CAF50; border-radius: 10px; padding: 15px; margin: 10px 0; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-family: Arial, sans-serif;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span style="font-size: 24px; font-weight: bold; color: #2196F3;">$${flight.price || flight.value || 'N/A'}</span>
-            <span style="font-size: 12px; color: #666; display: block;">per person</span>
-          </div>
-          <div style="text-align: center;">
-            <div style="font-weight: bold; font-size: 16px;">${flight.gate || 'OTA'}</div>
-            <div style="font-size: 12px; color: #666;">${flight.airline || 'Airline'}</div>
-          </div>
-        </div>
-        <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">
-          <div style="text-align: center; font-size: 18px; font-weight: bold;">
-            ${flight.origin || 'FROM'} → ${flight.destination || 'TO'}
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px;">
-            <span>Departure: ${flight.departure_at || 'N/A'}</span>
-            <span>Stops: ${flight.transfers !== undefined ? flight.transfers : 0}</span>
-            <span>Duration: ${flight.duration || 'N/A'} min</span>
-          </div>
-        </div>
-        <button style="width: 100%; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;" onclick="alert('Booking flight for $${flight.price}')">
-          Book Now
-        </button>
-      </div>
-    `).join('');
-    
-    const existingDebugWindow = document.getElementById('debug-flight-results');
-    if (existingDebugWindow) existingDebugWindow.remove();
 
-    const debugContainer = document.createElement('div');
-    debugContainer.id = 'debug-flight-results';
-    debugContainer.innerHTML = `
-      <div style="position: fixed; top: 20px; right: 20px; width: 400px; max-height: 80vh; overflow-y: auto; background: white; border: 3px solid #FF9800; border-radius: 10px; padding: 20px; z-index: 99999; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h2 style="margin: 0; color: #FF9800; font-family: Arial, sans-serif;">🚀 DEBUG FLIGHTS</h2>
-          <button onclick="document.getElementById('debug-flight-results').remove()" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px;">
-            Close
-          </button>
-        </div>
-        <div style="color: #666; margin-bottom: 15px; font-family: Arial, sans-serif;">
-          Found ${flightsToDisplay.length} flights
-        </div>
-        <div id="debug-flights-list">
-          ${simpleHTML}
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(debugContainer);
-    console.log('✅ DEBUG WINDOW INJECTED - Check top-right corner!');
-    
-    console.log('\n🎉 DIAGNOSTIC COMPLETE!');
-    console.log('What do you see?');
-    console.log('1. The orange debug window (top-right)?');
-    console.log('2. Any errors in console?');
+    function showNoFlightsMessage() {
+        let container = document.getElementById('flight-results');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'flight-results';
+          document.body.appendChild(container);
+        }
+        container.innerHTML = `
+            <div style="
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            color: #0369a1;
+            padding: 40px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px;
+            ">
+            <div style="font-size: 48px; margin-bottom: 20px;">✈️</div>
+            <h3 style="margin: 0 0 10px 0;">No Flights Found</h3>
+            <p>We couldn't find any flights matching your criteria.</p>
+            <div style="background: white; padding: 15px; border-radius: 6px; margin-top: 20px; text-align: left;">
+                <strong>Try:</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Different travel dates</li>
+                <li>Nearby airports</li>
+                <li>Flexible dates</li>
+                <li>Clear browser cache</li>
+                </ul>
+            </div>
+            </div>
+        `;
+    }
+
+    function displayFlightsGuaranteed(flights: Flight[]) {
+        console.log('🔄 displayFlightsGuaranteed called with:', flights);
+
+        if (!flights) {
+            console.error('❌ No flights data provided');
+            showErrorMessage('No flight data received');
+            return;
+        }
+
+        if (!Array.isArray(flights)) {
+            console.error('❌ Flights is not an array:', flights);
+            showErrorMessage('Invalid flight data format');
+            return;
+        }
+
+        if (flights.length === 0) {
+            console.log('ℹ️ No flights to display');
+            showNoFlightsMessage();
+            return;
+        }
+
+        console.log(`✅ Displaying ${flights.length} flights`);
+
+        const flightsHTML = flights.map((flight, index) => {
+            const price = flight.price || 'N/A';
+            const airline = flight.airline_code || flight.airline || 'Unknown';
+            const ota = flight.gate || 'OTA';
+            const origin = flight.origin || '???';
+            const destination = flight.destination || '???';
+            const stops = flight.transfers ?? 0;
+            const departure = flight.departure_at || 'N/A';
+            const duration = flight.duration || 'N/A';
+            const link = flight.link || '#';
+
+            return `
+            <div class="flight-item" data-index="${index}" style="
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 15px;
+                margin-bottom: 15px;
+                background: white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div>
+                    <div style="font-size: 28px; font-weight: bold; color: #1a73e8;">
+                    $${price}
+                    </div>
+                    <div style="font-size: 12px; color: #666;">
+                    per person
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-weight: bold; font-size: 16px; color: #333;">
+                    ${ota}
+                    </div>
+                    <div style="font-size: 14px; color: #666;">
+                    ${airline}
+                    </div>
+                </div>
+                </div>
+                
+                <div style="
+                background: #f8f9fa;
+                padding: 10px;
+                border-radius: 6px;
+                margin: 10px 0;
+                text-align: center;
+                ">
+                <div style="font-size: 18px; font-weight: bold; color: #333;">
+                    ${origin} → ${destination}
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #666;">
+                    <span>Departure: ${formatDateSimple(departure)}</span>
+                    <span>Stops: ${stops}</span>
+                    <span>Duration: ${duration} min</span>
+                </div>
+                </div>
+                
+                <a href="${link}" 
+                target="_blank" 
+                style="
+                    display: block;
+                    width: 100%;
+                    padding: 12px;
+                    background: #1a73e8;
+                    color: white;
+                    text-align: center;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: bold;
+                    font-size: 16px;
+                    cursor: pointer;
+                "
+                onclick="trackFlightClick('${flight.id || index}')">
+                Select Flight
+                </a>
+            </div>
+            `;
+        }).join('');
+
+        let container = document.getElementById('flight-results');
+
+        if (!container) {
+            console.log('⚠️ Container #flight-results not found, creating...');
+            const possibleIds = ['results', 'search-results', 'flights-container', 'flight-list'];
+            for (const id of possibleIds) {
+                container = document.getElementById(id);
+                if (container) {
+                    console.log(`✓ Found container #${id}`);
+                    break;
+                }
+            }
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'flight-results';
+                container.style.padding = '20px';
+                container.style.maxWidth = '800px';
+                container.style.margin = '0 auto';
+                
+                const mainContent = document.querySelector('main') || document.body;
+                mainContent.appendChild(container);
+                console.log('✅ Created new container #flight-results');
+            }
+        }
+        
+        container.innerHTML = `
+            <div style="
+            background: #e8f0fe;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            ">
+            <h2 style="margin: 0; color: #1a73e8;">
+                ✈️ Found ${flights.length} Flights
+            </h2>
+            <div style="color: #666; margin-top: 5px;">
+                Sorted by lowest price
+            </div>
+            </div>
+            ${flightsHTML}
+        `;
+        
+        console.log('✅ Flights displayed successfully!');
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function performSearch() {
+        flightDisplay.showLoading();
+        try {
+            const flights = await travelpayoutsApi.searchFlights({
+                origin: 'JFK',
+                destination: 'LAX',
+                depart_date: '2025-07-01',
+                currency: 'USD',
+                limit: 5
+            });
+            displayFlightsGuaranteed(flights);
+        } catch (error: any) {
+            console.error('Search failed:', error);
+            showErrorMessage(error.message || 'Failed to search flights');
+        }
+    }
+    const flightDisplay = { showLoading };
+    function showLoading() {
+      let container = document.getElementById('flight-results');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'flight-results';
+        document.body.appendChild(container);
+      }
+      container.innerHTML = `<div style="text-align: center; padding: 40px;">Loading...</div>`;
+    }
+
+    // Use existing flights from state if available, otherwise call API
+    if (testFlights.length > 0) {
+        console.log('Using flights from component state for diagnostic.');
+        displayFlightsGuaranteed(testFlights);
+    } else {
+        console.log('No flights in state, calling API for diagnostic.');
+        performSearch();
+    }
   }
 
 
@@ -511,5 +649,7 @@ export default function ApiTestPage() {
     </div>
   );
 }
+
+    
 
     
