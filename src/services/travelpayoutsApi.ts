@@ -231,18 +231,18 @@ class TravelpayoutsApiService {
     }: {
         flights: Flight[],
         filters: { sortBy: 'price' | 'duration' | 'departure' },
-        selectedAirlines: string[],
-        selectedStops: number[],
+        selectedAirlines: string[] | null,
+        selectedStops: number[] | null,
         baggageFilter: 'all' | 'without' | 'with',
         selectedDuration: number[],
         selectedPrice: number[],
         selectedDepartureTime: number[],
-        selectedOtas: string[],
+        selectedOtas: string[] | null,
     }): Flight[] {
         let filtered = [...flights]
-            .filter(flight => selectedAirlines.includes(flight.airline_code))
-            .filter(flight => selectedStops.includes(flight.transfers))
-            .filter(flight => !flight.gate || selectedOtas.includes(flight.gate))
+            .filter(flight => selectedAirlines === null || selectedAirlines.includes(flight.airline_code))
+            .filter(flight => selectedStops === null || selectedStops.includes(flight.transfers))
+            .filter(flight => selectedOtas === null || !flight.gate || selectedOtas.includes(flight.gate))
             .filter(flight => flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1])
             .filter(flight => {
                 const price = this.getFlightDisplayPrice(flight, baggageFilter);
@@ -382,5 +382,3 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams, Gate };
-
-    
