@@ -1,813 +1,124 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
-import { 
-  CheckCircle, 
-  XCircle, 
-  RefreshCw,
-  Key,
-  Plane,
-  Server,
-  Cloud,
-  Database,
-  ExternalLink,
-  Globe,
-  Users,
-  Paperclip,
-  Book,
-  Search,
-} from 'lucide-react';
-import { travelpayoutsApi, type Flight, type Gate } from '@/services/travelpayoutsApi';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { OTA_DATA } from '@/lib/ota-data';
-import { ALLIANCE_DATA } from '@/lib/alliance-data';
-
-type ApiStatus = {
-  success: boolean;
-  message: string;
-  endpoints: {
-    airports: boolean;
-    airlines: boolean;
-    cities: boolean;
-    flights: boolean;
-    otas: boolean;
-    countries: boolean;
-    planes: boolean;
-    routes: boolean;
-    alliances: boolean;
-  };
-  tokenValid: boolean;
-} | null;
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { toast } from 'react-hot-toast';
+import { Terminal, TestTube } from 'lucide-react';
 
 export default function ApiTestPage() {
+  const [token, setToken] = useState('');
   const [testing, setTesting] = useState(false);
-  const [apiStatus, setApiStatus] = useState<ApiStatus>(null);
-  const [testFlights, setTestFlights] = useState<Flight[]>([]);
-  const [flightLoading, setFlightLoading] = useState(false);
-  const [envToken, setEnvToken] = useState('');
-  const [allOtas] = useState<Gate[]>(OTA_DATA);
-  const [alliances] = useState(ALLIANCE_DATA);
 
-  /**
-   * GUARANTEED WORKING FLIGHT DISPLAY FUNCTION
-   * This will work no matter what
-   */
-  function displayFlightsGuaranteed(flights: Flight[] | null) {
-    console.log('🔄 displayFlightsGuaranteed called with:', flights);
-
-    function formatDateSimple(dateString: string) {
-        if (!dateString || dateString === 'N/A') return 'N/A';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (e) {
-            return dateString;
-        }
+  // This is the user's provided diagnostic script, adapted for React state
+  async function testAPIBasics() {
+    if (!token) {
+      toast.error('Please enter your Travelpayouts API token.');
+      return;
     }
-
-    function showErrorMessage(message: string) {
-        let container = document.getElementById('flight-results');
-        if (!container) {
-          container = document.createElement('div');
-          container.id = 'flight-results';
-          document.body.appendChild(container);
-        }
-        container.innerHTML = `
-            <div style="
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            margin: 20px;
-            ">
-            <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
-            <h3 style="margin: 0 0 10px 0;">Error Loading Flights</h3>
-            <p>${message}</p>
-            <button onclick="location.reload()" style="
-                background: #dc2626;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                margin-top: 10px;
-            ">
-                Try Again
-            </button>
-            </div>
-        `;
-    }
-
-    function showNoFlightsMessage() {
-        let container = document.getElementById('flight-results');
-        if (!container) {
-          container = document.createElement('div');
-          container.id = 'flight-results';
-          document.body.appendChild(container);
-        }
-        container.innerHTML = `
-            <div style="
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            color: #0369a1;
-            padding: 40px 20px;
-            border-radius: 8px;
-            text-align: center;
-            margin: 20px;
-            ">
-            <div style="font-size: 48px; margin-bottom: 20px;">✈️</div>
-            <h3 style="margin: 0 0 10px 0;">No Flights Found</h3>
-            <p>We couldn't find any flights matching your criteria.</p>
-            <div style="background: white; padding: 15px; border-radius: 6px; margin-top: 20px; text-align: left;">
-                <strong>Try:</strong>
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                <li>Different travel dates</li>
-                <li>Nearby airports</li>
-                <li>Flexible dates</li>
-                <li>Clear browser cache</li>
-                </ul>
-            </div>
-            </div>
-        `;
-    }
-    
-    // Validate input
-    if (!flights) {
-        console.error('❌ No flights data provided');
-        showErrorMessage('No flight data received');
-        return;
-    }
-
-    if (!Array.isArray(flights)) {
-        console.error('❌ Flights is not an array:', flights);
-        showErrorMessage('Invalid flight data format');
-        return;
-    }
-
-    if (flights.length === 0) {
-        console.log('ℹ️ No flights to display');
-        showNoFlightsMessage();
-        return;
-    }
-
-    console.log(`✅ Displaying ${flights.length} flights`);
-
-    const flightsHTML = flights.map((flight, index) => {
-        const price = flight.price || 'N/A';
-        const airlineCode = flight.airline_code || flight.airline || 'Unknown';
-        const ota = flight.gate || 'OTA';
-        const origin = flight.origin || '???';
-        const destination = flight.destination || '???';
-        const stops = flight.transfers ?? 0;
-        const departure = flight.departure_at || 'N/A';
-        const duration = flight.duration || 'N/A';
-        const link = flight.link || '#';
-
-        return `
-        <div class="flight-item" data-index="${index}" style="
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        ">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div>
-                <div style="font-size: 28px; font-weight: bold; color: #1a73e8;">
-                $${price}
-                </div>
-                <div style="font-size: 12px; color: #666;">
-                per person
-                </div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-weight: bold; font-size: 16px; color: #333;">
-                ${ota}
-                </div>
-                <div style="font-size: 14px; color: #666;">
-                ${airlineCode}
-                </div>
-            </div>
-            </div>
-            
-            <div style="
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            margin: 10px 0;
-            text-align: center;
-            ">
-            <div style="font-size: 18px; font-weight: bold; color: #333;">
-                ${origin} → ${destination}
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #666;">
-                <span>Departure: ${formatDateSimple(departure)}</span>
-                <span>Stops: ${stops}</span>
-                <span>Duration: ${duration} min</span>
-            </div>
-            </div>
-            
-            <a href="${link}" 
-            target="_blank" 
-            style="
-                display: block;
-                width: 100%;
-                padding: 12px;
-                background: #1a73e8;
-                color: white;
-                text-align: center;
-                text-decoration: none;
-                border-radius: 6px;
-                font-weight: bold;
-                font-size: 16px;
-                cursor: pointer;
-            "
-            onclick="window.trackFlightClick('${flight.id || index}')">
-            Select Flight
-            </a>
-        </div>
-        `;
-    }).join('');
-
-    let container = document.getElementById('flight-results');
-
-    if (!container) {
-        console.log('⚠️ Container #flight-results not found, creating...');
-        const possibleIds = ['results', 'search-results', 'flights-container', 'flight-list'];
-        for (const id of possibleIds) {
-            container = document.getElementById(id);
-            if (container) {
-                console.log(`✓ Found container #${id}`);
-                break;
-            }
-        }
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'flight-results';
-            container.style.padding = '20px';
-            container.style.maxWidth = '800px';
-            container.style.margin = '0 auto';
-            
-            const mainContent = document.querySelector('main') || document.body;
-            mainContent.appendChild(container);
-            console.log('✅ Created new container #flight-results');
-        }
-    }
-    
-    container.innerHTML = `
-        <div style="
-        background: #e8f0fe;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        ">
-        <h2 style="margin: 0; color: #1a73e8;">
-            ✈️ Found ${flights.length} Flights
-        </h2>
-        <div style="color: #666; margin-top: 5px;">
-            Sorted by lowest price
-        </div>
-        </div>
-        ${flightsHTML}
-    `;
-    
-    console.log('✅ Flights displayed successfully!');
-    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  // NUCLEAR OPTION - This WILL display flights
-  function nuclearDisplay(flights: any[]) {
-    console.log('💥 NUCLEAR DISPLAY ACTIVATED');
-    
-    // Remove any existing nuclear container
-    const oldContainer = document.getElementById('nuclear-flight-results');
-    if (oldContainer) oldContainer.remove();
-
-    // Create a completely new container that will definitely show
-    const nuclearContainer = document.createElement('div');
-    nuclearContainer.id = 'nuclear-flight-results';
-    nuclearContainer.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90%;
-      max-width: 800px;
-      max-height: 90vh;
-      overflow-y: auto;
-      background: white;
-      border: 3px solid #ff0000;
-      border-radius: 10px;
-      padding: 20px;
-      z-index: 999999;
-      box-shadow: 0 0 30px rgba(255,0,0,0.5);
-      font-family: Arial, sans-serif;
-    `;
-    
-    // Create close button
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '× CLOSE';
-    closeBtn.style.cssText = `
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #ff0000;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-weight: bold;
-    `;
-    closeBtn.onclick = () => nuclearContainer.remove();
-    
-    // Create header
-    const header = document.createElement('div');
-    header.innerHTML = `
-      <h2 style="color: #ff0000; margin: 0 0 20px 0;">
-        🚨 FLIGHTS FOUND (${flights.length})
-      </h2>
-      <p style="color: #666; margin-bottom: 20px;">
-        These flights were found but not displaying properly.
-      </p>
-    `;
-    
-    // Create flights list
-    const flightsList = document.createElement('div');
-    flights.forEach(flight => {
-      const flightDiv = document.createElement('div');
-      flightDiv.style.cssText = `
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 10px;
-        background: #f9f9f9;
-      `;
-      
-      flightDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between;">
-          <div>
-            <span style="font-size: 24px; font-weight: bold; color: #1a73e8;">
-              $${flight.price || flight.value || 'N/A'}
-            </span>
-            <div style="font-size: 12px; color: #666;">per person</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-weight: bold;">${flight.gate || 'OTA'}</div>
-            <div style="color: #666;">${flight.airline || 'Airline'}</div>
-          </div>
-        </div>
-        <div style="margin: 10px 0; padding: 10px; background: #e8f0fe; border-radius: 5px;">
-          <div style="text-align: center; font-weight: bold;">
-            ${flight.origin || 'FROM'} → ${flight.destination || 'TO'}
-          </div>
-        </div>
-      `;
-      
-      flightsList.appendChild(flightDiv);
-    });
-    
-    // Assemble everything
-    nuclearContainer.appendChild(closeBtn);
-    nuclearContainer.appendChild(header);
-    nuclearContainer.appendChild(flightsList);
-    
-    // Add to page
-    document.body.appendChild(nuclearContainer);
-    
-    console.log('✅ Nuclear display activated!');
-    return nuclearContainer;
-  }
-
-  const testFlightDisplay = () => {
-    console.log('🧪 Testing flight display...');
-    
-    const testFlightsData: Flight[] = [
-      {
-        id: 'test1',
-        price: 163,
-        airline: 'Flydubai',
-        airline_code: 'FZ',
-        flight_number: '334',
-        gate: 'MYTR',
-        origin: 'KHI',
-        destination: 'DXB',
-        departure_at: '2026-01-20T03:00:00Z',
-        duration: 145,
-        transfers: 0,
-        link: '#',
-        return_at: '',
-        baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: false, price: 50}},
-        currency: 'USD',
-      },
-      {
-        id: 'test2',
-        price: 187,
-        airline: 'Flydubai',
-        airline_code: 'FZ',
-        flight_number: '330',
-        gate: 'CITY',
-        origin: 'KHI',
-        destination: 'DXB',
-        departure_at: '2026-01-20T08:30:00Z',
-        duration: 135,
-        transfers: 0,
-        link: '#',
-        return_at: '',
-        baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: false, price: 50}},
-        currency: 'USD',
-      },
-      {
-        id: 'test3',
-        price: 210,
-        airline: 'Qatar Airways',
-        airline_code: 'QR',
-        flight_number: '611',
-        gate: 'WING',
-        origin: 'KHI',
-        destination: 'DXB',
-        departure_at: '2026-01-20T14:15:00Z',
-        duration: 165,
-        transfers: 1,
-        link: '#',
-        return_at: '',
-        baggage: { hand: { has_baggage: true, price: 0 }, checked: { has_baggage: true, price: 0}},
-        currency: 'USD',
-      }
-    ];
-
-    if (typeof displayFlightsGuaranteed === 'function') {
-      displayFlightsGuaranteed(testFlightsData);
-      toast.success('Test flights displayed! Check the page.');
-    } else {
-      toast.error('displayFlightsGuaranteed not found. Copy Step 1 again.');
-    }
-  }
-
-  useEffect(() => {
-    // Client-side access to env var
-    setEnvToken(process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || '');
-    testConnection(); // Auto-test on page load
-
-    // Make the tracking function available globally for the diagnostic script
-    (window as any).trackFlightClick = (flightId: string) => {
-        console.log(`Flight ${flightId} clicked`);
-    };
-  }, []);
-
-  async function searchFlights() {
-    console.log('🔍 Starting flight search...');
-    
-    const origin = 'KHI';
-    const destination = 'DXB';
-    const date = '2026-01-20';
-    
-    console.log(`Searching: ${origin} → ${destination} on ${date}`);
-    
-    const container = document.getElementById('flight-results') || document.body;
-    container.innerHTML = `
-      <div style="text-align: center; padding: 40px;">
-        <div style="
-          width: 50px;
-          height: 50px;
-          border: 5px solid #f3f3f3;
-          border-top: 5px solid #1a73e8;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 0 auto 20px;
-        "></div>
-        <h3>Searching for flights...</h3>
-        <p>Looking for the best prices from ${origin} to ${destination}</p>
-        <style>
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </div>
-    `;
-    
-    try {
-      const flights = await travelpayoutsApi.searchFlights({
-          origin,
-          destination,
-          depart_date: date,
-      });
-      
-      console.log(`API returned ${flights?.length || 0} flights`);
-      
-      displayFlightsGuaranteed(flights);
-
-      // NUCLEAR FALLBACK
-      // If the container is still empty after a successful call, something is wrong with the display function
-      const resultsContainer = document.getElementById('flight-results');
-      if (flights && flights.length > 0 && resultsContainer && resultsContainer.children.length <= 1) {
-        console.warn('Regular display seems to have failed. Activating Nuclear Option.');
-        nuclearDisplay(flights);
-      }
-      
-    } catch (error: any) {
-      console.error('Search failed:', error);
-      
-      const errorContainer = document.getElementById('flight-results') || document.body;
-      errorContainer.innerHTML = `
-          <div style="
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
-          padding: 20px;
-          border-radius: 8px;
-          text-align: center;
-          margin: 20px;
-          ">
-          <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
-          <h3 style="margin: 0 0 10px 0;">Error Loading Flights</h3>
-          <p>${error.message}</p>
-          </div>
-      `;
-    }
-  }
-
-  const testConnection = async () => {
     setTesting(true);
-    setApiStatus(null);
+    console.clear();
+    console.log('🧪 Testing API basics...');
+    toast('Testing API... Check the browser console (F12) for results.');
+    
     try {
-      const status = await travelpayoutsApi.testApiConnection();
+      // Test 1: Popular route (SHOULD work)
+      console.log('\n--- TEST 1: MOW -> LED (CHEAP) ---');
+      const test1 = await fetch(`https://api.travelpayouts.com/v1/prices/cheap?origin=MOW&destination=LED&token=${token}&currency=usd`);
+      const data1 = await test1.json();
+      console.log('MOW-LED (Moscow to St Petersburg):', data1.data?.['LED'] ? Object.keys(data1.data['LED']).length : 0, 'flights');
       
-      const workingEndpoints = Object.values(status.endpoints).filter(v => v).length;
-      const totalEndpoints = Object.values(status.endpoints).length;
-      status.message = `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`;
-      status.success = workingEndpoints > 0;
-
-      setApiStatus(status);
+      // Test 2: Another popular route
+      console.log('\n--- TEST 2: JFK -> LAX (LATEST) ---');
+      const test2 = await fetch(`https://api.travelpayouts.com/v2/prices/latest?currency=usd&origin=JFK&destination=LAX&token=${token}&show_to_affiliates=true&limit=2`);
+      const data2 = await test2.json();
+      console.log('JFK-LAX (NY to LA):', data2.data?.length || 0, 'flights');
+      
+      // Test 3: Any route from KHI?
+      console.log('\n--- TEST 3: KHI -> ANY (LATEST) ---');
+      const test3 = await fetch(`https://api.travelpayouts.com/v2/prices/latest?currency=usd&origin=KHI&token=${token}&show_to_affiliates=true&limit=5`);
+      const data3 = await test3.json();
+      console.log('Any from KHI:', data3.data?.length || 0, 'flights');
+      if (data3.data && data3.data.length > 0) {
+        console.log('Found Destinations:', [...new Set(data3.data.map((f: any) => f.destination))]);
+        toast.success(`Success! Found flights from KHI. See console.`);
+      } else if (data1.success || data2.success) {
+        toast.success('Basic tests passed, but no flights found from KHI.');
+      } else {
+         toast.error('All API tests failed. Check your token and console logs.');
+      }
     } catch (error: any) {
-      console.error('Test failed:', error);
-      setApiStatus({
-        success: false,
-        message: 'Test failed: ' + error.message,
-        endpoints: { airports: false, airlines: false, cities: false, flights: false, otas: false, countries: false, planes: false, routes: false, alliances: false },
-        tokenValid: false,
-      });
+        console.error("An error occurred during the test:", error);
+        toast.error('An error occurred. Check console.');
     } finally {
-      setTesting(false);
+        console.log('\n✅ Testing complete.');
+        setTesting(false);
     }
-  };
-
-  const testFlightSearch = async () => {
-    setFlightLoading(true);
-    setTestFlights([]);
-    try {
-      const flights = await travelpayoutsApi.searchFlights({
-        origin: 'JFK',
-        destination: 'LAX',
-        depart_date: '2026-07-01', // Use a future date
-        currency: 'USD',
-        limit: 3,
-      });
-      setTestFlights(flights);
-    } catch (error: any) {
-      console.error('Flight search failed:', error.message);
-      toast.error('Flight search test failed: ' + error.message);
-      setTestFlights([]);
-    } finally {
-      setFlightLoading(false);
-    }
-  };
-  
-  const formatDuration = (minutes: number) => {
-    if (typeof minutes !== 'number' || isNaN(minutes)) return 'N/A';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
-
-  const StatusIcon = ({ status }: { status: boolean }) => 
-    status ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />;
-
-  const EndpointStatus = ({ name, icon, status, loading }: { name: string, icon: React.ReactNode, status: boolean, loading?: boolean }) => (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-      <span className="flex items-center gap-2 capitalize"><div className="w-4 h-4 text-gray-500">{icon}</div>{name}</span>
-       {loading ? <RefreshCw className="w-5 h-5 text-gray-400 animate-spin" /> : <StatusIcon status={status} />}
-    </div>
-  );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-       <button 
-        onClick={testFlightDisplay}
-        className="fixed bottom-5 right-5 bg-[#4CAF50] text-white border-none py-4 px-6 rounded-full text-base font-bold cursor-pointer z-50 shadow-lg"
-      >
-        🚀 TEST FLIGHTS
-      </button>
-
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-2xl mx-auto px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Travelpayouts API Test
+            API Connection Test
           </h1>
           <p className="text-gray-600">
-            Test your API connection and flight search functionality
+            Use this page to test your Travelpayouts API token and basic connectivity.
           </p>
         </div>
 
-        {/* Current Status */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-              <Server className="w-6 h-6 mr-3 text-primary" />
-              API Status
-            </h2>
-            <Button
-              onClick={testConnection}
-              disabled={testing}
-              variant="outline"
-            >
-              {testing ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left Column: Config & Endpoints */}
-            <div className="space-y-6">
-              {/* API Token */}
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
-                  <Key className="w-5 h-5 mr-2 text-gray-400" />
-                  API Token
-                </h3>
-                <div className={`p-3 rounded-lg flex items-center gap-3 ${
-                  apiStatus?.tokenValid
-                    ? 'bg-green-50 text-green-800'
-                    : 'bg-red-50 text-red-800'
-                }`}>
-                  <StatusIcon status={apiStatus?.tokenValid || false} />
-                  <span>{apiStatus?.tokenValid ? 'Token format is valid' : 'Token missing or invalid'}</span>
-                </div>
-                 <div className="mt-2 text-xs text-gray-500 p-2 bg-gray-50 rounded font-mono truncate">
-                    .env: {envToken ? `${envToken.substring(0, 8)}...` : 'Not set'}
-                  </div>
-              </div>
-
-              {/* Endpoints */}
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
-                  <Cloud className="w-5 h-5 mr-2 text-gray-400" />
-                  Service Endpoints
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <EndpointStatus name="Flights" icon={<Plane />} status={apiStatus?.endpoints.flights || false} loading={testing} />
-                    <EndpointStatus name="OTAs" icon={<Users />} status={apiStatus?.endpoints.otas || false} loading={testing} />
-                    <EndpointStatus name="Airports" icon={<Database />} status={apiStatus?.endpoints.airports || false} loading={testing} />
-                    <EndpointStatus name="Airlines" icon={<Database />} status={apiStatus?.endpoints.airlines || false} loading={testing} />
-                    <EndpointStatus name="Cities" icon={<Database />} status={apiStatus?.endpoints.cities || false} loading={testing} />
-                    <EndpointStatus name="Countries" icon={<Globe />} status={apiStatus?.endpoints.countries || false} loading={testing} />
-                    <EndpointStatus name="Planes" icon={<Paperclip />} status={apiStatus?.endpoints.planes || false} loading={testing} />
-                    <EndpointStatus name="Routes" icon={<Paperclip />} status={apiStatus?.endpoints.routes || false} loading={testing} />
-                    <EndpointStatus name="Alliances" icon={<Book />} status={apiStatus?.endpoints.alliances || false} loading={testing} />
-                  </div>
-              </div>
-            </div>
-
-            {/* Right Column: Overall Status & Flight Test */}
-            <div className="space-y-6">
-               {/* Overall Status */}
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Overall Status</h3>
-                <div className={`p-4 rounded-lg border ${
-                  apiStatus?.success
-                    ? 'bg-green-50 border-green-200 text-green-800'
-                    : 'bg-red-50 border-red-200 text-red-800'
-                }`}>
-                  <div className="flex items-center mb-2">
-                    <StatusIcon status={apiStatus?.success || false} />
-                    <span className="ml-2 font-medium">
-                      {testing ? 'Testing...' : apiStatus?.success ? 'API Connected' : 'Connection Failed'}
-                    </span>
-                  </div>
-                  <p className="text-sm">
-                    {testing ? 'Checking endpoints...' : apiStatus?.message || 'Run a test to see status.'}
-                  </p>
-                </div>
-                 {!apiStatus?.tokenValid && (
-                    <a
-                      href="https://www.travelpayouts.com/developers/api"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-blue-600 hover:text-blue-700 text-sm mt-3"
-                    >
-                      Get your free API token
-                      <ExternalLink className="w-4 h-4 ml-1" />
-                    </a>
-                  )}
-              </div>
-
-              {/* Flight Search */}
-              <div className="space-y-4">
-                 <h3 className="font-semibold text-gray-800">Flight Search Test</h3>
-                 <div className="bg-blue-50 p-3 rounded-lg text-center font-mono text-sm">
-                    <span className="text-blue-600 font-bold">JFK</span>
-                    <span className="mx-2">→</span>
-                    <span className="text-blue-600 font-bold">LAX</span>
-                  </div>
-
-                 <Button
-                    onClick={testFlightSearch}
-                    disabled={flightLoading || !apiStatus?.endpoints.flights}
-                    className="w-full"
-                  >
-                    {flightLoading ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Plane className="w-4 h-4 mr-2" />
-                    )}
-                    Test Flight Search
-                  </Button>
-                  
-                  <Button
-                    onClick={searchFlights}
-                    variant="destructive"
-                    className="w-full"
-                  >
-                    <Search className="w-4 h-4 mr-2" />
-                    Complete Diagnostic
-                  </Button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        {/* Local Data Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-            {/* OTA (Gates) Data */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                Online Travel Agencies (Gates)
-                </h2>
-                {allOtas.length > 0 ? (
-                    <div className="max-h-60 overflow-y-auto space-y-2 pr-4">
-                    <p className="text-sm text-gray-600 mb-4">Successfully loaded {allOtas.length} OTAs from local data.</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {allOtas.slice(0, 10).map(ota => (
-                          <div key={ota.code} className="p-3 border rounded-lg bg-gray-50">
-                              <p className="font-bold text-gray-800">{ota.name}</p>
-                              <p className="text-sm text-gray-500 font-mono">{ota.code}</p>
-                          </div>
-                        ))}
-                    </div>
-                     {allOtas.length > 10 && <p className='text-sm text-center mt-2 text-muted-foreground'>...and {allOtas.length - 10} more.</p>}
-                    </div>
-                ) : (
-                <div className="text-center py-8 text-red-500">
-                    Failed to load OTA data. The local data file might be missing or empty.
-                </div>
-                )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TestTube />
+              Basic API Diagnostics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="token-input" className="font-medium">
+                Your Travelpayouts Token
+              </label>
+              <Input
+                id="token-input"
+                type="text"
+                placeholder="Enter your 32-character token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                className="font-mono"
+              />
+               <p className="text-sm text-muted-foreground">
+                Get your free token from{' '}
+                <a href="https://www.travelpayouts.com/developers/api" target="_blank" rel="noopener noreferrer" className="underline">
+                    Travelpayouts
+                </a>.
+              </p>
             </div>
             
-            {/* Alliance Data */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <Book className="w-5 h-5 mr-2" />
-                  Airline Alliances
-                </h2>
-                {alliances.length > 0 ? (
-                    <div className="max-h-60 overflow-y-auto space-y-2 pr-4">
-                      <p className="text-sm text-gray-600 mb-4">Successfully loaded {alliances.length} Alliances from local data.</p>
-                      <div className="space-y-4">
-                        {alliances.map(alliance => (
-                          <div key={alliance.name} className="p-3 border rounded-lg bg-gray-50">
-                            <p className="font-bold text-gray-800">{alliance.name}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                ) : (
-                  <div className="text-center py-8 text-red-500">
-                    Failed to load Alliance data. The local data file might be missing or empty.
-                  </div>
-                )}
-            </div>
-        </div>
+            <Button onClick={testAPIBasics} disabled={testing || !token} className="w-full">
+              {testing ? 'Testing...' : 'Run Basic API Test'}
+            </Button>
 
-        {/* Flight Search Results */}
-        <div id="flight-results" className="mt-8">
-          
-        </div>
+            <div className="p-4 bg-gray-100 rounded-lg text-sm text-gray-700">
+                <div className='flex items-center gap-2 mb-2'>
+                    <Terminal className='w-5 h-5'/>
+                    <h3 className='font-semibold'>Instructions</h3>
+                </div>
+              <p>
+                1. Paste your API token in the input field above.
+              </p>
+              <p>
+                2. Click the button to run the tests.
+              </p>
+              <p>
+                3. Open your browser's developer console (press F12) to see the detailed output of the API tests.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
