@@ -69,9 +69,6 @@ const ENDPOINTS = {
   cities: 'https://api.travelpayouts.com/data/en/cities.json',
   airports: 'https://api.travelpayouts.com/data/en/airports.json',
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
-  countries: 'https://api.travelpayouts.com/data/en/countries.json',
-  planes: 'https://api.travelpayouts.com/data/en/planes.json',
-  routes: 'https://api.travelpayouts.com/data/en/routes.json',
   
   // Internal proxy for flight search
   flightSearch: '/api/flights/search'
@@ -101,11 +98,6 @@ class TravelpayoutsApiService {
       airlines: boolean;
       cities: boolean;
       flights: boolean;
-      otas: boolean;
-      countries: boolean;
-      planes: boolean;
-      routes: boolean;
-      alliances: boolean;
     };
     tokenValid: boolean;
   }> {
@@ -114,14 +106,9 @@ class TravelpayoutsApiService {
       airlines: false,
       cities: false,
       flights: false,
-      otas: true, // OTA data is now local, so it's always "connected"
-      countries: false,
-      planes: false,
-      routes: false,
-      alliances: true, // Alliance data is local
     };
 
-    const checkEndpoint = async (endpoint: keyof Omit<typeof results, 'otas' | 'alliances' | 'flights'>, url: string) => {
+    const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
       try {
         const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
         results[endpoint] = response.status === 200 && Array.isArray(response.data) && response.data.length > 0;
@@ -136,9 +123,6 @@ class TravelpayoutsApiService {
       checkEndpoint('airports', ENDPOINTS.airports),
       checkEndpoint('airlines', ENDPOINTS.airlines),
       checkEndpoint('cities', ENDPOINTS.cities),
-      checkEndpoint('countries', ENDPOINTS.countries),
-      checkEndpoint('planes', ENDPOINTS.planes),
-      checkEndpoint('routes', ENDPOINTS.routes),
     ]);
     
     // Check flight search endpoint if token is present
@@ -150,8 +134,8 @@ class TravelpayoutsApiService {
           depart_date: '2026-08-01',
           limit: 1,
         };
-        await this.searchFlights(flightParams);
-        // The test is successful if the API call doesn't throw and returns an array (even an empty one)
+        const flightResponse = await this.searchFlights(flightParams);
+        // The test is successful if the API call doesn't throw and returns an array (can be empty)
         results.flights = true;
       } catch (flightError: any) {
         console.warn('Flight API test failed:', flightError.message);
@@ -162,10 +146,11 @@ class TravelpayoutsApiService {
 
     const workingEndpoints = Object.values(results).filter(v => v).length;
     const totalEndpoints = Object.values(results).length;
+    const allGood = workingEndpoints === totalEndpoints;
 
     return {
-      success: workingEndpoints > 0,
-      message: `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
+      success: allGood,
+      message: allGood ? 'All services are operational.' : `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
       endpoints: results,
       tokenValid: !!API_TOKEN && API_TOKEN.length === 32,
     };
