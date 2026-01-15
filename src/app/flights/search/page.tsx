@@ -10,7 +10,6 @@ import {
   X,
   Calendar,
 } from 'lucide-react';
-import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -156,6 +155,7 @@ function SearchResultsContent() {
         
         if (flightData && flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
+          setAllFlights(flightData);
 
           const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
           const minPrice = Math.floor(Math.min(...prices.filter(p => isFinite(p))));
@@ -169,14 +169,6 @@ function SearchResultsContent() {
           setSelectedPrice([minPrice, maxPrice]);
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
-
-          const initialStops = [...new Set(flightData.map(f => f.transfers))];
-          setSelectedStops(initialStops);
-
-          const initialAirlines = [...new Set(flightData.map(f => f.airline_code))];
-          setSelectedAirlines(initialAirlines);
-          
-          setAllFlights(flightData);
 
         } else {
           toast.error(`No flights found for ${origin} to ${destination}.`);
