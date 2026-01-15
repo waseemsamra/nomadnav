@@ -269,13 +269,13 @@ function SearchResultsContent() {
   const sortedAndFilteredFlights = useMemo(() => {
     let filtered = allFlights;
     
-    if (selectedAirlines) {
+    if (selectedAirlines !== null) {
         filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
     }
-    if (selectedStops) {
+    if (selectedStops !== null) {
         filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
     }
-    if (selectedOtas) {
+    if (selectedOtas !== null) {
         filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
     }
 
