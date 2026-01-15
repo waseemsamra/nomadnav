@@ -806,62 +806,7 @@ export default function ApiTestPage() {
 
         {/* Flight Search Results */}
         <div id="flight-results" className="mt-8">
-          {(flightLoading || testFlights.length > 0) && (
-            <div className="bg-white rounded-2xl shadow-lg p-8 mt-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <Plane className="w-5 h-5 mr-2" />
-                Flight Search Results
-              </h2>
-              
-              {flightLoading ? (
-                 <div className="text-center py-8 text-gray-500">
-                    <RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2" />
-                    Searching for flights...
-                 </div>
-              ) : testFlights.length > 0 ? (
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">
-                    Found {testFlights.length} flights:
-                  </h3>
-                  {testFlights.map((flight) => (
-                    <div
-                      key={flight.id}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <div className="font-bold text-lg">
-                            ${flight.price}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {flight.airline} ({flight.airline_code}) • {flight.flight_number}
-                          </div>
-                           <div className="text-sm text-gray-500 mt-1">
-                            Sold by: <span className="font-medium text-gray-700">{flight.gate}</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            {flight.origin} → {flight.destination}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {flight.transfers === 0 ? 'Non-stop' : `${flight.transfers} stop(s)`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Duration: {formatDuration(flight.duration)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  The API did not return any flights for this test route.
-                </div>
-              )}
-            </div>
-          )}
+          
         </div>
       </div>
     </div>

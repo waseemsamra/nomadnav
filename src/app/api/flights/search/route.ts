@@ -138,7 +138,6 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             const airlineName = airlines[airlineCode] || airlineCode;
             const gate = flight.gate || flight.ota_code || 'unknown';
             
-            // The uniqueId must be truly unique. Append a random number for mock flights.
             const uniqueId = flight.id || `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}${flight.is_mock ? `-${Math.random()}`: ''}`;
 
             const enrichedFlight = {
@@ -183,7 +182,7 @@ export async function GET(req: NextRequest) {
         origin: origin,
         destination: destination,
         currency: currency,
-        limit: '100', // Always ask for a good number of flights
+        limit: '100',
         trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
     });
     
@@ -230,7 +229,7 @@ export async function GET(req: NextRequest) {
                 console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
                 const cheapestFlight = [...flightsWithDetails].sort((a,b) => a.price - b.price)[0];
                 
-                if (cheapestFlight) { // CRITICAL FIX: Only inject mocks if a real flight exists
+                if (cheapestFlight) {
                     const mockRawFlights = getMockOTAs(cheapestFlight);
                     const processedMockFlights = processFlights(mockRawFlights, airlines, currency);
                     flightsWithDetails.push(...processedMockFlights);
