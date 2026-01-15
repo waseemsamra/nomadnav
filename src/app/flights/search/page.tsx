@@ -97,6 +97,13 @@ function SearchResultsContent() {
       
       const otaInfoFromData = OTA_DATA.filter(ota => allOtasFromFlights.includes(ota.code));
       
+      // Add any mock OTAs that aren't in the static data
+      allOtasFromFlights.forEach(otaCode => {
+        if (!otaInfoFromData.some(ota => ota.code === otaCode)) {
+          otaInfoFromData.push({ code: otaCode, name: otaCode, main_url: '#' });
+        }
+      });
+
       return otaInfoFromData
           .map(ota => ({
               id: ota.code,
@@ -262,21 +269,14 @@ function SearchResultsContent() {
   const sortedAndFilteredFlights = useMemo(() => {
     let filtered = allFlights;
     
-    // Checkbox filters
-    if (selectedAirlines !== null && airlineOptions.length > 0) {
-      if (selectedAirlines.length < airlineOptions.length) {
-          filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
-      }
+    if (selectedAirlines) {
+        filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
     }
-    if (selectedStops !== null && stopOptions.length > 0) {
-      if (selectedStops.length < stopOptions.length) {
-          filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
-      }
+    if (selectedStops) {
+        filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
     }
-    if (selectedOtas !== null && otaOptions.length > 0) {
-      if (selectedOtas.length < otaOptions.length) {
-          filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
-      }
+    if (selectedOtas) {
+        filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
     }
 
     // Range filters
@@ -310,7 +310,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedOtas, durationRange, priceRange, airlineOptions, stopOptions, otaOptions]);
+  }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedOtas, durationRange, priceRange]);
   
 
   if (loading) {
@@ -653,5 +653,7 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
 
     
