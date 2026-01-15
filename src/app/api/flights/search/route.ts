@@ -83,25 +83,28 @@ async function searchWithStrategy(params: URLSearchParams) {
     const endpoint = '/v1/prices/cheap';
     
     try {
-        console.log(`Attempting search with ${endpoint}...`);
+        console.log(`Attempting search with ${endpoint} for destination ${params.get('destination')}`);
         
         const apiResponse = await fetchWithEndpoint(endpoint, params);
         
         if (apiResponse.success && apiResponse.data) {
             const destination = params.get('destination') || '';
-            // The data is keyed by destination city code. We need to find the data for our destination.
             const destinationData = apiResponse.data[destination];
             if (destinationData && Object.keys(destinationData).length > 0) {
                 const flightsForDest = Object.values(destinationData);
                 console.log(`✓ Success with ${endpoint}. Found ${flightsForDest.length} raw flight segments for ${destination}.`);
-                return flightsForDest;
+                return flightsForDest.map((flight: any) => ({
+                    ...flight,
+                    origin: params.get('origin'), // Add origin to each flight
+                }));
             } else {
                  console.log(`Data received, but no flights for key '${destination}'. Keys found: ${Object.keys(apiResponse.data)}`);
             }
+        } else {
+            console.log(`No results from ${endpoint} for destination ${params.get('destination')}. API success: ${apiResponse.success}`);
         }
-        console.log(`No results from ${endpoint} for destination.`);
     } catch (e: any) {
-        console.warn(`${endpoint} failed:`, e.message);
+        console.warn(`${endpoint} failed for ${params.get('destination')}:`, e.message);
     }
     
     return [];
@@ -137,13 +140,11 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
     return flights
         .filter(flight => flight && typeof flight.price === 'number')
         .map((flight: any) => {
-            const airlineCode = flight.airline_code || flight.airline;
+            const airlineCode = flight.airline; // Data from /v1/prices/cheap uses 'airline'
             const airlineName = airlines[airlineCode] || airlineCode;
             const gate = flight.gate || flight.ota_code || 'unknown';
             
-            const uniqueId = (flight.id && !flight.is_mock) 
-                ? flight.id 
-                : `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}-${Math.random()}`;
+            const uniqueId = `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}-${Math.random()}`;
 
             const enrichedFlight = {
                 id: uniqueId,
@@ -153,7 +154,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
                 flight_number: flight.flight_number,
                 departure_at: flight.departure_at,
                 return_at: flight.return_at,
-                arrival_at: flight.arrival_at || flight.departure_at, // Fallback for arrival_at
+                arrival_at: flight.departure_at, 
                 origin: flight.origin,
                 destination: flight.destination,
                 transfers: flight.transfers,
