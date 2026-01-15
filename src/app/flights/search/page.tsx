@@ -47,14 +47,14 @@ function SearchResultsContent() {
   
   // All filter states are managed here
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
-  const [selectedAirlines, setSelectedAirlines] = useState<string[] | null>(null);
-  const [selectedStops, setSelectedStops] = useState<number[] | null>(null);
+  const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
+  const [selectedStops, setSelectedStops] = useState<number[]>([]);
   const [baggageFilter, setBaggageFilter] = useState<BaggageFilterType>('all');
   const [durationRange, setDurationRange] = useState({ min: 0, max: 0 });
   const [selectedDuration, setSelectedDuration] = useState([0, 0]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 0 });
   const [selectedPrice, setSelectedPrice] = useState([0, 0]);
-  const [selectedOtas, setSelectedOtas] = useState<string[] | null>(null);
+  const [selectedOtas, setSelectedOtas] = useState<string[]>([]);
 
   // Memoized options derived from flight data
   const airlineOptions = useMemo(() => {
@@ -177,6 +177,15 @@ function SearchResultsContent() {
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
 
+          // CORRECT INITIALIZATION: Default to all selected.
+          const allAirlines = [...new Set(flightData.map(f => f.airline_code).filter(Boolean))];
+          setSelectedAirlines(allAirlines);
+          const allStops = [...new Set(flightData.map(f => f.transfers))];
+          setSelectedStops(allStops);
+          const allOtas = [...new Set(flightData.map(f => f.gate).filter(Boolean))];
+          setSelectedOtas(allOtas);
+
+
         } else {
           toast.error(`No flights found for ${origin} to ${destination}.`);
           setAllFlights([]);
@@ -208,12 +217,11 @@ function SearchResultsContent() {
   };
 
   const handleAirlineSelection = (airlineCode: string) => {
-    setSelectedAirlines(prev => {
-        const current = prev ?? airlineOptions.map(a => a.code);
-        return current.includes(airlineCode)
-            ? current.filter(a => a !== airlineCode)
-            : [...current, airlineCode];
-    });
+    setSelectedAirlines(prev => 
+        prev.includes(airlineCode)
+            ? prev.filter(a => a !== airlineCode)
+            : [...prev, airlineCode]
+    );
   };
   
   const handleSelectAllAirlines = (checked: boolean) => {
@@ -221,12 +229,11 @@ function SearchResultsContent() {
   }
 
   const handleStopSelection = (stopCount: number) => {
-    setSelectedStops(prev => {
-        const current = prev ?? stopOptions.map(s => s.value);
-        return current.includes(stopCount)
-            ? current.filter(s => s !== stopCount)
-            : [...current, stopCount];
-    });
+    setSelectedStops(prev => 
+        prev.includes(stopCount)
+            ? prev.filter(s => s !== stopCount)
+            : [...prev, stopCount]
+    );
   };
 
   const handleSelectAllStops = (checked: boolean) => {
@@ -234,12 +241,11 @@ function SearchResultsContent() {
   }
   
   const handleOtaSelection = (otaId: string) => {
-    setSelectedOtas(prev => {
-      const current = prev ?? otaOptions.map(o => o.id);
-      return current.includes(otaId)
-        ? current.filter(id => id !== otaId)
-        : [...current, otaId];
-    });
+    setSelectedOtas(prev => 
+      prev.includes(otaId)
+        ? prev.filter(id => id !== otaId)
+        : [...prev, otaId]
+    );
   };
 
   const handleSelectAllOtas = (checked: boolean) => {
@@ -249,9 +255,9 @@ function SearchResultsContent() {
 
   const handleResetFilters = () => {
     setFilters(initialFilterState);
-    setSelectedAirlines(null);
-    setSelectedStops(null);
-    setSelectedOtas(null);
+    setSelectedAirlines(airlineOptions.map(a => a.code));
+    setSelectedStops(stopOptions.map(s => s.value));
+    setSelectedOtas(otaOptions.map(o => o.id));
     setBaggageFilter('all');
     setSelectedDuration([durationRange.min, durationRange.max]);
     setSelectedPrice([priceRange.min, priceRange.max]);
@@ -267,28 +273,18 @@ function SearchResultsContent() {
   };
   
   const sortedAndFilteredFlights = useMemo(() => {
-    let filtered = allFlights;
-    
-    if (selectedAirlines !== null) {
-        filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
-    }
-    if (selectedStops !== null) {
-        filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
-    }
-    if (selectedOtas !== null) {
-        filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
-    }
+    let filtered = allFlights.filter(flight => {
+        const airlineMatch = selectedAirlines.includes(flight.airline_code);
+        const stopMatch = typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers);
+        const otaMatch = flight.gate && selectedOtas.includes(flight.gate);
+        
+        const durationMatch = typeof flight.duration === 'number' && flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1];
+        
+        const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
+        const priceMatch = price >= selectedPrice[0] && price <= selectedPrice[1];
 
-    // Range filters
-    if (durationRange.max > 0) {
-      filtered = filtered.filter(flight => typeof flight.duration === 'number' && flight.duration >= selectedDuration[0] && flight.duration <= selectedDuration[1]);
-    }
-    if (priceRange.max > 0) {
-      filtered = filtered.filter(flight => {
-          const price = travelpayoutsApi.getFlightDisplayPrice(flight, baggageFilter);
-          return price >= selectedPrice[0] && price <= selectedPrice[1];
-      });
-    }
+        return airlineMatch && stopMatch && otaMatch && durationMatch && priceMatch;
+    });
 
     // Apply sorting
     switch (filters.sortBy) {
@@ -343,9 +339,9 @@ function SearchResultsContent() {
     );
     
     // Determine checkbox state for "Select All"
-    const isAllAirlinesSelected = selectedAirlines === null || (airlineOptions.length > 0 && selectedAirlines.length === airlineOptions.length);
-    const isAllStopsSelected = selectedStops === null || (stopOptions.length > 0 && selectedStops.length === stopOptions.length);
-    const isAllOtasSelected = selectedOtas === null || (otaOptions.length > 0 && selectedOtas.length === otaOptions.length);
+    const isAllAirlinesSelected = airlineOptions.length > 0 && selectedAirlines.length === airlineOptions.length;
+    const isAllStopsSelected = stopOptions.length > 0 && selectedStops.length === stopOptions.length;
+    const isAllOtasSelected = otaOptions.length > 0 && selectedOtas.length === otaOptions.length;
 
 
     return (
@@ -388,7 +384,7 @@ function SearchResultsContent() {
                                   <div className="flex items-center space-x-2">
                                     <Checkbox
                                         id={`stop-${opt.value}`}
-                                        checked={(selectedStops ?? stopOptions.map(o => o.value)).includes(opt.value)}
+                                        checked={selectedStops.includes(opt.value)}
                                         onCheckedChange={() => handleStopSelection(opt.value)}
                                     />
                                     <Label htmlFor={`stop-${opt.value}`}>{opt.label}</Label>
@@ -474,7 +470,7 @@ function SearchResultsContent() {
                                <div key={`${airline.code}-${airline.name}`} className="flex items-center space-x-2">
                                   <Checkbox
                                       id={`airline-${airline.name}`}
-                                      checked={(selectedAirlines ?? airlineOptions.map(a => a.code)).includes(airline.code)}
+                                      checked={selectedAirlines.includes(airline.code)}
                                       onCheckedChange={() => handleAirlineSelection(airline.code)}
                                   />
                                   <Label htmlFor={`airline-${airline.name}`}>{airline.name}</Label>
@@ -500,7 +496,7 @@ function SearchResultsContent() {
                                   <div className={`flex items-center space-x-2 ${ota.price === null ? 'opacity-50' : ''}`}>
                                       <Checkbox 
                                         id={`ota-${ota.id}`} 
-                                        checked={(selectedOtas ?? otaOptions.map(o => o.id)).includes(ota.id)}
+                                        checked={selectedOtas.includes(ota.id)}
                                         onCheckedChange={() => handleOtaSelection(ota.id)}
                                         disabled={ota.price === null}
                                       />
