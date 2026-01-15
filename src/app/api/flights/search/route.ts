@@ -73,32 +73,29 @@ function addEstimatedBaggagePrices(flight: any): Flight {
 async function fetchWithEndpoint(endpoint: string, params: URLSearchParams) {
     const url = `${API_BASE_URL}${endpoint}?${params.toString()}`;
     const response = await axios.get(url, {
-        timeout: 20000, // Increased timeout for potentially slower endpoint
+        timeout: 20000,
         headers: { 'X-Access-Token': API_TOKEN, 'Accept-Encoding': 'gzip, deflate, compress' },
     });
     return response.data;
 }
 
 async function searchWithStrategy(params: URLSearchParams) {
-    // STRATEGY: Use the more reliable but potentially slower /v1/prices/cheap endpoint
     const endpoint = '/v1/prices/cheap';
     
     try {
         console.log(`Attempting search with ${endpoint}...`);
         const currentParams = new URLSearchParams(params);
-        // This endpoint uses 'page' and does not need sorting or affiliates flags
         currentParams.delete('sorting');
         currentParams.delete('show_to_affiliates');
         
         const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
         
-        // The structure for /v1/prices/cheap is { success: boolean, data: { [destination]: { [origin]: { ...flight_details } } } }
         if (apiResponse.success && apiResponse.data) {
             const destination = params.get('destination') || '';
             const flightsForDest = apiResponse.data[destination];
             if (flightsForDest) {
                 const allFlights = Object.values(flightsForDest);
-                console.log(`✓ Success with ${endpoint}. Found ${allFlights.length} flights.`);
+                console.log(`✓ Success with ${endpoint}. Found ${allFlights.length} raw flight segments.`);
                 return allFlights;
             }
         }
@@ -107,7 +104,7 @@ async function searchWithStrategy(params: URLSearchParams) {
         console.warn(`${endpoint} failed:`, e.message);
     }
     
-    return []; // Return empty array if strategy fails
+    return [];
 }
 
 
@@ -123,14 +120,11 @@ function getMockOTAs(baseFlight: any) {
 
     return mockGates.map(mock => {
       const newPrice = Math.round(baseFlight.price * mock.priceModifier);
-      const uniqueId = `${baseFlight.id}-mock-${mock.gate}`;
       
       return {
         ...baseFlight,
         price: newPrice,
         gate: mock.gate,
-        id: uniqueId,
-        link: '#', 
         is_mock: true
       };
     });
@@ -225,22 +219,19 @@ export async function GET(req: NextRequest) {
                         allFlights.push(...result);
                     }
                 });
-                console.log(`Found ${allFlights.length} flights via alternative routes.`);
+                console.log(`Found ${allFlights.length} total flights via alternative routes.`);
             }
         }
         
         const airlines = await getAirlinesData();
         let flightsWithDetails = processFlights(allFlights, airlines, currency);
         
-        // **CRITICAL FIX**: Only add mock data if there are REAL flights to base them on.
         if (flightsWithDetails.length > 0) {
             const uniqueGates = new Set(flightsWithDetails.map(f => f.gate).filter(Boolean));
             if (uniqueGates.size < 3) {
                 console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
-                // Sort by price and get the actual cheapest flight
                 const cheapestFlight = [...flightsWithDetails].sort((a,b) => a.price - b.price)[0];
                 
-                // **SAFETY CHECK**: Ensure cheapestFlight is not undefined
                 if (cheapestFlight) {
                     const mockRawFlights = getMockOTAs(cheapestFlight);
                     const processedMockFlights = processFlights(mockRawFlights, airlines, currency);
@@ -249,6 +240,7 @@ export async function GET(req: NextRequest) {
             }
         }
 
+        console.log(`Returning ${flightsWithDetails.length} processed flights to client.`);
         return NextResponse.json(flightsWithDetails);
 
     } catch (error: any) {
@@ -259,5 +251,3 @@ export async function GET(req: NextRequest) {
         );
     }
 }
-
-    
