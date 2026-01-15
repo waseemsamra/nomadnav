@@ -89,12 +89,14 @@ async function searchWithStrategy(params: URLSearchParams) {
         
         if (apiResponse.success && apiResponse.data) {
             const destination = params.get('destination') || '';
-            // The data is keyed by destination city code.
-            const flightsForDest = apiResponse.data[destination];
-            if (flightsForDest) {
-                const allFlights = Object.values(flightsForDest);
-                console.log(`✓ Success with ${endpoint}. Found ${allFlights.length} raw flight segments for ${destination}.`);
-                return allFlights;
+            // The data is keyed by destination city code. We need to find the data for our destination.
+            const destinationData = apiResponse.data[destination];
+            if (destinationData && Object.keys(destinationData).length > 0) {
+                const flightsForDest = Object.values(destinationData);
+                console.log(`✓ Success with ${endpoint}. Found ${flightsForDest.length} raw flight segments for ${destination}.`);
+                return flightsForDest;
+            } else {
+                 console.log(`Data received, but no flights for key '${destination}'. Keys found: ${Object.keys(apiResponse.data)}`);
             }
         }
         console.log(`No results from ${endpoint} for destination.`);
@@ -151,7 +153,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
                 flight_number: flight.flight_number,
                 departure_at: flight.departure_at,
                 return_at: flight.return_at,
-                arrival_at: flight.arrival_at,
+                arrival_at: flight.arrival_at || flight.departure_at, // Fallback for arrival_at
                 origin: flight.origin,
                 destination: flight.destination,
                 transfers: flight.transfers,
