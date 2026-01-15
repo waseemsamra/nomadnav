@@ -245,6 +245,7 @@ function Footer() {
             © {currentYear || ''} Nomad Navigator. All rights reserved.
           </div>
           <div className="footer-meta">
+            <Link href="/test" className="text-sm hover:underline">Test Page</Link>
             <div className="footer-made-with">
               Made with <Heart className="heart-icon" /> by The Studio Team
             </div>
