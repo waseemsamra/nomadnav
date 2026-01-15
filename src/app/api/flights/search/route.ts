@@ -73,28 +73,36 @@ function addEstimatedBaggagePrices(flight: any): Flight {
 async function fetchWithEndpoint(endpoint: string, params: URLSearchParams) {
     const url = `${API_BASE_URL}${endpoint}?${params.toString()}`;
     const response = await axios.get(url, {
-        timeout: 15000,
+        timeout: 20000, // Increased timeout for potentially slower endpoint
         headers: { 'X-Access-Token': API_TOKEN, 'Accept-Encoding': 'gzip, deflate, compress' },
     });
     return response.data;
 }
 
 async function searchWithStrategy(params: URLSearchParams) {
-    const endpoint = '/v2/prices/latest';
+    // STRATEGY: Use the more reliable but potentially slower /v1/prices/cheap endpoint
+    const endpoint = '/v1/prices/cheap';
     
     try {
         console.log(`Attempting search with ${endpoint}...`);
         const currentParams = new URLSearchParams(params);
-        currentParams.set('sorting', 'price');
-        currentParams.set('show_to_affiliates', 'true');
+        // This endpoint uses 'page' and does not need sorting or affiliates flags
+        currentParams.delete('sorting');
+        currentParams.delete('show_to_affiliates');
         
         const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
         
-        if (apiResponse.success && Array.isArray(apiResponse.data) && apiResponse.data.length > 0) {
-            console.log(`✓ Success with ${endpoint}. Found ${apiResponse.data.length} flights.`);
-            return apiResponse.data;
+        // The structure for /v1/prices/cheap is { success: boolean, data: { [destination]: { [origin]: { ...flight_details } } } }
+        if (apiResponse.success && apiResponse.data) {
+            const destination = params.get('destination') || '';
+            const flightsForDest = apiResponse.data[destination];
+            if (flightsForDest) {
+                const allFlights = Object.values(flightsForDest);
+                console.log(`✓ Success with ${endpoint}. Found ${allFlights.length} flights.`);
+                return allFlights;
+            }
         }
-        console.log(`No results from ${endpoint}.`);
+        console.log(`No results from ${endpoint} for destination.`);
     } catch (e: any) {
         console.warn(`${endpoint} failed:`, e.message);
     }
@@ -251,3 +259,5 @@ export async function GET(req: NextRequest) {
         );
     }
 }
+
+    
