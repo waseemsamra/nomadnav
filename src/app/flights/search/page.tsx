@@ -156,9 +156,6 @@ function SearchResultsContent() {
         
         console.log(`Fetched ${flightData.length} flights`);
         
-        // ** ATOMIC STATE UPDATE **
-        handleResetFilters();
-        
         if (flightData && flightData.length > 0) {
           toast.success(`Found ${flightData.length} flights`);
 
@@ -174,6 +171,12 @@ function SearchResultsContent() {
           setSelectedPrice([minPrice, maxPrice]);
           setDurationRange({ min: minDuration, max: maxDuration });
           setSelectedDuration([minDuration, maxDuration]);
+
+          const initialStops = [...new Set(flightData.map(f => f.transfers))];
+          setSelectedStops(initialStops);
+
+          const initialAirlines = [...new Set(flightData.map(f => f.airline_code))];
+          setSelectedAirlines(initialAirlines);
           
           setAllFlights(flightData);
 
@@ -681,7 +684,3 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
-
-    
