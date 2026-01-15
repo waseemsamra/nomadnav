@@ -89,6 +89,7 @@ async function searchWithStrategy(params: URLSearchParams) {
         
         if (apiResponse.success && apiResponse.data) {
             const destination = params.get('destination') || '';
+            // The data is keyed by destination city code.
             const flightsForDest = apiResponse.data[destination];
             if (flightsForDest) {
                 const allFlights = Object.values(flightsForDest);
@@ -250,5 +251,4 @@ export async function GET(req: NextRequest) {
         );
     }
 }
-
     

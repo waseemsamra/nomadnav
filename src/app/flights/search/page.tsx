@@ -55,8 +55,6 @@ function SearchResultsContent() {
   const [selectedDuration, setSelectedDuration] = useState([0, 0]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 0 });
   const [selectedPrice, setSelectedPrice] = useState([0, 0]);
-  const [departureTimeRange, setDepartureTimeRange] = useState({ min: 0, max: 1440 });
-  const [selectedDepartureTime, setSelectedDepartureTime] = useState([0, 1440]);
   const [selectedOtas, setSelectedOtas] = useState<string[] | null>(null);
 
   // Memoized options derived from flight data
@@ -258,7 +256,6 @@ function SearchResultsContent() {
     setBaggageFilter('all');
     setSelectedDuration([durationRange.min, durationRange.max]);
     setSelectedPrice([priceRange.min, priceRange.max]);
-    setSelectedDepartureTime([departureTimeRange.min, departureTimeRange.max]);
   };
 
   const formatDuration = (minutes: number) => {
@@ -267,12 +264,6 @@ function SearchResultsContent() {
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
   };
-
-  const formatTime = (totalMinutes: number) => {
-    const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
-    const minutes = (totalMinutes % 60).toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
 
   const formatDate = (dateString: string) => {
     try {
@@ -330,7 +321,7 @@ function SearchResultsContent() {
             break;
     }
     return filtered;
-  }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedDepartureTime, selectedOtas, durationRange, priceRange, airlineOptions, stopOptions, otaOptions]);
+  }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedOtas, durationRange, priceRange, airlineOptions, stopOptions, otaOptions]);
   
 
   if (loading) {
