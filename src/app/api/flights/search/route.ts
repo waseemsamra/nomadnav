@@ -122,7 +122,6 @@ function getMockOTAs(baseFlight: any) {
         ...baseFlight,
         price: newPrice,
         gate: mock.gate,
-        flight_number: `${baseFlight.flight_number}-${Math.floor(Math.random() * 1000)}`,
         is_mock: true
       };
     });
@@ -139,7 +138,8 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             const airlineName = airlines[airlineCode] || airlineCode;
             const gate = flight.gate || flight.ota_code || 'unknown';
             
-            const uniqueId = flight.id || `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}`;
+            // The uniqueId must be truly unique. Append a random number for mock flights.
+            const uniqueId = flight.id || `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}${flight.is_mock ? `-${Math.random()}`: ''}`;
 
             const enrichedFlight = {
                 id: uniqueId,
