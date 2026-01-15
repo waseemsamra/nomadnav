@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { type Flight } from '@/services/travelpayoutsApi';
 import { OTA_DATA } from '@/lib/ota-data';
 import { Button } from '@/components/ui/button';
+import { formatDuration, formatDateString } from '@/lib/utils';
+import { ArrowRight, Clock, Users, Dot } from 'lucide-react';
 
 interface FlightCardProps {
   flight: Flight;
@@ -17,81 +19,71 @@ const getOtaName = (code: string | undefined): string => {
     return ota ? ota.name : code;
 };
 
-const formatSimpleDateTime = (dateString: string | undefined): string => {
-    if (!dateString || dateString === 'N/A') return 'N/A';
-    try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-        });
-    } catch (e) {
-        return dateString;
-    }
-};
-
 const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
-    // Safely extract data with fallbacks, just like in the guaranteed function
     const price = flight.price ?? 'N/A';
-    const airlineCode = flight.airline_code || flight.airline || '??';
-    const otaCode = flight.gate || 'OTA';
+    const airlineCode = flight.airline_code || '??';
+    const airlineName = flight.airline || 'Unknown Airline';
+    const otaCode = flight.gate || 'unknown';
     const otaName = getOtaName(otaCode);
     const origin = flight.origin || '???';
     const destination = flight.destination || '???';
     const stops = flight.transfers ?? 0;
-    const departure = flight.departure_at || 'N/A';
-    const duration = flight.duration ?? 'N/A';
+    const departureTime = flight.departure_at ? formatDateString(flight.departure_at, 'h:mm a') : 'N/A';
+    const arrivalTime = flight.arrival_at ? formatDateString(flight.arrival_at, 'h:mm a') : 'N/A';
+    const durationFormatted = typeof flight.duration === 'number' ? formatDuration(flight.duration * 60) : 'N/A';
+    const airlineLogoUrl = `https://pics.avs.io/120/40/${airlineCode}.png`;
 
     return (
-        <div className="bg-white rounded-lg border border-border shadow-sm overflow-hidden">
-            <div className="p-4">
-                <div className="grid grid-cols-12 gap-4">
-                    {/* Price */}
-                    <div className="col-span-3">
-                        <p className="text-2xl font-bold text-primary">${price}</p>
-                        <p className="text-xs text-muted-foreground">per person</p>
-                    </div>
+        <div className="bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300">
+            <div className="grid grid-cols-12 gap-4 items-center p-4">
+                
+                {/* Airline & OTA */}
+                <div className="col-span-3 flex flex-col items-start justify-center gap-2">
+                     <Image 
+                        src={airlineLogoUrl}
+                        alt={airlineName}
+                        width={120}
+                        height={40}
+                        className="object-contain h-8 w-auto"
+                    />
+                    <div className="text-sm text-muted-foreground">{otaName}</div>
+                </div>
 
-                    {/* Middle Details */}
-                    <div className="col-span-6">
-                        <div className="flex items-center justify-center font-semibold text-lg">
-                            <span>{origin}</span>
-                            <span className="mx-2 text-muted-foreground">→</span>
-                            <span>{destination}</span>
+                {/* Flight Details */}
+                <div className="col-span-6 flex flex-col items-center justify-center">
+                    <div className="flex items-center w-full">
+                        <div className="flex-1 text-center">
+                            <p className="text-2xl font-semibold">{origin}</p>
+                            <p className="text-sm text-muted-foreground">{departureTime}</p>
                         </div>
-                        <div className="mt-2 text-xs text-muted-foreground grid grid-cols-3 gap-2 text-center">
-                            <div>
-                                <span className="font-semibold">Departure:</span> {formatSimpleDateTime(departure)}
-                            </div>
-                            <div>
-                                <span className="font-semibold">Stops:</span> {stops}
-                            </div>
-                            <div>
-                                <span className="font-semibold">Duration:</span> {duration} min
-                            </div>
+                        <div className="px-4 text-center">
+                            <Clock className="w-4 h-4 text-muted-foreground mx-auto mb-1"/>
+                            <p className="text-xs text-muted-foreground whitespace-nowrap">{durationFormatted}</p>
+                        </div>
+                        <div className="flex-1 text-center">
+                            <p className="text-2xl font-semibold">{destination}</p>
+                            <p className="text-sm text-muted-foreground">{arrivalTime}</p>
                         </div>
                     </div>
-                    
-                    {/* OTA and Airline */}
-                    <div className="col-span-3 text-right">
-                        <p className="font-bold">{otaName}</p>
-                        <p className="text-sm text-muted-foreground">{airlineCode}</p>
+                    <div className="w-full flex items-center justify-center text-xs text-muted-foreground mt-2">
+                        <div className="flex-grow h-px bg-border"></div>
+                        <div className="px-2">{stops === 0 ? 'Non-stop' : `${stops} stop${stops > 1 ? 's' : ''}`}</div>
+                        <div className="flex-grow h-px bg-border"></div>
                     </div>
                 </div>
-            </div>
-            
-            {/* Action Button */}
-            <div className="bg-gray-50 px-4 py-3">
-                 <Button 
-                    size="sm"
-                    onClick={() => onBookFlight(flight)}
-                    className="w-full"
-                >
-                   Select Flight
-                </Button>
+                
+                {/* Price & Booking */}
+                <div className="col-span-3 flex flex-col items-end justify-center text-right">
+                    <p className="text-3xl font-bold text-primary">${price}</p>
+                    <p className="text-xs text-muted-foreground mb-3">per person</p>
+                    <Button 
+                        size="sm"
+                        onClick={() => onBookFlight(flight)}
+                        className="w-full"
+                    >
+                       Select Flight
+                    </Button>
+                </div>
             </div>
         </div>
     );

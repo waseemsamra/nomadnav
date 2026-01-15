@@ -138,8 +138,6 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
             const airlineName = airlines[airlineCode] || airlineCode;
             const gate = flight.gate || flight.ota_code || 'unknown';
             
-            // Critical Fix: Ensure a truly unique ID for every processed flight.
-            // If the source doesn't provide an ID, or if it's a mock flight, create a robust unique key.
             const uniqueId = flight.id && !flight.is_mock 
                 ? flight.id 
                 : `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}-${Math.random()}`;
