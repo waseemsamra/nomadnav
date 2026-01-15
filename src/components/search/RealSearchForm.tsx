@@ -10,7 +10,7 @@ import {
   Briefcase,
   Users,
 } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -74,13 +74,13 @@ const RealSearchForm: React.FC = () => {
   const [destination, setDestination] = useState<AirportOption | null>(null);
   
   const [multiCitySegments, setMultiCitySegments] = useState([
-    { from: null as AirportOption | null, to: null as AirportOption | null, date: format(addDays(new Date(), 7), 'yyyy-MM-dd') },
-    { from: null as AirportOption | null, to: null as AirportOption | null, date: format(addDays(new Date(), 14), 'yyyy-MM-dd') },
+    { from: null as AirportOption | null, to: null as AirportOption | null, date: '2026-01-20' },
+    { from: null as AirportOption | null, to: null as AirportOption | null, date: '2026-01-27' },
   ]);
 
   const [formData, setFormData] = useState({
-    departDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
-    returnDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
+    departDate: '2026-01-20',
+    returnDate: '2026-01-27',
     tripType: 'oneway' as 'oneway' | 'round' | 'multi',
     passengers: 1,
     cabinClass: 'economy',

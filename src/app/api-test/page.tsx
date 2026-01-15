@@ -398,7 +398,7 @@ export default function ApiTestPage() {
         gate: 'MYTR',
         origin: 'KHI',
         destination: 'DXB',
-        departure_at: '2024-12-20T03:00:00Z',
+        departure_at: '2026-01-20T03:00:00Z',
         duration: 145,
         transfers: 0,
         link: '#',
@@ -415,7 +415,7 @@ export default function ApiTestPage() {
         gate: 'CITY',
         origin: 'KHI',
         destination: 'DXB',
-        departure_at: '2024-12-20T08:30:00Z',
+        departure_at: '2026-01-20T08:30:00Z',
         duration: 135,
         transfers: 0,
         link: '#',
@@ -432,7 +432,7 @@ export default function ApiTestPage() {
         gate: 'WING',
         origin: 'KHI',
         destination: 'DXB',
-        departure_at: '2024-12-20T14:15:00Z',
+        departure_at: '2026-01-20T14:15:00Z',
         duration: 165,
         transfers: 1,
         link: '#',
@@ -466,7 +466,7 @@ export default function ApiTestPage() {
     
     const origin = 'KHI';
     const destination = 'DXB';
-    const date = '2024-12-20';
+    const date = '2026-01-20';
     
     console.log(`Searching: ${origin} → ${destination} on ${date}`);
     
@@ -567,7 +567,7 @@ export default function ApiTestPage() {
       const flights = await travelpayoutsApi.searchFlights({
         origin: 'JFK',
         destination: 'LAX',
-        depart_date: '2025-07-01', // Use a future date
+        depart_date: '2026-07-01', // Use a future date
         currency: 'USD',
         limit: 3,
       });
@@ -867,3 +867,4 @@ export default function ApiTestPage() {
     
 
     
+
