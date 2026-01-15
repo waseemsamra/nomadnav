@@ -286,12 +286,16 @@ export default function ApiTestPage() {
   }
 
   // NUCLEAR OPTION - This WILL display flights
-  function nuclearDisplay(flights: Flight[]) {
+  function nuclearDisplay(flights: any[]) {
     console.log('💥 NUCLEAR DISPLAY ACTIVATED');
     
+    // Remove any existing nuclear container
+    const oldContainer = document.getElementById('nuclear-flight-results');
+    if (oldContainer) oldContainer.remove();
+
     // Create a completely new container that will definitely show
     const nuclearContainer = document.createElement('div');
-    nuclearContainer.id = 'nuclear-flight-results-' + Date.now();
+    nuclearContainer.id = 'nuclear-flight-results';
     nuclearContainer.style.cssText = `
       position: fixed;
       top: 50%;
@@ -354,7 +358,7 @@ export default function ApiTestPage() {
         <div style="display: flex; justify-content: space-between;">
           <div>
             <span style="font-size: 24px; font-weight: bold; color: #1a73e8;">
-              $${flight.price || 'N/A'}
+              $${flight.price || flight.value || 'N/A'}
             </span>
             <div style="font-size: 12px; color: #666;">per person</div>
           </div>
@@ -498,7 +502,6 @@ export default function ApiTestPage() {
           origin,
           destination,
           depart_date: date,
-          limit: 10
       });
       
       console.log(`API returned ${flights?.length || 0} flights`);
@@ -574,6 +577,7 @@ export default function ApiTestPage() {
       setTestFlights(flights);
     } catch (error: any) {
       console.error('Flight search failed:', error.message);
+      toast.error('Flight search test failed: ' + error.message);
       setTestFlights([]);
     } finally {
       setFlightLoading(false);
@@ -863,8 +867,3 @@ export default function ApiTestPage() {
     </div>
   );
 }
-
-    
-
-    
-

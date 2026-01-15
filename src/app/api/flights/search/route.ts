@@ -84,18 +84,15 @@ async function searchWithStrategy(params: URLSearchParams) {
     
     try {
         console.log(`Attempting search with ${endpoint}...`);
-        const currentParams = new URLSearchParams(params);
-        currentParams.delete('sorting');
-        currentParams.delete('show_to_affiliates');
         
-        const apiResponse = await fetchWithEndpoint(endpoint, currentParams);
+        const apiResponse = await fetchWithEndpoint(endpoint, params);
         
         if (apiResponse.success && apiResponse.data) {
             const destination = params.get('destination') || '';
             const flightsForDest = apiResponse.data[destination];
             if (flightsForDest) {
                 const allFlights = Object.values(flightsForDest);
-                console.log(`✓ Success with ${endpoint}. Found ${allFlights.length} raw flight segments.`);
+                console.log(`✓ Success with ${endpoint}. Found ${allFlights.length} raw flight segments for ${destination}.`);
                 return allFlights;
             }
         }
@@ -185,7 +182,7 @@ export async function GET(req: NextRequest) {
         origin: origin,
         destination: destination,
         currency: currency,
-        limit: searchParams.get('limit') || '100',
+        limit: '100', // Always ask for a good number of flights
         trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
     });
     
@@ -232,7 +229,7 @@ export async function GET(req: NextRequest) {
                 console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
                 const cheapestFlight = [...flightsWithDetails].sort((a,b) => a.price - b.price)[0];
                 
-                if (cheapestFlight) {
+                if (cheapestFlight) { // CRITICAL FIX: Only inject mocks if a real flight exists
                     const mockRawFlights = getMockOTAs(cheapestFlight);
                     const processedMockFlights = processFlights(mockRawFlights, airlines, currency);
                     flightsWithDetails.push(...processedMockFlights);

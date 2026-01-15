@@ -147,7 +147,7 @@ class TravelpayoutsApiService {
         const flightParams: FlightSearchParams = {
           origin: 'JFK',
           destination: 'LAX',
-          depart_date: '2025-08-01',
+          depart_date: '2026-08-01',
           limit: 1,
         };
         await this.searchFlights(flightParams);
@@ -182,7 +182,6 @@ class TravelpayoutsApiService {
         destination: params.destination,
         depart_date: params.depart_date,
         currency: params.currency || 'USD',
-        limit: (params.limit || 50).toString(),
         cabin_class: params.cabin_class || 'economy',
       });
 
@@ -192,7 +191,11 @@ class TravelpayoutsApiService {
       
       const response = await axios.get(ENDPOINTS.flightSearch, { params: searchParams });
       
-      return response.data;
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+
+      return [];
 
     } catch (error: any) {
       console.error('API call failed, returning empty result:', error.response?.data || error.message);
@@ -323,5 +326,3 @@ export const travelpayoutsApi = TravelpayoutsApiService.getInstance();
 
 // Export types
 export type { Airport, Flight, FlightSearchParams, Gate };
-
-    
