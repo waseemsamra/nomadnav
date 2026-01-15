@@ -122,6 +122,7 @@ function getMockOTAs(baseFlight: any) {
         ...baseFlight,
         price: newPrice,
         gate: mock.gate,
+        flight_number: `${baseFlight.flight_number}-${Math.floor(Math.random() * 1000)}`,
         is_mock: true
       };
     });
