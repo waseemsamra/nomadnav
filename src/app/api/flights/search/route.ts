@@ -96,6 +96,7 @@ async function searchWithStrategy(params: URLSearchParams) {
                 return flightsForDest.map((flight: any) => ({
                     ...flight,
                     origin: params.get('origin'), // Add origin to each flight
+                    destination: destination // Ensure destination is correctly passed
                 }));
             } else {
                  console.log(`Data received, but no flights for key '${destination}'. Keys found: ${Object.keys(apiResponse.data)}`);
@@ -142,7 +143,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
         .map((flight: any) => {
             const airlineCode = flight.airline; // Data from /v1/prices/cheap uses 'airline'
             const airlineName = airlines[airlineCode] || airlineCode;
-            const gate = flight.gate || flight.ota_code || 'unknown';
+            const gate = flight.gate || 'unknown';
             
             const uniqueId = `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}-${Math.random()}`;
 
@@ -154,11 +155,11 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
                 flight_number: flight.flight_number,
                 departure_at: flight.departure_at,
                 return_at: flight.return_at,
-                arrival_at: flight.departure_at, 
+                arrival_at: flight.departure_at, // Placeholder, can be improved if API provides it
                 origin: flight.origin,
                 destination: flight.destination,
                 transfers: flight.transfers,
-                duration: flight.duration,
+                duration: flight.duration_to, // Use duration_to for one-way duration
                 link: flight.link ? `https://www.aviasales.com${flight.link}?marker=${MARKER}` : '#',
                 currency: currency,
                 gate: gate,
@@ -254,4 +255,6 @@ export async function GET(req: NextRequest) {
         );
     }
 }
+    
+
     

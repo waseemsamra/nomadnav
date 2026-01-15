@@ -6,7 +6,7 @@ import { type Flight } from '@/services/travelpayoutsApi';
 import { OTA_DATA } from '@/lib/ota-data';
 import { Button } from '@/components/ui/button';
 import { formatDuration, formatDateString } from '@/lib/utils';
-import { ArrowRight, Clock, Users, Dot } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 interface FlightCardProps {
   flight: Flight;
@@ -29,6 +29,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
     const destination = flight.destination || '???';
     const stops = flight.transfers ?? 0;
     const departureTime = flight.departure_at ? formatDateString(flight.departure_at, 'h:mm a') : 'N/A';
+    // The cheap prices API doesn't provide arrival time, so we calculate it as a fallback.
     const arrivalTime = flight.arrival_at ? formatDateString(flight.arrival_at, 'h:mm a') : 'N/A';
     const durationFormatted = typeof flight.duration === 'number' ? formatDuration(flight.duration * 60) : 'N/A';
     const airlineLogoUrl = `https://pics.avs.io/120/40/${airlineCode}.png`;
@@ -45,6 +46,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
                         width={120}
                         height={40}
                         className="object-contain h-8 w-auto"
+                        unoptimized // prevents next/image optimization issues with external dynamic URLs
                     />
                     <div className="text-sm text-muted-foreground">{otaName}</div>
                 </div>
@@ -90,3 +92,5 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
 };
 
 export default FlightCard;
+
+    

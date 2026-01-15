@@ -23,7 +23,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import { Slider } from '@/components/ui/slider';
 import FlightCard from '@/components/flights/FlightCard';
 import { OTA_DATA } from '@/lib/ota-data';
-import { ALLIANCE_DATA } from '@/lib/alliance-data';
+import { formatDuration, formatDateString } from '@/lib/utils';
 
 
 type FilterState = {
@@ -258,19 +258,10 @@ function SearchResultsContent() {
     setSelectedPrice([priceRange.min, priceRange.max]);
   };
 
-  const formatDuration = (minutes: number) => {
-    if (typeof minutes !== 'number' || isNaN(minutes)) return 'N/A';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
 
   const formatDate = (dateString: string) => {
     try {
-      if (!dateString) return '';
-      // Create date object assuming UTC to avoid timezone shifts
-      const date = new Date(dateString + 'T00:00:00Z');
-      return format(date, 'MMM dd, yyyy');
+      return formatDateString(dateString, 'MMM dd, yyyy');
     } catch {
       return dateString;
     }
@@ -381,7 +372,7 @@ function SearchResultsContent() {
                   </Select>
               </div>
 
-              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Departure/Arrival times', 'Airlines', 'Online travel agencies']}>
+              <Accordion type="multiple" className="w-full border-t mt-4" defaultValue={['Numbers of stops', 'Baggage', 'TRAVEL TIME', 'Airfares', 'Airlines', 'Online travel agencies']}>
                   <FilterSection title="Numbers of stops" disabled={stopOptions.length === 0}>
                       <div className="space-y-2 pr-2">
                            <div className="flex items-center justify-between">
@@ -442,7 +433,7 @@ function SearchResultsContent() {
                   <FilterSection title="TRAVEL TIME" disabled={durationRange.max === 0 || durationRange.min === durationRange.max}>
                       <div className="p-2">
                         <p className="text-sm text-center mb-2 text-muted-foreground">
-                            {formatDuration(selectedDuration[0])} - {formatDuration(selectedDuration[1])}
+                            {formatDuration(selectedDuration[0] * 60)} - {formatDuration(selectedDuration[1] * 60)}
                         </p>
                         <Slider
                             min={durationRange.min}
@@ -470,13 +461,6 @@ function SearchResultsContent() {
                         />
                       </div>
                   </FilterSection>
-                  <FilterSection title="Departure/Arrival times" disabled>
-                     <p className="p-2 text-sm text-muted-foreground">This filter is currently disabled.</p>
-                  </FilterSection>
-                  
-                   <FilterSection title="Connecting airports" disabled>
-                     <p className="p-2 text-sm text-muted-foreground">Connecting airports filter is not available with this API.</p>
-                  </FilterSection>
 
                   <FilterSection title="Airlines" disabled={airlineOptions.length === 0}>
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
@@ -499,10 +483,6 @@ function SearchResultsContent() {
                               </div>
                           ))}
                       </div>
-                  </FilterSection>
-                  
-                   <FilterSection title="Airports" disabled>
-                     <p className="p-2 text-sm text-muted-foreground">Airport filter is not available.</p>
                   </FilterSection>
 
                   <FilterSection title="Online travel agencies" disabled={otaOptions.length === 0}>
@@ -675,3 +655,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
