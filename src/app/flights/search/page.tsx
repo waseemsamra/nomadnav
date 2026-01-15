@@ -263,14 +263,20 @@ function SearchResultsContent() {
     let filtered = allFlights;
     
     // Checkbox filters
-    if (selectedAirlines && selectedAirlines.length < airlineOptions.length) {
-        filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
+    if (selectedAirlines !== null && airlineOptions.length > 0) {
+      if (selectedAirlines.length < airlineOptions.length) {
+          filtered = filtered.filter(flight => flight.airline_code && selectedAirlines.includes(flight.airline_code));
+      }
     }
-    if (selectedStops && selectedStops.length < stopOptions.length) {
-        filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
+    if (selectedStops !== null && stopOptions.length > 0) {
+      if (selectedStops.length < stopOptions.length) {
+          filtered = filtered.filter(flight => typeof flight.transfers === 'number' && selectedStops.includes(flight.transfers));
+      }
     }
-    if (selectedOtas && selectedOtas.length < otaOptions.length) {
-        filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
+    if (selectedOtas !== null && otaOptions.length > 0) {
+      if (selectedOtas.length < otaOptions.length) {
+          filtered = filtered.filter(flight => flight.gate && selectedOtas.includes(flight.gate));
+      }
     }
 
     // Range filters
