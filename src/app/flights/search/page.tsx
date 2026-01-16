@@ -210,13 +210,21 @@ function SearchResultsContent() {
   };
 
   const handleAirlineSelection = (airlineCode: string) => {
-    const allOptions = airlineOptions.map(a => a.code);
     setSelectedAirlines(prev => {
-      const currentSelections = prev === null ? allOptions : prev;
-      const newSelections = currentSelections.includes(airlineCode)
-        ? currentSelections.filter(a => a !== airlineCode)
-        : [...currentSelections, airlineCode];
-      return newSelections.length === allOptions.length ? null : newSelections;
+      // If it's null (all selected), start a new list with everything BUT the one clicked.
+      if (prev === null) {
+          return airlineOptions.map(o => o.code).filter(code => code !== airlineCode);
+      }
+      // If it's already an array, toggle the item.
+      const newSelections = prev.includes(airlineCode)
+          ? prev.filter(code => code !== airlineCode)
+          : [...prev, airlineCode];
+      
+      // If the new list has all options, set it back to null.
+      if (newSelections.length === airlineOptions.length) {
+          return null;
+      }
+      return newSelections;
     });
   };
   
@@ -225,13 +233,21 @@ function SearchResultsContent() {
   }
 
   const handleStopSelection = (stopCount: number) => {
-    const allOptions = stopOptions.map(s => s.value);
     setSelectedStops(prev => {
-      const currentSelections = prev === null ? allOptions : prev;
-      const newSelections = currentSelections.includes(stopCount)
-        ? currentSelections.filter(s => s !== stopCount)
-        : [...currentSelections, stopCount];
-      return newSelections.length === allOptions.length ? null : newSelections;
+        // If it's null (all selected), start a new list with everything BUT the one clicked.
+        if (prev === null) {
+            return stopOptions.map(o => o.value).filter(val => val !== stopCount);
+        }
+        // If it's already an array, toggle the item.
+        const newSelections = prev.includes(stopCount)
+            ? prev.filter(val => val !== stopCount)
+            : [...prev, stopCount];
+        
+        // If the new list has all options, set it back to null.
+        if (newSelections.length === stopOptions.length) {
+            return null;
+        }
+        return newSelections;
     });
   };
 
@@ -240,13 +256,21 @@ function SearchResultsContent() {
   }
   
   const handleOtaSelection = (otaId: string) => {
-    const allOptions = otaOptions.map(o => o.id);
     setSelectedOtas(prev => {
-      const currentSelections = prev === null ? allOptions : prev;
-      const newSelections = currentSelections.includes(otaId)
-        ? currentSelections.filter(id => id !== otaId)
-        : [...currentSelections, otaId];
-      return newSelections.length === allOptions.length ? null : newSelections;
+        // If it's null (all selected), start a new list with everything BUT the one clicked.
+        if (prev === null) {
+            return otaOptions.map(o => o.id).filter(id => id !== otaId);
+        }
+        // If it's already an array, toggle the item.
+        const newSelections = prev.includes(otaId)
+            ? prev.filter(id => id !== otaId)
+            : [...prev, otaId];
+        
+        // If the new list has all options, set it back to null.
+        if (newSelections.length === otaOptions.length) {
+            return null;
+        }
+        return newSelections;
     });
   };
 
@@ -651,5 +675,7 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
 
     
