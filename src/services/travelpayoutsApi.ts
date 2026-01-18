@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-import { getHours, getMinutes } from 'date-fns';
+import { getHours, getMinutes, format, addMonths } from 'date-fns';
 import { OTA_DATA } from '@/lib/ota-data';
 
 // Types
@@ -97,6 +97,7 @@ class TravelpayoutsApiService {
       airports: boolean;
       airlines: boolean;
       cities: boolean;
+      otas: boolean;
       flights: boolean;
     };
     tokenValid: boolean;
@@ -105,12 +106,13 @@ class TravelpayoutsApiService {
       airports: false,
       airlines: false,
       cities: false,
+      otas: false,
       flights: false,
     };
 
-    const checkEndpoint = async (endpoint: keyof typeof results, url: string) => {
+    const checkEndpoint = async (endpoint: 'airports' | 'airlines' | 'cities', url: string) => {
       try {
-        const response = await axios.get(url, { timeout: 5000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
+        const response = await axios.get(url, { timeout: 30000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
         results[endpoint] = response.status === 200 && Array.isArray(response.data) && response.data.length > 0;
       } catch (error) {
         console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
@@ -125,17 +127,20 @@ class TravelpayoutsApiService {
       checkEndpoint('cities', ENDPOINTS.cities),
     ]);
     
+    // Check local OTA data
+    results.otas = OTA_DATA && OTA_DATA.length > 0;
+
     // Check flight search endpoint if token is present
     if (API_TOKEN) {
       try {
         const flightParams: FlightSearchParams = {
           origin: 'JFK',
           destination: 'LAX',
-          depart_date: '2026-08-01',
+          depart_date: format(addMonths(new Date(), 3), 'yyyy-MM-dd'),
           limit: 1,
         };
         const flightResponse = await this.searchFlights(flightParams);
-        // The test is successful if the API call doesn't throw and returns an array (can be empty)
+        // The test is successful if the API call doesn't throw and returns an array
         results.flights = true;
       } catch (flightError: any) {
         console.warn('Flight API test failed:', flightError.message);
