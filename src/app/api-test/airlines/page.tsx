@@ -9,11 +9,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-
-const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN;
+import { travelpayoutsApi } from '@/services/travelpayoutsApi';
+import { type Airline } from '@/types/travel';
 
 export default function AirlinesDataPage() {
-    const [airlines, setAirlines] = useState<any[]>([]);
+    const [airlines, setAirlines] = useState<Airline[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -21,14 +21,7 @@ export default function AirlinesDataPage() {
         async function fetchData() {
             setLoading(true);
             try {
-                const response = await fetch('https://api.travelpayouts.com/data/en/airlines.json', {
-                    headers: {
-                        'X-Access-Token': API_TOKEN || '',
-                        'Accept-Encoding': 'gzip, deflate, compress'
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to fetch data from API.');
-                const data = await response.json();
+                const data = await travelpayoutsApi.getAirlines();
                 setAirlines(data);
             } catch (e: any) {
                 setError(e.message);

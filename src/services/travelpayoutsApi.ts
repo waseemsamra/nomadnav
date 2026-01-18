@@ -8,8 +8,7 @@ import { ALLIANCE_DATA } from '@/lib/alliance-data';
 export interface Airport {
   code: string;
   name: string;
-  city: string;
-  country: string;
+  city_code: string;
   country_code: string;
   flightable: boolean;
 }
@@ -179,8 +178,8 @@ class TravelpayoutsApiService {
 
     try {
       const searchParams = new URLSearchParams({
-        origin: params.origin,
-        destination: params.destination,
+        origin: params.origin.toUpperCase(),
+        destination: params.destination.toUpperCase(),
         depart_date: params.depart_date,
         currency: params.currency || 'USD',
         cabin_class: params.cabin_class || 'economy',
@@ -250,6 +249,19 @@ class TravelpayoutsApiService {
   }
   
   // ==================== PUBLIC METHODS ====================
+  async getAirports(): Promise<Airport[]> {
+    try {
+      const response = await axios.get(ENDPOINTS.airports, { 
+        timeout: 30000,
+        headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' }
+      });
+      return response.data || [];
+    } catch (error: any) {
+      console.error('Error fetching airports:', error.message);
+      return [];
+    }
+  }
+
   async getAirportOptions() {
     try {
       console.log('Fetching airports from:', ENDPOINTS.airports);
