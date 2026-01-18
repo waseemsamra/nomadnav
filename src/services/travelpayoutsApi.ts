@@ -238,7 +238,7 @@ class TravelpayoutsApiService {
     try {
       console.log('Fetching airports from:', ENDPOINTS.airports);
       const response = await axios.get(ENDPOINTS.airports, {
-        timeout: 10000,
+        timeout: 30000,
         headers: { 'Accept': 'application/json' },
       });
 
