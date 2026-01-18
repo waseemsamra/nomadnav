@@ -12,15 +12,6 @@ let airlinesCache: { [key: string]: string } | null = null;
 let airlinesCacheTimestamp = 0;
 const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 
-const airportAlternatives: { [key: string]: string[] } = {
-    'DXB': ['DXB', 'SHJ', 'AUH', 'DWC'],
-    'MOW': ['SVO', 'DME', 'VKO', 'ZIA'],
-    'LON': ['LHR', 'LGW', 'STN', 'LTN', 'LCY'],
-    'NYC': ['JFK', 'LGA', 'EWR'],
-    'TYO': ['HND', 'NRT'],
-    'PAR': ['CDG', 'ORY'],
-};
-
 async function getAirlinesData() {
     const now = Date.now();
     if (airlinesCache && (now - airlinesCacheTimestamp < CACHE_DURATION)) {
@@ -70,70 +61,6 @@ function addEstimatedBaggagePrices(flight: any): Flight {
   };
 }
 
-async function fetchWithEndpoint(endpoint: string, params: URLSearchParams) {
-    const url = `${API_BASE_URL}${endpoint}?${params.toString()}`;
-    const response = await axios.get(url, {
-        timeout: 20000,
-        headers: { 'X-Access-Token': API_TOKEN, 'Accept-Encoding': 'gzip, deflate, compress' },
-    });
-    return response.data;
-}
-
-async function searchWithStrategy(params: URLSearchParams) {
-    const endpoint = '/v1/prices/cheap';
-    
-    try {
-        console.log(`Attempting search with ${endpoint} for destination ${params.get('destination')}`);
-        
-        const apiResponse = await fetchWithEndpoint(endpoint, params);
-        
-        if (apiResponse.success && apiResponse.data) {
-            const destination = params.get('destination') || '';
-            const destinationData = apiResponse.data[destination];
-            if (destinationData && Object.keys(destinationData).length > 0) {
-                const flightsForDest = Object.values(destinationData);
-                console.log(`✓ Success with ${endpoint}. Found ${flightsForDest.length} raw flight segments for ${destination}.`);
-                return flightsForDest.map((flight: any) => ({
-                    ...flight,
-                    origin: params.get('origin'), // Add origin to each flight
-                    destination: destination // Ensure destination is correctly passed
-                }));
-            } else {
-                 console.log(`Data received, but no flights for key '${destination}'. Keys found: ${Object.keys(apiResponse.data)}`);
-            }
-        } else {
-            console.log(`No results from ${endpoint} for destination ${params.get('destination')}. API success: ${apiResponse.success}`);
-        }
-    } catch (e: any) {
-        console.warn(`${endpoint} failed for ${params.get('destination')}:`, e.message);
-    }
-    
-    return [];
-}
-
-
-function getMockOTAs(baseFlight: any) {
-    if (!baseFlight || typeof baseFlight.price !== 'number') return [];
-    
-    const mockGates = [
-      { gate: 'MYTR', priceModifier: 0.95, name: 'Mytrip.com' },
-      { gate: 'CITY', priceModifier: 1.02, name: 'City.Travel' },
-      { gate: 'GOTO', priceModifier: 0.98, name: 'Gotogate' },
-      { gate: 'TRIP', priceModifier: 1.05, name: 'Trip.com' },
-    ];
-
-    return mockGates.map(mock => {
-      const newPrice = Math.round(baseFlight.price * mock.priceModifier);
-      
-      return {
-        ...baseFlight,
-        price: newPrice,
-        gate: mock.gate,
-        is_mock: true
-      };
-    });
-}
-
 
 function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
     if (!Array.isArray(flights)) return [];
@@ -176,16 +103,20 @@ export async function GET(req: NextRequest) {
     const origin = searchParams.get('origin');
     const destination = searchParams.get('destination');
     const depart_date = searchParams.get('depart_date');
+    const return_date = searchParams.get('return_date');
+    const currency = searchParams.get('currency') || 'USD';
+
+    console.log(`[API] Received search: ${origin} -> ${destination} on ${depart_date}`);
 
     if (!origin || !destination) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
     }
     if (!API_TOKEN) {
+      console.error('[API] FATAL: API token not configured.');
       return NextResponse.json({ message: 'API token is not configured. Please add NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN to your .env file.' }, { status: 500 });
     }
     
-    const currency = searchParams.get('currency') || 'USD';
-    const baseApiParams = new URLSearchParams({
+    const apiParams = new URLSearchParams({
         origin: origin,
         destination: destination,
         currency: currency,
@@ -193,64 +124,54 @@ export async function GET(req: NextRequest) {
         trip_class: searchParams.get('cabin_class') === 'business' ? '1' : '0',
     });
     
-    if (depart_date) baseApiParams.set('depart_date', depart_date);
-    const return_date = searchParams.get('return_date');
-    if (return_date) baseApiParams.set('return_date', return_date);
+    if (depart_date) apiParams.set('depart_date', depart_date);
+    if (return_date) apiParams.set('return_date', return_date);
+
+    const url = `${API_BASE_URL}/v1/prices/cheap?${apiParams.toString()}`;
+    console.log(`[API] Requesting Travelpayouts URL: ${url}`);
 
     try {
-        let allFlights: any[] = await searchWithStrategy(new URLSearchParams(baseApiParams));
+        const response = await axios.get(url, {
+            timeout: 20000,
+            headers: { 'X-Access-Token': API_TOKEN, 'Accept-Encoding': 'gzip, deflate, compress' },
+        });
 
-        if (allFlights.length === 0) {
-            console.log('No flights on direct route, trying alternatives...');
-            const originAlts = airportAlternatives[origin] || [origin];
-            const destAlts = airportAlternatives[destination] || [destination];
-            
-            if (originAlts.length > 1 || destAlts.length > 1) {
-                const alternativeSearches = [];
-                for (const altOrigin of originAlts) {
-                    for (const altDest of destAlts) {
-                        if (altOrigin === origin && altDest === destination) continue;
-                        
-                        const altParams = new URLSearchParams(baseApiParams);
-                        altParams.set('origin', altOrigin);
-                        altParams.set('destination', altDest);
-                        alternativeSearches.push(searchWithStrategy(altParams));
-                    }
-                }
-                const results = await Promise.all(alternativeSearches);
-                results.forEach(result => {
-                    if (result && result.length > 0) {
-                        allFlights.push(...result);
-                    }
-                });
-                console.log(`Found ${allFlights.length} total flights via alternative routes.`);
+        console.log('[API] Received response from Travelpayouts.');
+        
+        let rawFlights: any[] = [];
+
+        if (response.data?.success && response.data?.data) {
+            const destinationData = response.data.data[destination];
+            if (destinationData && Object.keys(destinationData).length > 0) {
+                // Map over the flights and add origin/destination, as the API doesn't provide it in the nested objects
+                rawFlights = Object.values(destinationData).map((flight: any) => ({
+                    ...flight,
+                    origin: origin,
+                    destination: destination
+                }));
+                console.log(`[API] SUCCESS: Found ${rawFlights.length} flight segments for key '${destination}'.`);
+            } else {
+                console.warn(`[API] WARN: API response successful, but no flight data found for destination key '${destination}'. Available keys: ${Object.keys(response.data.data)}`);
             }
+        } else {
+            console.warn('[API] WARN: API response was not successful or did not contain data field.', response.data);
+        }
+
+        if (rawFlights.length === 0) {
+            console.log('[API] No flights found after processing. Returning empty array.');
+            return NextResponse.json([]);
         }
         
         const airlines = await getAirlinesData();
-        let flightsWithDetails = processFlights(allFlights, airlines, currency);
+        const processedFlights = processFlights(rawFlights, airlines, currency);
         
-        if (flightsWithDetails.length > 0) {
-            const uniqueGates = new Set(flightsWithDetails.map(f => f.gate).filter(Boolean));
-            if (uniqueGates.size < 3) {
-                console.log(`Injecting mock OTA data because only ${uniqueGates.size} real gates were found.`);
-                const cheapestFlight = [...flightsWithDetails].sort((a,b) => a.price - b.price)[0];
-                
-                if (cheapestFlight) {
-                    const mockRawFlights = getMockOTAs(cheapestFlight);
-                    const processedMockFlights = processFlights(mockRawFlights, airlines, currency);
-                    flightsWithDetails.push(...processedMockFlights);
-                }
-            }
-        }
-
-        console.log(`Returning ${flightsWithDetails.length} processed flights to client.`);
-        return NextResponse.json(flightsWithDetails);
+        console.log(`[API] Processed ${processedFlights.length} flights. Returning to client.`);
+        return NextResponse.json(processedFlights);
 
     } catch (error: any) {
-        console.error('Proxy API Error:', error.response?.data || error.message);
+        console.error('[API] FATAL: Error during API call to Travelpayouts:', error.response?.data || error.message);
         return NextResponse.json(
-            { message: 'Failed to fetch flight data', error: error.message },
+            { message: 'Failed to fetch flight data from external API.', error: error.message },
             { status: 500 }
         );
     }
