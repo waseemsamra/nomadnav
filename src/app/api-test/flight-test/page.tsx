@@ -90,7 +90,7 @@ export default function FlightTestPage() {
                         <TableCell>
                           {flight.is_mock ? 
                             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              Example
+                              Sample
                             </span>
                             : 
                             <span className="flex items-center gap-1.5 text-xs text-green-600 font-medium">

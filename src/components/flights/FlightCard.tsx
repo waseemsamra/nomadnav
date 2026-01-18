@@ -40,7 +40,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
         <div className="bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 relative">
             {isMock && (
                 <Badge variant="outline" className="absolute top-2 right-2 z-10 bg-background/80">
-                    Example Flight
+                    Sample Flight
                 </Badge>
             )}
             <div className="grid grid-cols-12 gap-4 items-center p-4">
@@ -84,13 +84,13 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
                 {/* Price & Booking */}
                 <div className="col-span-3 flex flex-col items-end justify-center text-right">
                     <p className="text-3xl font-bold text-primary">${price}</p>
-                    <p className="text-xs text-muted-foreground mb-3">{isMock ? 'Example price' : 'per person'}</p>
+                    <p className="text-xs text-muted-foreground mb-3">{isMock ? 'Sample price' : 'per person'}</p>
                     <Button 
                         size="sm"
                         onClick={() => onBookFlight(flight)}
                         className="w-full"
                     >
-                       {isMock ? 'See Live Flights' : 'Select Flight'}
+                       {isMock ? 'See Sample Search' : 'Select Flight'}
                     </Button>
                 </div>
             </div>
