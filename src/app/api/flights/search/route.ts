@@ -87,6 +87,8 @@ function createMockFlights(origin: string, destination: string, depart_date: str
         const arrival_at = arrivalAtDate.toISOString();
 
         const uniqueId = `mock-${airline.code}-${flight_number}-${departure_at}-${Math.random()}`;
+        
+        const googleFlightsLink = `https://www.google.com/travel/flights/search?q=flights%20from%20${origin}%20to%20${destination}%20on%20${depart_date}`;
 
         const flightData = {
             id: uniqueId,
@@ -101,7 +103,7 @@ function createMockFlights(origin: string, destination: string, depart_date: str
             destination: destination,
             transfers: transfers,
             duration: duration,
-            link: '#',
+            link: googleFlightsLink,
             currency: currency,
             gate: mockGates[index % mockGates.length],
             is_mock: true,

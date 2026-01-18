@@ -7,6 +7,7 @@ import { OTA_DATA } from '@/lib/ota-data';
 import { Button } from '@/components/ui/button';
 import { formatDuration, formatDateString } from '@/lib/utils';
 import { Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface FlightCardProps {
   flight: Flight;
@@ -33,9 +34,15 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
     const arrivalTime = flight.arrival_at ? formatDateString(flight.arrival_at, 'h:mm a') : 'N/A';
     const durationFormatted = typeof flight.duration === 'number' ? formatDuration(flight.duration * 60) : 'N/A';
     const airlineLogoUrl = `https://pics.avs.io/120/40/${airlineCode}.png`;
+    const isMock = flight.is_mock || false;
 
     return (
-        <div className="bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300">
+        <div className="bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 relative">
+            {isMock && (
+                <Badge variant="outline" className="absolute top-2 right-2 z-10 bg-background/80">
+                    Example Flight
+                </Badge>
+            )}
             <div className="grid grid-cols-12 gap-4 items-center p-4">
                 
                 {/* Airline & OTA */}
@@ -77,13 +84,13 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
                 {/* Price & Booking */}
                 <div className="col-span-3 flex flex-col items-end justify-center text-right">
                     <p className="text-3xl font-bold text-primary">${price}</p>
-                    <p className="text-xs text-muted-foreground mb-3">per person</p>
+                    <p className="text-xs text-muted-foreground mb-3">{isMock ? 'Example price' : 'per person'}</p>
                     <Button 
                         size="sm"
                         onClick={() => onBookFlight(flight)}
                         className="w-full"
                     >
-                       Select Flight
+                       {isMock ? 'See Live Flights' : 'Select Flight'}
                     </Button>
                 </div>
             </div>
@@ -92,5 +99,3 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBookFlight }) => {
 };
 
 export default FlightCard;
-
-    
