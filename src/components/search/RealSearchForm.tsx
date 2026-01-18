@@ -10,7 +10,7 @@ import {
   Briefcase,
   Users,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -73,14 +73,17 @@ const RealSearchForm: React.FC = () => {
   const [origin, setOrigin] = useState<AirportOption | null>(null);
   const [destination, setDestination] = useState<AirportOption | null>(null);
   
+  const defaultDepartDate = format(addMonths(new Date(), 3), 'yyyy-MM-dd');
+  const defaultReturnDate = format(addMonths(new Date(), 3), 'yyyy-MM-dd');
+  
   const [multiCitySegments, setMultiCitySegments] = useState([
-    { from: null as AirportOption | null, to: null as AirportOption | null, date: '2026-01-20' },
-    { from: null as AirportOption | null, to: null as AirportOption | null, date: '2026-01-27' },
+    { from: null as AirportOption | null, to: null as AirportOption | null, date: defaultDepartDate },
+    { from: null as AirportOption | null, to: null as AirportOption | null, date: defaultReturnDate },
   ]);
 
   const [formData, setFormData] = useState({
-    departDate: '2026-01-20',
-    returnDate: '2026-01-27',
+    departDate: defaultDepartDate,
+    returnDate: defaultReturnDate,
     tripType: 'oneway' as 'oneway' | 'round' | 'multi',
     passengers: 1,
     cabinClass: 'economy',

@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format, addMonths } from 'date-fns';
 
 export default function TestPage() {
   const [origin, setOrigin] = useState('KHI');
   const [destination, setDestination] = useState('DXB');
-  const [departDate, setDepartDate] = useState('2026-01-20');
+  const [departDate, setDepartDate] = useState(format(addMonths(new Date(), 3), 'yyyy-MM-dd'));
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
