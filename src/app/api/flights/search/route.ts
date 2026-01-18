@@ -184,8 +184,9 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
     }
     if (!API_TOKEN) {
-      console.error('[API] FATAL: API token not configured.');
-      return NextResponse.json({ message: 'API token is not configured. Please add NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN to your .env file.' }, { status: 500 });
+      console.warn('[API] WARN: API token not configured. Returning mock flights.');
+      const mockFlights = createMockFlights(origin, destination, depart_date || format(new Date(), 'yyyy-MM-dd'), currency);
+      return NextResponse.json(mockFlights);
     }
     
     const apiParams = new URLSearchParams({
@@ -259,5 +260,7 @@ export async function GET(req: NextRequest) {
 
 
 
+
+    
 
     
