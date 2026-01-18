@@ -2,6 +2,7 @@
 import axios from 'axios';
 import { getHours, getMinutes, format, addMonths } from 'date-fns';
 import { OTA_DATA } from '@/lib/ota-data';
+import { ALLIANCE_DATA } from '@/lib/alliance-data';
 
 // Types
 export interface Airport {
@@ -99,6 +100,7 @@ class TravelpayoutsApiService {
       cities: boolean;
       otas: boolean;
       flights: boolean;
+      alliances: boolean;
     };
     tokenValid: boolean;
   }> {
@@ -108,6 +110,7 @@ class TravelpayoutsApiService {
       cities: false,
       otas: false,
       flights: false,
+      alliances: false,
     };
 
     const checkEndpoint = async (endpoint: 'airports' | 'airlines' | 'cities', url: string) => {
@@ -129,6 +132,9 @@ class TravelpayoutsApiService {
     
     // Check local OTA data
     results.otas = OTA_DATA && OTA_DATA.length > 0;
+    
+    // Check local Alliance data
+    results.alliances = ALLIANCE_DATA && ALLIANCE_DATA.length > 0;
 
     // Check flight search endpoint if token is present
     if (API_TOKEN) {

@@ -11,7 +11,8 @@ import {
   Cloud,
   Database,
   ExternalLink,
-  Key
+  Key,
+  Users,
 } from 'lucide-react';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ export default function RealApiTest() {
       cities: boolean;
       otas: boolean;
       flights: boolean;
+      alliances: boolean;
     };
     tokenValid: boolean;
   } | null>(null);
@@ -49,7 +51,7 @@ export default function RealApiTest() {
       setApiStatus({
         success: false,
         message: 'Test failed: ' + error.message,
-        endpoints: { airports: false, airlines: false, cities: false, otas: false, flights: false },
+        endpoints: { airports: false, airlines: false, cities: false, otas: false, flights: false, alliances: false },
         tokenValid: false,
       });
     } finally {
@@ -110,7 +112,7 @@ export default function RealApiTest() {
             </h3>
             {testing ? (
               <div className="space-y-2">
-                {[...Array(5)].map((_, i) => (
+                {[...Array(6)].map((_, i) => (
                   <div key={i} className="bg-gray-100 rounded-lg p-3 animate-pulse h-10" />
                 ))}
               </div>
@@ -131,6 +133,10 @@ export default function RealApiTest() {
                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="flex items-center gap-2"><ExternalLink className="w-4 h-4 text-gray-500"/>OTAs</span>
                   <StatusIcon status={apiStatus?.endpoints.otas || false} />
+                </div>
+                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="flex items-center gap-2"><Users className="w-4 h-4 text-gray-500"/>Alliances</span>
+                  <StatusIcon status={apiStatus?.endpoints.alliances || false} />
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="flex items-center gap-2"><Plane className="w-4 h-4 text-gray-500"/>Flights</span>
