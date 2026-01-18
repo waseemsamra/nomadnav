@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   CheckCircle, 
   XCircle, 
@@ -13,6 +14,7 @@ import {
   ExternalLink,
   Key,
   Users,
+  ArrowRight,
 } from 'lucide-react';
 import { travelpayoutsApi } from '@/services/travelpayoutsApi';
 import { Button } from '@/components/ui/button';
@@ -61,6 +63,23 @@ export default function RealApiTest() {
 
   const StatusIcon = ({ status }: { status: boolean }) => 
     status ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />;
+
+  const StatusRow = ({ name, status, link, icon }: { name: string; status: boolean; link?: string; icon: React.ReactNode }) => (
+    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <span className="flex items-center gap-2">{icon}{name}</span>
+        <div className="flex items-center gap-2">
+            <StatusIcon status={status} />
+            {link && (
+                <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                    <Link href={link}>
+                        <ArrowRight className="w-4 h-4" />
+                        <span className="sr-only">View {name}</span>
+                    </Link>
+                </Button>
+            )}
+        </div>
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8 h-full">
@@ -113,35 +132,17 @@ export default function RealApiTest() {
             {testing ? (
               <div className="space-y-2">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="bg-gray-100 rounded-lg p-3 animate-pulse h-10" />
+                  <div key={i} className="bg-gray-100 rounded-lg p-3 animate-pulse h-12" />
                 ))}
               </div>
             ) : (
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Airports</span>
-                  <StatusIcon status={apiStatus?.endpoints.airports || false} />
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Airlines</span>
-                  <StatusIcon status={apiStatus?.endpoints.airlines || false} />
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="flex items-center gap-2"><Database className="w-4 h-4 text-gray-500"/>Cities</span>
-                  <StatusIcon status={apiStatus?.endpoints.cities || false} />
-                </div>
-                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="flex items-center gap-2"><ExternalLink className="w-4 h-4 text-gray-500"/>OTAs</span>
-                  <StatusIcon status={apiStatus?.endpoints.otas || false} />
-                </div>
-                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="flex items-center gap-2"><Users className="w-4 h-4 text-gray-500"/>Alliances</span>
-                  <StatusIcon status={apiStatus?.endpoints.alliances || false} />
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="flex items-center gap-2"><Plane className="w-4 h-4 text-gray-500"/>Flights</span>
-                  <StatusIcon status={apiStatus?.endpoints.flights || false} />
-                </div>
+                <StatusRow name="Airports" status={apiStatus?.endpoints.airports || false} link="/api-test/airports" icon={<Database className="w-4 h-4 text-gray-500"/>} />
+                <StatusRow name="Airlines" status={apiStatus?.endpoints.airlines || false} link="/api-test/airlines" icon={<Database className="w-4 h-4 text-gray-500"/>} />
+                <StatusRow name="Cities" status={apiStatus?.endpoints.cities || false} link="/api-test/cities" icon={<Database className="w-4 h-4 text-gray-500"/>} />
+                <StatusRow name="OTAs" status={apiStatus?.endpoints.otas || false} link="/api-test/otas" icon={<ExternalLink className="w-4 h-4 text-gray-500"/>} />
+                <StatusRow name="Alliances" status={apiStatus?.endpoints.alliances || false} link="/api-test/alliances" icon={<Users className="w-4 h-4 text-gray-500"/>} />
+                <StatusRow name="Flights" status={apiStatus?.endpoints.flights || false} icon={<Plane className="w-4 h-4 text-gray-500"/>} />
               </div>
             )}
           </div>
