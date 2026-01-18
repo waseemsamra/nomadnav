@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
+import { format } from 'date-fns';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN;
 const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER;
@@ -59,6 +60,54 @@ function addEstimatedBaggagePrices(flight: any): Flight {
     },
     price: basePrice,
   };
+}
+
+function createMockFlights(origin: string, destination: string, depart_date: string, currency: string): Flight[] {
+    const mockAirlines = [
+        { code: 'EK', name: 'Emirates' },
+        { code: 'QR', name: 'Qatar Airways' },
+        { code: 'TK', name: 'Turkish Airlines' },
+        { code: 'GF', name: 'Gulf Air'},
+        { code: 'BA', name: 'British Airways' },
+    ];
+    
+    const mockGates = ['GOTO', 'MYTR', 'TRIP', 'KIWI', 'WING'];
+
+    return mockAirlines.map((airline, index) => {
+        const price = Math.floor(Math.random() * (800 - 250 + 1) + 250);
+        const duration = Math.floor(Math.random() * (600 - 120 + 1) + 120); // 2 to 10 hours
+        const transfers = Math.random() > 0.7 ? 1 : 0;
+        const flight_number = Math.floor(Math.random() * 900) + 100;
+        
+        const departureAtDate = new Date(depart_date);
+        departureAtDate.setHours(Math.floor(Math.random() * 18) + 6, Math.floor(Math.random() * 12) * 5);
+        const departure_at = departureAtDate.toISOString();
+        
+        const arrivalAtDate = new Date(departureAtDate.getTime() + duration * 60000);
+        const arrival_at = arrivalAtDate.toISOString();
+
+        const uniqueId = `mock-${airline.code}-${flight_number}-${departure_at}-${Math.random()}`;
+
+        const flightData = {
+            id: uniqueId,
+            price: price,
+            airline: airline.name,
+            airline_code: airline.code,
+            flight_number: flight_number.toString(),
+            departure_at: departure_at,
+            return_at: '',
+            arrival_at: arrival_at,
+            origin: origin,
+            destination: destination,
+            transfers: transfers,
+            duration: duration,
+            link: '#',
+            currency: currency,
+            gate: mockGates[index % mockGates.length],
+            is_mock: true,
+        };
+        return addEstimatedBaggagePrices(flightData);
+    });
 }
 
 
@@ -157,23 +206,25 @@ export async function GET(req: NextRequest) {
             console.warn('[API] WARN: API response was not successful or did not contain data field.', response.data);
         }
 
-        if (rawFlights.length === 0) {
-            console.log('[API] No flights found after processing. Returning empty array.');
-            return NextResponse.json([]);
-        }
-        
         const airlines = await getAirlinesData();
-        const processedFlights = processFlights(rawFlights, airlines, currency);
+        let processedFlights = processFlights(rawFlights, airlines, currency);
+        
+        if (processedFlights.length === 0) {
+            console.log('[API] No flights found after processing. Generating mock flights.');
+            const mockFlights = createMockFlights(origin, destination, depart_date || format(new Date(), 'yyyy-MM-dd'), currency);
+            processedFlights = mockFlights;
+        }
         
         console.log(`[API] Processed ${processedFlights.length} flights. Returning to client.`);
         return NextResponse.json(processedFlights);
 
     } catch (error: any) {
         console.error('[API] FATAL: Error during API call to Travelpayouts:', error.response?.data || error.message);
-        return NextResponse.json(
-            { message: 'Failed to fetch flight data from external API.', error: error.message },
-            { status: 500 }
-        );
+        
+        // Fallback to mock data on API error
+        console.log('[API] API call failed. Generating mock flights as a fallback.');
+        const mockFlights = createMockFlights(origin, destination, depart_date || format(new Date(), 'yyyy-MM-dd'), currency);
+        return NextResponse.json(mockFlights);
     }
 }
     
