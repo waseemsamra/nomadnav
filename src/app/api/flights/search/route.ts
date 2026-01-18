@@ -88,7 +88,21 @@ function createMockFlights(origin: string, destination: string, depart_date: str
 
         const uniqueId = `mock-${airline.code}-${flight_number}-${departure_at}-${Math.random()}`;
         
-        const googleFlightsLink = `https://www.google.com/travel/flights/search?q=flights%20from%20${origin}%20to%20${destination}%20on%20${depart_date}`;
+        const searchParams = new URLSearchParams({
+            origin_iata: origin,
+            destination_iata: destination,
+            depart_date: depart_date,
+            adults: '1',
+            children: '0',
+            infants: '0',
+            trip_class: '0',
+        });
+        
+        if (MARKER) {
+            searchParams.append('marker', MARKER);
+        }
+
+        const aviaSalesLink = `https://www.aviasales.com/search?${searchParams.toString()}`;
 
         const flightData = {
             id: uniqueId,
@@ -103,7 +117,7 @@ function createMockFlights(origin: string, destination: string, depart_date: str
             destination: destination,
             transfers: transfers,
             duration: duration,
-            link: googleFlightsLink,
+            link: aviaSalesLink,
             currency: currency,
             gate: mockGates[index % mockGates.length],
             is_mock: true,
@@ -232,3 +246,4 @@ export async function GET(req: NextRequest) {
     
 
     
+
