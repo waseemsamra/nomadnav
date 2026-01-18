@@ -23,7 +23,8 @@ export default function AirlinesDataPage() {
             try {
                 const response = await fetch('https://api.travelpayouts.com/data/en/airlines.json', {
                     headers: {
-                        'X-Access-Token': API_TOKEN || ''
+                        'X-Access-Token': API_TOKEN || '',
+                        'Accept-Encoding': 'gzip, deflate, compress'
                     }
                 });
                 if (!response.ok) throw new Error('Failed to fetch data from API.');

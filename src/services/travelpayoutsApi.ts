@@ -255,7 +255,7 @@ class TravelpayoutsApiService {
       console.log('Fetching airports from:', ENDPOINTS.airports);
       const response = await axios.get(ENDPOINTS.airports, {
         timeout: 30000,
-        headers: { ...AUTH_HEADER, 'Accept': 'application/json' },
+        headers: { ...AUTH_HEADER, 'Accept': 'application/json', 'Accept-Encoding': 'gzip,deflate,compress' },
       });
 
       if (response.data && Array.isArray(response.data)) {
@@ -305,7 +305,7 @@ class TravelpayoutsApiService {
     try {
       const response = await axios.get(ENDPOINTS.airlines, { 
         timeout: 5000,
-        headers: AUTH_HEADER
+        headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' }
       });
       return response.data || [];
     } catch (error: any) {
@@ -318,7 +318,7 @@ class TravelpayoutsApiService {
     try {
       const response = await axios.get(ENDPOINTS.cities, { 
         timeout: 5000,
-        headers: AUTH_HEADER
+        headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' }
        });
       return response.data || [];
     } catch (error: any) {

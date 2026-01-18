@@ -21,7 +21,8 @@ export default function AirportsDataPage() {
             try {
                 const response = await fetch('https://api.travelpayouts.com/data/en/airports.json', {
                     headers: {
-                        'X-Access-Token': API_TOKEN || ''
+                        'X-Access-Token': API_TOKEN || '',
+                        'Accept-Encoding': 'gzip, deflate, compress'
                     }
                 });
                 if (!response.ok) throw new Error('Failed to fetch data from API.');
