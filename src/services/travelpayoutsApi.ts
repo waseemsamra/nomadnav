@@ -67,7 +67,7 @@ const AUTH_HEADER = { 'X-Access-Token': API_TOKEN || '' };
 
 // REAL WORKING ENDPOINTS
 const ENDPOINTS = {
-  // Static data (always works without token)
+  // Static data (works without token)
   cities: 'https://api.travelpayouts.com/data/en/cities.json',
   airports: 'https://api.travelpayouts.com/data/en/airports.json',
   airlines: 'https://api.travelpayouts.com/data/en/airlines.json',
@@ -115,26 +115,13 @@ class TravelpayoutsApiService {
       flights: false,
       alliances: ALLIANCE_DATA && ALLIANCE_DATA.length > 0,
     };
-
-    if (!tokenValid) {
-        return {
-            success: false,
-            message: "API Token is missing or invalid. Please add it to your .env file to connect to live data services.",
-            endpoints: results,
-            tokenValid: false,
-        };
-    }
-
-    // Token is valid, so we mark it as such and proceed with tests.
-    results.airports = false; // Reset before test
-    results.airlines = false;
-    results.cities = false;
-
+    
+    // Test static data endpoints (they don't require a token)
     const checkEndpoint = async (endpoint: 'airports' | 'airlines' | 'cities', url: string) => {
       try {
         const response = await axios.get(url, { 
           timeout: 30000, 
-          headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' } 
+          headers: { 'Accept-Encoding': 'gzip,deflate,compress' } 
         });
         results[endpoint] = response.status === 200 && Array.isArray(response.data) && response.data.length > 0;
       } catch (error) {
@@ -143,14 +130,23 @@ class TravelpayoutsApiService {
       }
     };
     
-    // Check static data endpoints
     await Promise.all([
       checkEndpoint('airports', ENDPOINTS.airports),
       checkEndpoint('airlines', ENDPOINTS.airlines),
       checkEndpoint('cities', ENDPOINTS.cities),
     ]);
     
-    // Check flight search endpoint
+    // Now, test flight search which depends on the token
+    if (!tokenValid) {
+        results.flights = false; // Fails if no token
+        return {
+            success: false,
+            message: "API Token is missing or invalid. Live flight search is disabled. Please add token to your .env file.",
+            endpoints: results,
+            tokenValid: false,
+        };
+    }
+    
     try {
       const flightParams: FlightSearchParams = {
         origin: 'JFK',
@@ -160,9 +156,7 @@ class TravelpayoutsApiService {
       };
       
       const flightResponse = await this.searchFlights(flightParams);
-      // Test is successful if we get a response (even if it's mock data, because that means the endpoint is up)
-      // and the token is valid. This test is primarily for endpoint availability.
-      results.flights = true;
+      results.flights = true; // Success if the call doesn't throw, even with mocks
     } catch (flightError: any) {
       console.warn('Flight API test failed:', flightError.message);
       results.flights = false;
@@ -175,7 +169,7 @@ class TravelpayoutsApiService {
 
     return {
       success: allGood,
-      message: allGood ? 'All services are operational.' : `Connected to ${workingEndpoints}/${totalEndpoints} endpoints`,
+      message: allGood ? 'All services are operational.' : `Connected to ${workingEndpoints}/${totalEndpoints} endpoints.`,
       endpoints: results,
       tokenValid: tokenValid,
     };
@@ -242,7 +236,7 @@ class TravelpayoutsApiService {
 
     try {
         const response = await axios.get(ENDPOINTS.airlines, {
-            headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' },
+            headers: { 'Accept-Encoding': 'gzip,deflate,compress' },
         });
         if (response.data) {
             this.airlinesCache = response.data.reduce((acc: any, airline: any) => {
@@ -263,7 +257,7 @@ class TravelpayoutsApiService {
     try {
       const response = await axios.get(ENDPOINTS.airports, { 
         timeout: 30000,
-        headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' }
+        headers: { 'Accept-Encoding': 'gzip,deflate,compress' }
       });
       return response.data || [];
     } catch (error: any) {
@@ -277,7 +271,7 @@ class TravelpayoutsApiService {
       console.log('Fetching airports from:', ENDPOINTS.airports);
       const response = await axios.get(ENDPOINTS.airports, {
         timeout: 30000,
-        headers: { ...AUTH_HEADER, 'Accept': 'application/json', 'Accept-Encoding': 'gzip,deflate,compress' },
+        headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip,deflate,compress' },
       });
 
       if (response.data && Array.isArray(response.data)) {
@@ -327,7 +321,7 @@ class TravelpayoutsApiService {
     try {
       const response = await axios.get(ENDPOINTS.airlines, { 
         timeout: 5000,
-        headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' }
+        headers: { 'Accept-Encoding': 'gzip,deflate,compress' }
       });
       return response.data || [];
     } catch (error: any) {
@@ -340,7 +334,7 @@ class TravelpayoutsApiService {
     try {
       const response = await axios.get(ENDPOINTS.cities, { 
         timeout: 5000,
-        headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' }
+        headers: { 'Accept-Encoding': 'gzip,deflate,compress' }
        });
       return response.data || [];
     } catch (error: any) {
