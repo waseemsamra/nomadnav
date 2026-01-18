@@ -168,8 +168,9 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
 export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
 
-    const origin = searchParams.get('origin');
-    const destination = searchParams.get('destination');
+    // IATA codes are case-insensitive on input but should be uppercase for API consistency.
+    const origin = searchParams.get('origin')?.toUpperCase();
+    const destination = searchParams.get('destination')?.toUpperCase();
     const depart_date = searchParams.get('depart_date');
     const return_date = searchParams.get('return_date');
     const currency = searchParams.get('currency') || 'USD';
@@ -249,4 +250,5 @@ export async function GET(req: NextRequest) {
     
 
     
+
 
