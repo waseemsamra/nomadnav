@@ -134,13 +134,16 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
     if (!Array.isArray(flights)) return [];
     
     return flights
-        .filter(flight => flight && typeof flight.price === 'number')
+        .filter(flight => flight && typeof flight.price === 'number' && flight.duration_to && flight.departure_at)
         .map((flight: any) => {
             const airlineCode = flight.airline; // Data from /v1/prices/cheap uses 'airline'
             const airlineName = airlines[airlineCode] || airlineCode;
             const gate = flight.gate || 'unknown';
             
             const uniqueId = `${gate}-${flight.price}-${airlineCode}-${flight.flight_number}-${flight.departure_at}-${Math.random()}`;
+            
+            const departureDate = new Date(flight.departure_at);
+            const arrivalDate = new Date(departureDate.getTime() + (flight.duration_to * 60000));
 
             const enrichedFlight = {
                 id: uniqueId,
@@ -150,7 +153,7 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
                 flight_number: flight.flight_number,
                 departure_at: flight.departure_at,
                 return_at: flight.return_at,
-                arrival_at: flight.departure_at, // Placeholder, can be improved if API provides it
+                arrival_at: arrivalDate.toISOString(),
                 origin: flight.origin,
                 destination: flight.destination,
                 transfers: flight.transfers,
@@ -210,7 +213,10 @@ export async function GET(req: NextRequest) {
         let rawFlights: any[] = [];
 
         if (response.data?.success && response.data?.data) {
-            const destinationData = response.data.data[destination];
+            const responseData = response.data.data;
+            const destinationKey = Object.keys(responseData).find(key => key.toUpperCase() === destination);
+            const destinationData = destinationKey ? responseData[destinationKey] : null;
+
             if (destinationData && Object.keys(destinationData).length > 0) {
                 // Map over the flights and add origin/destination, as the API doesn't provide it in the nested objects
                 rawFlights = Object.values(destinationData).map((flight: any) => ({
@@ -218,7 +224,7 @@ export async function GET(req: NextRequest) {
                     origin: origin,
                     destination: destination
                 }));
-                console.log(`[API] SUCCESS: Found ${rawFlights.length} flight segments for key '${destination}'.`);
+                console.log(`[API] SUCCESS: Found ${rawFlights.length} flight segments for key '${destinationKey}'.`);
             } else {
                 console.warn(`[API] WARN: API response successful, but no flight data found for destination key '${destination}'. Available keys: ${Object.keys(response.data.data)}`);
             }
@@ -252,3 +258,6 @@ export async function GET(req: NextRequest) {
     
 
 
+
+
+    
