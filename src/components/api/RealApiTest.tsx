@@ -142,7 +142,7 @@ export default function RealApiTest() {
                 <StatusRow name="Cities" status={apiStatus?.endpoints.cities || false} link="/api-test/cities" icon={<Database className="w-4 h-4 text-gray-500"/>} />
                 <StatusRow name="OTAs" status={apiStatus?.endpoints.otas || false} link="/api-test/otas" icon={<ExternalLink className="w-4 h-4 text-gray-500"/>} />
                 <StatusRow name="Alliances" status={apiStatus?.endpoints.alliances || false} link="/api-test/alliances" icon={<Users className="w-4 h-4 text-gray-500"/>} />
-                <StatusRow name="Flights" status={apiStatus?.endpoints.flights || false} icon={<Plane className="w-4 h-4 text-gray-500"/>} />
+                <StatusRow name="Flights" status={apiStatus?.endpoints.flights || false} link="/api-test/flight-test" icon={<Plane className="w-4 h-4 text-gray-500"/>} />
               </div>
             )}
           </div>
