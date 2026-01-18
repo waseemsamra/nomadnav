@@ -63,6 +63,8 @@ export interface FlightSearchParams {
 
 // Configuration
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN;
+const AUTH_HEADER = { 'X-Access-Token': API_TOKEN || '' };
+
 
 // REAL WORKING ENDPOINTS
 const ENDPOINTS = {
@@ -115,7 +117,10 @@ class TravelpayoutsApiService {
 
     const checkEndpoint = async (endpoint: 'airports' | 'airlines' | 'cities', url: string) => {
       try {
-        const response = await axios.get(url, { timeout: 30000, headers: { 'Accept-Encoding': 'gzip,deflate,compress' } });
+        const response = await axios.get(url, { 
+          timeout: 30000, 
+          headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' } 
+        });
         results[endpoint] = response.status === 200 && Array.isArray(response.data) && response.data.length > 0;
       } catch (error) {
         console.warn(`Endpoint test for ${endpoint} failed:`, (error as Error).message);
@@ -228,7 +233,7 @@ class TravelpayoutsApiService {
 
     try {
         const response = await axios.get(ENDPOINTS.airlines, {
-            headers: { 'Accept-Encoding': 'gzip,deflate,compress' },
+            headers: { ...AUTH_HEADER, 'Accept-Encoding': 'gzip,deflate,compress' },
         });
         if (response.data) {
             this.airlinesCache = response.data.reduce((acc: any, airline: any) => {
@@ -250,7 +255,7 @@ class TravelpayoutsApiService {
       console.log('Fetching airports from:', ENDPOINTS.airports);
       const response = await axios.get(ENDPOINTS.airports, {
         timeout: 30000,
-        headers: { 'Accept': 'application/json' },
+        headers: { ...AUTH_HEADER, 'Accept': 'application/json' },
       });
 
       if (response.data && Array.isArray(response.data)) {
@@ -298,7 +303,10 @@ class TravelpayoutsApiService {
 
   async getAirlines() {
     try {
-      const response = await axios.get(ENDPOINTS.airlines, { timeout: 5000 });
+      const response = await axios.get(ENDPOINTS.airlines, { 
+        timeout: 5000,
+        headers: AUTH_HEADER
+      });
       return response.data || [];
     } catch (error: any) {
       console.error('Error fetching airlines:', error.message);
@@ -308,7 +316,10 @@ class TravelpayoutsApiService {
 
   async getCities() {
     try {
-      const response = await axios.get(ENDPOINTS.cities, { timeout: 5000 });
+      const response = await axios.get(ENDPOINTS.cities, { 
+        timeout: 5000,
+        headers: AUTH_HEADER
+       });
       return response.data || [];
     } catch (error: any) {
       console.error('Error fetching cities:', error.message);

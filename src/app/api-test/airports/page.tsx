@@ -8,6 +8,8 @@ import { Database } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
+const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN;
+
 export default function AirportsDataPage() {
     const [airports, setAirports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -17,7 +19,11 @@ export default function AirportsDataPage() {
         async function fetchData() {
             setLoading(true);
             try {
-                const response = await fetch('https://api.travelpayouts.com/data/en/airports.json');
+                const response = await fetch('https://api.travelpayouts.com/data/en/airports.json', {
+                    headers: {
+                        'X-Access-Token': API_TOKEN || ''
+                    }
+                });
                 if (!response.ok) throw new Error('Failed to fetch data from API.');
                 const data = await response.json();
                 setAirports(data.filter((a: any) => a.flightable));
