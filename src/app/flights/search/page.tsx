@@ -183,7 +183,7 @@ function SearchResultsContent() {
           setSelectedDuration([minDuration, maxDuration]);
 
         } else {
-          toast.info(`No flights found for ${origin} to ${destination}.`);
+          toast(`No flights found for ${origin} to ${destination}.`);
           setAllFlights([]);
         }
       } catch (error: any) {
@@ -680,5 +680,7 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
+
+    
 
     
