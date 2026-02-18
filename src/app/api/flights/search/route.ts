@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { type Flight } from '@/services/travelpayoutsApi';
-import { format } from 'date-fns';
 
 const API_TOKEN = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN;
 const MARKER = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER;
@@ -23,7 +22,6 @@ async function getAirlinesData() {
         const response = await axios.get(AIRLINES_ENDPOINT, {
             headers: { 
                 'Accept-Encoding': 'gzip, deflate, compress',
-                'X-Access-Token': API_TOKEN || ''
             },
         });
         if (response.data && Array.isArray(response.data)) {
@@ -65,70 +63,6 @@ function addEstimatedBaggagePrices(flight: any): Flight {
   };
 }
 
-function createMockFlights(origin: string, destination: string, depart_date: string, currency: string): Flight[] {
-    const mockAirlines = [
-        { code: 'EK', name: 'Emirates' },
-        { code: 'QR', name: 'Qatar Airways' },
-        { code: 'TK', name: 'Turkish Airlines' },
-        { code: 'GF', name: 'Gulf Air'},
-        { code: 'BA', name: 'British Airways' },
-    ];
-    
-    const mockGates = ['GOTO', 'MYTR', 'TRIP', 'KIWI', 'WING'];
-
-    return mockAirlines.map((airline, index) => {
-        const price = Math.floor(Math.random() * (800 - 250 + 1) + 250);
-        const duration = Math.floor(Math.random() * (600 - 120 + 1) + 120); // 2 to 10 hours
-        const transfers = Math.random() > 0.7 ? 1 : 0;
-        const flight_number = Math.floor(Math.random() * 900) + 100;
-        
-        const departureAtDate = new Date(depart_date);
-        departureAtDate.setHours(Math.floor(Math.random() * 18) + 6, Math.floor(Math.random() * 12) * 5);
-        const departure_at = departureAtDate.toISOString();
-        
-        const arrivalAtDate = new Date(departureAtDate.getTime() + duration * 60000);
-        const arrival_at = arrivalAtDate.toISOString();
-
-        const uniqueId = `mock-${airline.code}-${flight_number}-${departure_at}-${Math.random()}`;
-        
-        const searchParams = new URLSearchParams({
-            origin_iata: origin,
-            destination_iata: destination,
-            depart_date: depart_date,
-            adults: '1',
-            children: '0',
-            infants: '0',
-            trip_class: '0',
-        });
-        
-        if (MARKER) {
-            searchParams.append('marker', MARKER);
-        }
-
-        const aviaSalesLink = `https://www.aviasales.com/search?${searchParams.toString()}`;
-
-        const flightData = {
-            id: uniqueId,
-            price: price,
-            airline: airline.name,
-            airline_code: airline.code,
-            flight_number: flight_number.toString(),
-            departure_at: departure_at,
-            return_at: '',
-            arrival_at: arrival_at,
-            origin: origin,
-            destination: destination,
-            transfers: transfers,
-            duration: duration,
-            link: aviaSalesLink,
-            currency: currency,
-            gate: mockGates[index % mockGates.length],
-            is_mock: true,
-        };
-        return addEstimatedBaggagePrices(flightData);
-    });
-}
-
 
 function processFlights(flights: any[], airlines: { [key: string]: string }, currency: string): Flight[] {
     if (!Array.isArray(flights)) return [];
@@ -161,7 +95,6 @@ function processFlights(flights: any[], airlines: { [key: string]: string }, cur
                 link: flight.link ? `https://www.aviasales.com${flight.link}?marker=${MARKER}` : '#',
                 currency: currency,
                 gate: gate,
-                is_mock: flight.is_mock || false,
             };
             return addEstimatedBaggagePrices(enrichedFlight);
         }).filter((flight): flight is Flight => flight !== null);
@@ -184,9 +117,8 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ message: 'Origin and destination are required' }, { status: 400 });
     }
     if (!API_TOKEN) {
-      console.warn('[API] WARN: API token not configured. Returning mock flights.');
-      const mockFlights = createMockFlights(origin, destination, depart_date || format(new Date(), 'yyyy-MM-dd'), currency);
-      return NextResponse.json(mockFlights);
+      console.error('[API] ERROR: API token not configured.');
+      return NextResponse.json({ message: 'The flight API is not configured. Please contact the site administrator.' }, { status: 503 });
     }
     
     const apiParams = new URLSearchParams({
@@ -236,22 +168,13 @@ export async function GET(req: NextRequest) {
         const airlines = await getAirlinesData();
         let processedFlights = processFlights(rawFlights, airlines, currency);
         
-        if (processedFlights.length === 0) {
-            console.log('[API] No flights found after processing. Generating mock flights.');
-            const mockFlights = createMockFlights(origin, destination, depart_date || format(new Date(), 'yyyy-MM-dd'), currency);
-            processedFlights = mockFlights;
-        }
-        
         console.log(`[API] Processed ${processedFlights.length} flights. Returning to client.`);
         return NextResponse.json(processedFlights);
 
     } catch (error: any) {
         console.error('[API] FATAL: Error during API call to Travelpayouts:', error.response?.data || error.message);
-        
-        // Fallback to mock data on API error
-        console.log('[API] API call failed. Generating mock flights as a fallback.');
-        const mockFlights = createMockFlights(origin, destination, depart_date || format(new Date(), 'yyyy-MM-dd'), currency);
-        return NextResponse.json(mockFlights);
+        const errorMessage = error.response?.data?.message || error.message || 'An unknown error occurred with the flight provider.';
+        return NextResponse.json({ message: `Failed to connect to flight provider. ${errorMessage}` }, { status: 502 });
     }
 }
     

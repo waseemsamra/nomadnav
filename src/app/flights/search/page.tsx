@@ -9,7 +9,7 @@ import {
   Filter,
   X,
   Calendar,
-  Info,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
@@ -24,7 +24,6 @@ import { Slider } from '@/components/ui/slider';
 import FlightCard from '@/components/flights/FlightCard';
 import { OTA_DATA } from '@/lib/ota-data';
 import { formatDuration, formatDateString } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 type FilterState = {
@@ -45,6 +44,7 @@ function SearchResultsContent() {
   
   const [allFlights, setAllFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   // All filter states are managed here
@@ -150,6 +150,7 @@ function SearchResultsContent() {
         return;
       }
       setLoading(true);
+      setError(null);
       
       try {
         const flightData = await travelpayoutsApi.searchFlights({
@@ -165,9 +166,7 @@ function SearchResultsContent() {
         console.log(`Fetched ${flightData.length} flights`);
         
         if (flightData && flightData.length > 0) {
-          if (!flightData.every(f => f.is_mock)) {
-            toast.success(`Found ${flightData.length} flights`);
-          }
+          toast.success(`Found ${flightData.length} flights`);
           setAllFlights(flightData);
 
           const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
@@ -184,12 +183,14 @@ function SearchResultsContent() {
           setSelectedDuration([minDuration, maxDuration]);
 
         } else {
-          toast.error(`No flights found for ${origin} to ${destination}.`);
+          toast.info(`No flights found for ${origin} to ${destination}.`);
           setAllFlights([]);
         }
       } catch (error: any) {
         console.error('Error fetching flights:', error);
-        toast.error(error.message || 'Failed to load flight data.');
+        const errorMessage = error.message || 'Failed to load flight data.';
+        toast.error(errorMessage);
+        setError(errorMessage);
         setAllFlights([]);
       } finally {
         setLoading(false);
@@ -338,10 +339,6 @@ function SearchResultsContent() {
     return filtered;
   }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedOtas]);
   
-  const areAllFlightsMock = useMemo(() => {
-    return allFlights.length > 0 && allFlights.every(f => f.is_mock);
-  }, [allFlights]);
-
 
   if (loading) {
     return (
@@ -562,9 +559,9 @@ function SearchResultsContent() {
     if (allFlights.length === 0 && !loading) {
       return (
         <div className="text-center p-8 bg-gray-50 rounded-lg">
-          <div className="text-4xl mb-4">✈️</div>
-          <h3 className="text-xl font-semibold">No flights found</h3>
-          <p className="text-muted-foreground">We couldn't find any flights for the selected route and dates.</p>
+          <div className="text-4xl mb-4">{error ? <AlertTriangle className="mx-auto h-12 w-12 text-destructive" /> : '✈️'}</div>
+          <h3 className="text-xl font-semibold">{error ? 'An Error Occurred' : 'No flights found'}</h3>
+          <p className="text-muted-foreground max-w-md mx-auto">{error || "We couldn't find any flights for the selected route and dates. Please try a different search."}</p>
           <Button onClick={() => router.push('/')} className="mt-4">Try a New Search</Button>
         </div>
       );
@@ -572,15 +569,6 @@ function SearchResultsContent() {
 
     return (
       <div className='space-y-4'>
-        {areAllFlightsMock && (
-            <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800">
-                <Info className="h-4 w-4 !text-blue-800" />
-                <AlertTitle>Displaying Sample Flights</AlertTitle>
-                <AlertDescription>
-                    We couldn't find live flights for this route from our API partner. We're showing sample data to demonstrate how the search works.
-                </AlertDescription>
-            </Alert>
-        )}
         <div className="p-4 bg-gray-50 rounded-lg text-sm text-muted-foreground">
             <p>Showing {sortedAndFilteredFlights.length} of {allFlights.length} flights. All prices are in USD and include estimated taxes.</p>
         </div>

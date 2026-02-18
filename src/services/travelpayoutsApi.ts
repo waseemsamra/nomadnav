@@ -45,7 +45,6 @@ export interface Flight {
     checked: BaggageInfo;
   };
   gate: string; // This will be the OTA code
-  is_mock?: boolean;
 }
 
 export interface FlightSearchParams {
@@ -139,8 +138,11 @@ class TravelpayoutsApiService {
     // Now, test flight search which depends on the token
     if (!tokenValid) {
         results.flights = false; // Fails if no token
+        const staticEndpointsGood = results.airports && results.airlines && results.cities;
+        const overallSuccess = staticEndpointsGood && results.otas && results.alliances;
+
         return {
-            success: false,
+            success: overallSuccess,
             message: "API Token is missing or invalid. Live flight search is disabled. Please add token to your .env file.",
             endpoints: results,
             tokenValid: false,
@@ -156,7 +158,7 @@ class TravelpayoutsApiService {
       };
       
       const flightResponse = await this.searchFlights(flightParams);
-      results.flights = true; // Success if the call doesn't throw, even with mocks
+      results.flights = true; // Success if the call doesn't throw, even with an empty array.
     } catch (flightError: any) {
       console.warn('Flight API test failed:', flightError.message);
       results.flights = false;
@@ -320,7 +322,7 @@ class TravelpayoutsApiService {
   async getAirlines() {
     try {
       const response = await axios.get(ENDPOINTS.airlines, { 
-        timeout: 5000,
+        timeout: 30000,
         headers: { 'Accept-Encoding': 'gzip,deflate,compress' }
       });
       return response.data || [];
@@ -333,7 +335,7 @@ class TravelpayoutsApiService {
   async getCities() {
     try {
       const response = await axios.get(ENDPOINTS.cities, { 
-        timeout: 5000,
+        timeout: 30000,
         headers: { 'Accept-Encoding': 'gzip,deflate,compress' }
        });
       return response.data || [];
