@@ -9,6 +9,7 @@ import {
   Filter,
   X,
   Calendar,
+  Info,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { type Flight, travelpayoutsApi } from '@/services/travelpayoutsApi';
@@ -23,6 +24,7 @@ import { Slider } from '@/components/ui/slider';
 import FlightCard from '@/components/flights/FlightCard';
 import { OTA_DATA } from '@/lib/ota-data';
 import { formatDuration, formatDateString } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 type FilterState = {
@@ -163,7 +165,9 @@ function SearchResultsContent() {
         console.log(`Fetched ${flightData.length} flights`);
         
         if (flightData && flightData.length > 0) {
-          toast.success(`Found ${flightData.length} flights`);
+          if (!flightData.every(f => f.is_mock)) {
+            toast.success(`Found ${flightData.length} flights`);
+          }
           setAllFlights(flightData);
 
           const prices = flightData.map(f => travelpayoutsApi.getFlightDisplayPrice(f, 'all'));
@@ -334,6 +338,10 @@ function SearchResultsContent() {
     return filtered;
   }, [allFlights, filters, selectedAirlines, selectedStops, baggageFilter, selectedDuration, selectedPrice, selectedOtas]);
   
+  const areAllFlightsMock = useMemo(() => {
+    return allFlights.length > 0 && allFlights.every(f => f.is_mock);
+  }, [allFlights]);
+
 
   if (loading) {
     return (
@@ -564,6 +572,15 @@ function SearchResultsContent() {
 
     return (
       <div className='space-y-4'>
+        {areAllFlightsMock && (
+            <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800">
+                <Info className="h-4 w-4 !text-blue-800" />
+                <AlertTitle>Displaying Sample Flights</AlertTitle>
+                <AlertDescription>
+                    We couldn't find live flights for this route from our API partner. We're showing sample data to demonstrate how the search works.
+                </AlertDescription>
+            </Alert>
+        )}
         <div className="p-4 bg-gray-50 rounded-lg text-sm text-muted-foreground">
             <p>Showing {sortedAndFilteredFlights.length} of {allFlights.length} flights. All prices are in USD and include estimated taxes.</p>
         </div>
@@ -675,7 +692,5 @@ export default function SearchResultsPage() {
     </Suspense>
   );
 }
-
-    
 
     
